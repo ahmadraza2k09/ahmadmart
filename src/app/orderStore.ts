@@ -111,11 +111,23 @@ export function toWaNumber(local: string): string {
   return digits;
 }
 
+/** True when the order is a Cash-on-Delivery order (vs. manual JazzCash). */
+export function isCashOnDelivery(order: Pick<Order, "paymentMethod">): boolean {
+  return /cash on delivery|\bcod\b/i.test(order.paymentMethod);
+}
+
 /** Build the pre-filled order message the customer sends to the store on WhatsApp. */
 export function buildWhatsAppText(order: Order): string {
   const products = order.items
     .map(i => `• ${i.name} × ${i.qty} = Rs. ${i.price * i.qty}`)
     .join("\n");
+  const cod = isCashOnDelivery(order);
+  const paymentLine = cod
+    ? `Payment: Cash on Delivery (Multan)`
+    : `Payment: JazzCash (Manual) to ${JAZZCASH_NUMBER} (${JAZZCASH_TITLE})`;
+  const closingLine = cod
+    ? `Please confirm my order — I'll pay cash on delivery. 🚚`
+    : `I have made the payment and I'm attaching my JazzCash payment screenshot here 👇`;
   return [
     `*New Order — Ahmad Mart*`,
     `Order ID: ${order.id}`,
@@ -135,10 +147,10 @@ export function buildWhatsAppText(order: Order): string {
     `Shipping: ${order.shipping === 0 ? "Free" : `Rs. ${order.shipping}`}`,
     `*Total: Rs. ${order.total}*`,
     ``,
-    `Payment: JazzCash (Manual) to ${JAZZCASH_NUMBER} (${JAZZCASH_TITLE})`,
+    paymentLine,
     `Status: Pending Verification`,
     ``,
-    `I have made the payment and I'm attaching my JazzCash payment screenshot here 👇`,
+    closingLine,
   ]
     .filter(Boolean)
     .join("\n");
