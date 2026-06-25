@@ -54,6 +54,8 @@ export interface Order {
   items: OrderItem[];
   subtotal: number;
   shipping: number;
+  discount?: number;   // amount waived by a promo code (e.g. Rs. 100 off delivery)
+  promoCode?: string;  // the promo code that was applied, if any
   total: number;
   proofImage?: string; // optional — payment proof is sent/verified on WhatsApp
   proofName?: string;
@@ -144,7 +146,8 @@ export function buildWhatsAppText(order: Order): string {
     products,
     ``,
     `Subtotal: Rs. ${order.subtotal}`,
-    `Shipping: ${order.shipping === 0 ? "Free" : `Rs. ${order.shipping}`}`,
+    `Delivery: ${order.shipping === 0 ? "Free" : `Rs. ${order.shipping}`}`,
+    order.discount ? `Promo (${order.promoCode || "discount"}): -Rs. ${order.discount}` : ``,
     `*Total: Rs. ${order.total}*`,
     ``,
     paymentLine,
@@ -241,7 +244,8 @@ export async function sendOrderEmail(order: Order, file: File | null): Promise<E
       productLines,
       ``,
       `  Subtotal: Rs. ${order.subtotal}`,
-      `  Shipping: ${order.shipping === 0 ? "Free" : `Rs. ${order.shipping}`}`,
+      `  Delivery: ${order.shipping === 0 ? "Free" : `Rs. ${order.shipping}`}`,
+      order.discount ? `  Promo (${order.promoCode || "discount"}): -Rs. ${order.discount}` : ``,
       `  TOTAL AMOUNT: Rs. ${order.total}`,
       ``,
       `PAYMENT`,

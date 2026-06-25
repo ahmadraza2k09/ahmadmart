@@ -14,8 +14,12 @@ import {
   JAZZCASH_NUMBER, JAZZCASH_TITLE, ADMIN_PASSCODE, WHATSAPP_DISPLAY, WHATSAPP_NUMBER,
   ORDER_STATUSES, getOrders, saveOrder, updateOrderStatus, newOrderId,
   sendOrderEmail, whatsappOrderUrl, toWaNumber, isCashOnDelivery,
+  fileToCompressedDataURL, validateProofFile,
   type Order, type OrderStatus,
 } from "./orderStore";
+import {
+  getProductReviews, saveReview, newReviewId, type UserReview,
+} from "./reviewStore";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -63,17 +67,100 @@ const Store = createContext<StoreCtx>({} as StoreCtx);
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const PRODUCTS: Product[] = [
   {
-    id: 1, name: "Pro Elite Wireless Earbuds", price: 2499, originalPrice: 3999,
+    id: 18, name: "White Losse Pro 2 (Without Box)", price: 849, originalPrice: 1000,
+    category: "Mobile Accessories", subcategory: "Earbuds",
+    image: "/earbuds/losse-pro2-white-nobox-1.jpg",
+    images: [
+      "/earbuds/losse-pro2-white-nobox-1.jpg",
+      "/earbuds/losse-pro2-white-nobox-2.jpg",
+    ],
+    rating: 0, reviews: 0, inStock: true,
+    description: "The White Losse Pro 2 earbuds deliver premium quality sound with deep, punchy bass and a clean, balanced output. They sit comfortably for hours, charge fast, and last all day on a single charge. A sleek white finish that feels light yet durable.",
+    specs: { "Sound": "Premium, Deep Bass", "Bluetooth": "5.3", "Battery": "Long lasting", "Charging": "Fast charge", "Fit": "Lightweight and comfortable", "Build": "Durable", "Packaging": "Without box" }
+  },
+  {
+    id: 19, name: "Black Losse Pro 2 (Without Box)", price: 949, originalPrice: 1100,
+    category: "Mobile Accessories", subcategory: "Earbuds",
+    image: "/earbuds/losse-pro2-black-nobox-1.jpg",
+    images: [
+      "/earbuds/losse-pro2-black-nobox-1.jpg",
+      "/earbuds/losse-pro2-black-nobox-2.jpg",
+    ],
+    rating: 0, reviews: 0, inStock: true,
+    description: "The Black Losse Pro 2 earbuds bring rich, powerful bass and crisp highs in a bold matte black design. Comfortable for all day wear, with fast charging and long battery life that keeps the music going. Tough, reliable, and splash resistant for everyday use.",
+    specs: { "Sound": "Powerful Bass", "Bluetooth": "5.3", "Battery": "Long lasting", "Charging": "Fast charge", "Water Resistance": "Splash resistant", "Fit": "Comfortable", "Packaging": "Without box" }
+  },
+  {
+    id: 20, name: "Air 31 (Box Packed)", price: 949, originalPrice: 1300,
+    category: "Mobile Accessories", subcategory: "Earbuds",
+    image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop&auto=format",
+    images: [
+      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=600&fit=crop&auto=format",
+      "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&h=600&fit=crop&auto=format",
+    ],
+    rating: 0, reviews: 0, inStock: true,
+    description: "The Air 31 earbuds come fully box packed with a premium feel and a satisfying, bass heavy sound. They pair instantly, charge quickly, and offer a comfortable, secure fit for music and calls. A smart digital battery display shows the charge at a glance.",
+    specs: { "Sound": "Bass heavy", "Bluetooth": "5.3", "Display": "Digital battery display", "Charging": "Fast charge", "Fit": "Secure and comfortable", "Build": "Durable", "Packaging": "Box packed" }
+  },
+  {
+    id: 21, name: "Losse Pro 2 White (With Box)", price: 1599, originalPrice: 2200,
+    category: "Mobile Accessories", subcategory: "Earbuds",
+    image: "/earbuds/losse-pro2-white-box-1.jpg",
+    images: [
+      "/earbuds/losse-pro2-white-box-1.jpg",
+      "/earbuds/losse-pro2-white-box-2.jpg",
+    ],
+    rating: 0, reviews: 0, inStock: true,
+    description: "The Losse Pro 2 White comes complete with its full retail box. Enjoy premium quality sound with deep bass, crystal clear calls, and easy touch controls. Fast and long lasting charging, a comfortable fit, and a durable, water resistant build make these a complete package.",
+    specs: { "Sound": "Premium, Deep Bass", "Bluetooth": "5.3", "Calls": "Crystal clear mic", "Charging": "Fast and long lasting", "Water Resistance": "Water resistant", "Controls": "Touch controls", "Packaging": "With box" }
+  },
+  {
+    id: 22, name: "Losse Pro 2 Black (With Box)", price: 1699, originalPrice: 2300,
+    category: "Mobile Accessories", subcategory: "Earbuds",
+    image: "/earbuds/losse-pro2-black-box-1.jpg",
+    images: [
+      "/earbuds/losse-pro2-black-box-1.jpg",
+      "/earbuds/losse-pro2-black-box-2.jpg",
+    ],
+    rating: 0, reviews: 0, inStock: true,
+    description: "The Losse Pro 2 Black is the complete boxed edition with a premium black finish. It delivers the best bass in its class, comfortable all day wear, and fast, long lasting charging. Durable and water resistant, built to keep up with your daily routine.",
+    specs: { "Sound": "Best in class Bass", "Bluetooth": "5.3", "Charging": "Fast and long lasting", "Water Resistance": "Water resistant", "Fit": "Comfortable", "Build": "Durable", "Packaging": "With box" }
+  },
+  {
+    id: 23, name: "Audionic 550", price: 4899, originalPrice: 5400,
+    category: "Mobile Accessories", subcategory: "Earbuds",
+    image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop&auto=format",
+    images: [
+      "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=600&fit=crop&auto=format",
+      "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=600&h=600&fit=crop&auto=format",
+    ],
+    rating: 0, reviews: 0, badge: "new", inStock: true,
+    description: "Audionic 550 is a fully branded earbud set built for premium sound. Expect rich, best in class bass, comfortable long wear, and fast charging that lasts. Durable and water resistant, and backed by a full 12 months brand warranty for complete peace of mind.",
+    specs: { "Brand": "Audionic (Original)", "Warranty": "12 Months", "Sound": "Premium, Best Bass", "Charging": "Fast and long lasting", "Water Resistance": "Water resistant", "Fit": "Comfortable", "Build": "Durable" }
+  },
+  {
+    id: 24, name: "Audionic 425", price: 4999, originalPrice: 5600,
     category: "Mobile Accessories", subcategory: "Earbuds",
     image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop&auto=format",
     images: [
       "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&h=600&fit=crop&auto=format",
       "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=600&fit=crop&auto=format",
-      "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.8, reviews: 342, badge: "bestseller", inStock: true,
-    description: "Experience crystal-clear audio with our Pro Elite Wireless Earbuds. Featuring advanced noise cancellation, 30-hour battery life, and premium sound quality that rivals earbuds costing twice as much.",
-    specs: { "Battery Life": "30 Hours", "Connectivity": "Bluetooth 5.3", "Driver Size": "12mm", "Noise Cancellation": "Active (ANC)", "Water Resistance": "IPX5", "Charging": "USB-C + Wireless" }
+    rating: 0, reviews: 0, badge: "new", inStock: true,
+    description: "Audionic 425 brings genuine branded quality with deep, powerful bass and crystal clear calls. Comfortable for hours, with fast and long lasting charging and a tough, water resistant build. Includes a full 12 months official Audionic warranty.",
+    specs: { "Brand": "Audionic (Original)", "Warranty": "12 Months", "Sound": "Deep, Powerful Bass", "Calls": "Crystal clear mic", "Charging": "Fast and long lasting", "Water Resistance": "Water resistant", "Build": "Durable" }
+  },
+  {
+    id: 25, name: "Audionic 595", price: 4849, originalPrice: 5200,
+    category: "Mobile Accessories", subcategory: "Earbuds",
+    image: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=400&h=400&fit=crop&auto=format",
+    images: [
+      "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=600&h=600&fit=crop&auto=format",
+      "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=600&h=600&fit=crop&auto=format",
+    ],
+    rating: 0, reviews: 0, badge: "new", inStock: true,
+    description: "Audionic 595 is a premium branded earbud set tuned for balanced sound and strong bass. It is comfortable, durable, and water resistant, with fast charging and long playtime. Covered by a full 12 months Audionic brand warranty.",
+    specs: { "Brand": "Audionic (Original)", "Warranty": "12 Months", "Sound": "Balanced, Strong Bass", "Charging": "Fast and long lasting", "Water Resistance": "Water resistant", "Fit": "Comfortable", "Build": "Durable" }
   },
   {
     id: 2, name: "65W GaN Fast Charger", price: 1299, originalPrice: 1899,
@@ -83,8 +170,8 @@ const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=600&fit=crop&auto=format",
       "https://images.unsplash.com/photo-1620714223084-8fcacc2dcea3?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.9, reviews: 521, badge: "bestseller", inStock: true,
-    description: "Charge your devices at blazing speed with our 65W GaN Fast Charger. Compatible with all USB-C devices including MacBooks, smartphones, and tablets.",
+    rating: 0, reviews: 0, badge: "bestseller", inStock: true,
+    description: "Charge your devices at blazing speed with our 65W GaN Fast Charger. It works with all USB C devices including MacBooks, smartphones, and tablets.",
     specs: { "Power Output": "65W Max", "Ports": "2x USB-C + 1x USB-A", "Technology": "GaN III", "Compatibility": "Universal", "Protection": "Over-voltage, Short-circuit", "Size": "Compact" }
   },
   {
@@ -94,7 +181,7 @@ const PRODUCTS: Product[] = [
     images: [
       "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.7, reviews: 289, badge: "sale", inStock: true,
+    rating: 0, reviews: 0, badge: "sale", inStock: true,
     description: "Never run out of power with our 20000mAh Power Bank Pro. Charge up to 4 devices simultaneously with fast charging support.",
     specs: { "Capacity": "20000mAh", "Input": "USB-C 65W", "Output": "3x USB (22.5W)", "Charging Cycles": "500+", "Safety": "CE, FCC, RoHS", "Weight": "450g" }
   },
@@ -105,8 +192,8 @@ const PRODUCTS: Product[] = [
     images: [
       "https://images.unsplash.com/photo-1625480860249-be231b4e2e06?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.6, reviews: 876, badge: "new", inStock: true,
-    description: "Durable nylon braided USB-C cable with 100W fast charging support and data transfer speeds up to 10Gbps.",
+    rating: 0, reviews: 0, badge: "new", inStock: true,
+    description: "Durable nylon braided USB C cable with 100W fast charging support and data transfer speeds up to 10Gbps.",
     specs: { "Length": "1.8 Meters", "Material": "Nylon Braided", "Max Power": "100W", "Data Speed": "10 Gbps", "Compatibility": "USB-C Universal", "Durability": "30,000+ Bends" }
   },
   {
@@ -116,31 +203,31 @@ const PRODUCTS: Product[] = [
     images: [
       "https://images.unsplash.com/photo-1512499617640-c74ae3a79d37?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.5, reviews: 445, inStock: true,
-    description: "360-degree adjustable phone holder for your car dashboard. Compatible with all phones up to 7 inches.",
+    rating: 0, reviews: 0, inStock: true,
+    description: "A 360 degree adjustable phone holder for your car dashboard. It fits all phones up to 7 inches.",
     specs: { "Rotation": "360°", "Compatibility": "4\"-7\" Phones", "Mounting": "Dashboard/Windshield", "Material": "Premium ABS", "Grip": "Strong Suction + Gel", "Adjustable": "Yes" }
   },
   {
-    id: 6, name: "Clear Armor Phone Case — iPhone 15", price: 699, originalPrice: 999,
+    id: 6, name: "Clear Armor Phone Case for iPhone 15", price: 699, originalPrice: 999,
     category: "Mobile Accessories", subcategory: "Mobile Cases",
     image: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=400&h=400&fit=crop&auto=format",
     images: [
       "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.7, reviews: 632, badge: "new", inStock: true,
-    description: "Military-grade drop protection with crystal clear transparency. Show off your phone's design while keeping it safe.",
+    rating: 0, reviews: 0, badge: "new", inStock: true,
+    description: "Military grade drop protection with crystal clear transparency. Show off your phone's design while keeping it safe.",
     specs: { "Material": "TPU + Polycarbonate", "Drop Protection": "MIL-STD-810G", "Compatibility": "iPhone 15/15 Pro", "Color": "Crystal Clear", "Raised Edges": "Yes", "Wireless Charging": "Compatible" }
   },
   {
-    id: 7, name: "Luxury Silent Wall Clock — Gold", price: 2999, originalPrice: 4499,
+    id: 7, name: "Luxury Silent Wall Clock in Gold", price: 2999, originalPrice: 4499,
     category: "Home Decoration", subcategory: "Wall Clocks",
     image: "https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?w=400&h=400&fit=crop&auto=format",
     images: [
       "https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?w=600&h=600&fit=crop&auto=format",
       "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.9, reviews: 198, badge: "bestseller", inStock: true,
-    description: "Elevate your interior with this premium gold-finish silent wall clock. Features whisper-quiet movement and an elegant minimalist design.",
+    rating: 0, reviews: 0, badge: "bestseller", inStock: true,
+    description: "Elevate your interior with this premium gold finish silent wall clock. It features whisper quiet movement and an elegant minimalist design.",
     specs: { "Diameter": "30cm", "Movement": "Quartz Silent", "Material": "Aluminum Frame", "Color": "Rose Gold", "Battery": "1x AA", "Mounting": "Wall Hook Included" }
   },
   {
@@ -150,20 +237,9 @@ const PRODUCTS: Product[] = [
     images: [
       "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.6, reviews: 143, badge: "sale", inStock: true,
+    rating: 0, reviews: 0, badge: "sale", inStock: true,
     description: "Inspired by Scandinavian design, this minimalist wall clock brings calm sophistication to any room.",
     specs: { "Diameter": "35cm", "Movement": "Step Sweep", "Material": "Natural Wood + Glass", "Color": "White/Walnut", "Battery": "1x AA", "Style": "Nordic Minimalist" }
-  },
-  {
-    id: 9, name: "TWS Sport Earbuds X1", price: 1799, originalPrice: 2499,
-    category: "Mobile Accessories", subcategory: "Earbuds",
-    image: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=400&h=400&fit=crop&auto=format",
-    images: [
-      "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=600&h=600&fit=crop&auto=format",
-    ],
-    rating: 4.5, reviews: 267, badge: "sale", inStock: true,
-    description: "Designed for active lifestyles. Sweat-proof, secure fit, and powerful bass make these your perfect workout companion.",
-    specs: { "Battery Life": "25 Hours Total", "Connectivity": "Bluetooth 5.2", "Water Resistance": "IPX7", "Driver": "10mm Dynamic", "Microphone": "CVC 8.0 Noise Cancel", "Fit": "Ergonomic Sport" }
   },
   {
     id: 10, name: "30W iPhone Fast Charger", price: 999, originalPrice: 1499,
@@ -172,8 +248,8 @@ const PRODUCTS: Product[] = [
     images: [
       "https://images.unsplash.com/photo-1620714223084-8fcacc2dcea3?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.8, reviews: 389, badge: "new", inStock: true,
-    description: "Official-quality 30W USB-C charger designed for iPhones. Charge from 0-50% in just 30 minutes.",
+    rating: 0, reviews: 0, badge: "new", inStock: true,
+    description: "Official quality 30W USB C charger designed for iPhones. Charge from 0 to 50 percent in just 30 minutes.",
     specs: { "Power Output": "30W", "Port": "USB-C", "Compatibility": "iPhone 12 and above", "Cable Required": "USB-C to Lightning", "Protection": "Yes", "Certification": "MFi Compatible" }
   },
   {
@@ -183,7 +259,7 @@ const PRODUCTS: Product[] = [
     images: [
       "https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.7, reviews: 89, badge: "new", inStock: true,
+    rating: 0, reviews: 0, badge: "new", inStock: true,
     description: "Timeless vintage charm with Roman numerals. The perfect centerpiece for living rooms, offices, and hallways.",
     specs: { "Diameter": "40cm", "Movement": "Silent Quartz", "Material": "Iron Frame", "Style": "Vintage Industrial", "Battery": "1x AA", "Color": "Antique Bronze" }
   },
@@ -194,12 +270,12 @@ const PRODUCTS: Product[] = [
     images: [
       "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?w=600&h=600&fit=crop&auto=format",
     ],
-    rating: 4.6, reviews: 215, inStock: true,
-    description: "Ultra-slim 10000mAh power bank that fits in your pocket. Perfect for daily commutes and travel.",
+    rating: 0, reviews: 0, inStock: true,
+    description: "Ultra slim 10000mAh power bank that fits in your pocket. Perfect for daily commutes and travel.",
     specs: { "Capacity": "10000mAh", "Thickness": "12mm", "Ports": "USB-C + USB-A", "Fast Charge": "22.5W", "LED Indicator": "4-LED", "Weight": "195g" }
   },
   {
-    id: 13, name: "Website Development", price: 15000, priceNote: "– Rs. 30,000",
+    id: 13, name: "Website Development", price: 15000, priceNote: "to Rs. 30,000",
     category: "Digital Services", subcategory: "Digital Services", isService: true,
     image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=400&fit=crop&auto=format",
     images: [
@@ -208,8 +284,8 @@ const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1551434678-e076c223a692?w=600&h=600&fit=crop&auto=format",
     ],
     rating: 5, reviews: 0, inStock: true,
-    description: "A complete, professional website built for your business — responsive design, fast loading, SEO-ready pages, and a contact/order flow. Final scope and price are confirmed with you directly on WhatsApp.",
-    specs: { "Price Range": "Rs. 15,000 – 30,000", "Type": "Business / Portfolio / Store", "Responsive": "Mobile + Desktop", "Delivery Time": "2–3 weeks", "Revisions": "Included", "Support": "Post-launch support" }
+    description: "A complete, professional website built for your business with responsive design, fast loading, search engine ready pages, and a contact and order flow. The final scope and price are confirmed with you directly on WhatsApp.",
+    specs: { "Price Range": "Rs. 15,000 to 30,000", "Type": "Business / Portfolio / Store", "Responsive": "Mobile + Desktop", "Delivery Time": "2 to 3 weeks", "Revisions": "Included", "Support": "Support after launch" }
   },
   {
     id: 14, name: "Social Media Management", price: 5000, priceNote: "per month",
@@ -220,7 +296,7 @@ const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&h=600&fit=crop&auto=format",
     ],
     rating: 5, reviews: 0, inStock: true,
-    description: "We manage your social media presence — content planning, captions, scheduling, posting, and audience engagement — to grow your brand every month. Graphic design is offered as a separate service. Final package and payment details are arranged on WhatsApp.",
+    description: "We manage your social media presence with content planning, captions, scheduling, posting, and audience engagement to grow your brand every month. Graphic design is offered as a separate service. The final package and payment details are arranged on WhatsApp.",
     specs: { "Price": "Rs. 5,000 / month", "Platforms": "Facebook, Instagram, TikTok", "Content": "Captions + Scheduling", "Posting": "Included", "Reporting": "Monthly", "Engagement": "Comments & DMs" }
   },
   {
@@ -232,7 +308,7 @@ const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=600&fit=crop&auto=format",
     ],
     rating: 5, reviews: 0, inStock: true,
-    description: "Paid advertising managed end to end — Meta & Google ad campaigns, audience targeting, creatives, and ongoing optimisation to bring you real leads and sales. Ad budget is separate; final terms are set on WhatsApp.",
+    description: "Paid advertising managed from start to finish, covering Meta and Google ad campaigns, audience targeting, creatives, and ongoing optimisation to bring you real leads and sales. The ad budget is separate and the final terms are set on WhatsApp.",
     specs: { "Management Fee": "Rs. 15,000 / month", "Platforms": "Meta & Google Ads", "Includes": "Targeting + Creatives", "Optimisation": "Ongoing", "Reporting": "Weekly", "Ad Budget": "Billed separately" }
   },
   {
@@ -244,11 +320,11 @@ const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&h=600&fit=crop&auto=format",
     ],
     rating: 5, reviews: 0, inStock: true,
-    description: "Custom Android & iOS app development tailored to your idea — the price depends on the features and category, starting from Rs. 1,00,000. Share your requirements on WhatsApp for an exact quote and timeline.",
+    description: "Custom Android and iOS app development tailored to your idea. The price depends on the features and category, starting from Rs. 1,00,000. Share your requirements on WhatsApp for an exact quote and timeline.",
     specs: { "Starting Price": "Rs. 1,00,000", "Platforms": "Android & iOS", "Pricing": "Based on features", "UI / UX Design": "Included", "Timeline": "Quoted per project", "Support": "Post-launch support" }
   },
   {
-    id: 17, name: "Graphic Designing", price: 10000, priceNote: "– Rs. 15,000",
+    id: 17, name: "Graphic Designing", price: 10000, priceNote: "to Rs. 15,000",
     category: "Digital Services", subcategory: "Digital Services", isService: true,
     image: "https://images.unsplash.com/photo-1558655146-9f40138edfeb?w=400&h=400&fit=crop&auto=format",
     images: [
@@ -256,19 +332,15 @@ const PRODUCTS: Product[] = [
       "https://images.unsplash.com/photo-1626785774625-ddcddc3445e9?w=600&h=600&fit=crop&auto=format",
     ],
     rating: 5, reviews: 0, inStock: true,
-    description: "Eye-catching graphic design for your brand — logos, social media posts, banners, flyers, and a complete visual identity. Pricing depends on the scope, from Rs. 10,000 to Rs. 15,000. Share your requirements on WhatsApp for a final quote.",
-    specs: { "Price Range": "Rs. 10,000 – 15,000", "Includes": "Logos, Posts, Banners", "Formats": "PNG, JPG, PDF + Source", "Revisions": "Included", "Delivery Time": "3–7 days", "Pricing": "Based on scope" }
+    description: "Striking graphic design for your brand, including logos, social media posts, banners, flyers, and a complete visual identity. Pricing depends on the scope, from Rs. 10,000 to Rs. 15,000. Share your requirements on WhatsApp for a final quote.",
+    specs: { "Price Range": "Rs. 10,000 to 15,000", "Includes": "Logos, Posts, Banners", "Formats": "PNG, JPG, PDF + Source", "Revisions": "Included", "Delivery Time": "3 to 7 days", "Pricing": "Based on scope" }
   },
 ];
 
-const REVIEWS = [
-  { id: 1, name: "Abis Faheem", city: "Karachi", rating: 5, text: "The Losse Pro 2 earbuds sound absolutely incredible — crisp highs, deep bass, and the battery lasts all day. Premium packaging too. Best purchase from Ahmad Mart!", product: "Losse Pro 2 Earbuds", avatar: "AF" },
-  { id: 2, name: "Muzamil Ajmal", city: "Lahore", rating: 5, text: "Fast delivery and exactly what I expected. The quality is genuinely impressive and the whole ordering process was smooth. Will definitely shop from Ahmad Mart again!", product: "", avatar: "MA" },
-  { id: 3, name: "Faizan Ali", city: "Islamabad", rating: 5, text: "Top-notch quality and the packaging was neat and professional. The team replied instantly on WhatsApp and sorted everything out. Highly recommended!", product: "", avatar: "FA" },
-  { id: 4, name: "Usama Maher", city: "Faisalabad", rating: 4, text: "Great value for money. My order arrived right on time and in perfect condition. I've been a happy customer for months now.", product: "", avatar: "UM" },
-  { id: 5, name: "Hafsa Chaudhry", city: "Multan", rating: 5, text: "Excellent service from start to finish. The team is super responsive and everything I've ordered feels premium. Couldn't be happier!", product: "", avatar: "HC" },
-  { id: 6, name: "Farooq Alamdar", city: "Rawalpindi", rating: 5, text: "A reliable store with honest pricing. My order was confirmed quickly on WhatsApp and delivered fast. Trustworthy and professional!", product: "", avatar: "FA" },
-];
+// Demo testimonials are emptied until the store is live — real reviews come from
+// customers via the review form on each product page. Refill this array to show
+// curated testimonials later.
+const REVIEWS: { id: number; name: string; city: string; rating: number; text: string; product: string; avatar: string }[] = [];
 
 const CATEGORIES = [
   { name: "Earbuds", icon: Headphones, subcategory: "Earbuds", color: "#1E40AF", bg: "#EFF6FF" },
@@ -330,6 +402,11 @@ const serviceWhatsAppUrl = (p: Product) => {
   const text = `Hi Ahmad Mart 👋, I'm interested in your *${p.name}* service (${price}). Please share the final price, payment details, and next steps.`;
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 };
+
+// ─── Delivery & promo ─────────────────────────────────────────────────────────
+const DELIVERY_FEE = 230;           // flat delivery charge per order
+const PROMO_CODE = "DELIVERY100";   // promo code that waives Rs. 100 off delivery
+const PROMO_WAIVER = 100;
 
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
@@ -398,7 +475,7 @@ function ProductCardBase({ product }: { product: Product }) {
       <div className="p-4">
         <p className="text-xs text-[#F97316] font-semibold mb-1">{product.subcategory}</p>
         <h3 className="font-semibold text-[#111827] text-sm leading-snug mb-2 line-clamp-2 group-hover:text-[#1E40AF] transition-colors">{product.name}</h3>
-        {!product.isService && (
+        {!product.isService && product.reviews > 0 && (
           <div className="flex items-center gap-2 mb-3">
             <Stars rating={product.rating} />
             <span className="text-xs text-gray-400">({product.reviews})</span>
@@ -474,20 +551,6 @@ function Navbar() {
     <>
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "shadow-lg" : ""}`}
         style={{ background: scrolled ? "rgba(255,255,255,0.97)" : "#fff", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(30,64,175,0.08)" }}>
-        {/* Top bar — continuously scrolling announcement */}
-        <div className="bg-[#1E40AF] text-white text-xs py-1.5 overflow-hidden">
-          <div className="flex w-max animate-marquee">
-            {[0, 1].map(group => (
-              <div key={group} className="flex shrink-0" aria-hidden={group === 1}>
-                {[0, 1, 2, 3].map(i => (
-                  <span key={i} className="px-8 font-medium whitespace-nowrap">
-                    🚚 Free delivery on orders above Rs. 2,000 | Easy JazzCash Payment Across Pakistan
-                  </span>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -577,7 +640,7 @@ function Navbar() {
           </div>
         )}
       </nav>
-      <div className="h-[calc(64px+28px)]" />
+      <div className="h-16" />
     </>
   );
 }
@@ -720,7 +783,7 @@ function HomePage() {
     },
     {
       title: "Premium Earbuds Starting at Rs. 1,799",
-      sub: "Crystal clear sound with 30-hour battery life. ANC technology included.",
+      sub: "Crystal clear sound with 30 hours of battery life. ANC technology included.",
       cta: "Explore Earbuds", link: "/shop?sub=Earbuds",
       bg: "from-[#1E40AF] to-[#3730a3]",
       img: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&h=400&fit=crop&auto=format",
@@ -797,6 +860,16 @@ function HomePage() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Promo strip */}
+        <div className="mb-12 rounded-2xl px-5 py-4 flex items-center justify-center gap-3 text-center flex-wrap"
+          style={{ background: "linear-gradient(135deg, #1E40AF, #1e3a8a)", boxShadow: "0 4px 16px rgba(30,64,175,0.18)" }}>
+          <Truck size={20} className="text-[#F97316] flex-shrink-0" />
+          <p className="text-white text-sm sm:text-base font-bold">
+            Get <span className="text-[#F97316]">Rs. 100 off</span> on delivery by using promo code{" "}
+            <span className="font-black tracking-wide bg-white/15 px-2 py-0.5 rounded-md whitespace-nowrap">{PROMO_CODE}</span> at checkout
+          </p>
+        </div>
+
         {/* Categories */}
         <section className="mb-14">
           <SectionHeader title="Shop by Category" subtitle="Find exactly what you need" />
@@ -909,12 +982,12 @@ function HomePage() {
           <SectionHeader title="Why Choose Ahmad Mart?" subtitle="We put our customers first, always." />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { icon: Award, title: "Premium Quality", desc: "Every product is quality-checked and sourced from verified suppliers.", color: "#1E40AF" },
+              { icon: Award, title: "Premium Quality", desc: "Every product is checked for quality and sourced from verified suppliers.", color: "#1E40AF" },
               { icon: TrendingUp, title: "Best Prices", desc: "We offer the most competitive prices in Pakistan with no hidden charges.", color: "#F97316" },
-              { icon: Truck, title: "Nationwide Delivery", desc: "Fast, reliable delivery to all cities across Pakistan. Cash on Delivery is available in Multan only — Multan orders can pay by COD or JazzCash, both ways.", color: "#059669" },
-              { icon: Shield, title: "Secure Shopping", desc: "Your data and payments are completely safe with end-to-end encryption.", color: "#7C3AED" },
-              { icon: RotateCcw, title: "Easy Returns", desc: "Not satisfied? Return within 7 days for a hassle-free refund.", color: "#DC2626" },
-              { icon: Headphones, title: "24/7 Support", desc: "Our team is always here to help — reach us anytime on WhatsApp.", color: "#B45309" },
+              { icon: Truck, title: "Nationwide Delivery", desc: "Fast, reliable delivery to all cities across Pakistan. Cash on Delivery is available in Multan only, and Multan orders can pay by COD or JazzCash.", color: "#059669" },
+              { icon: Shield, title: "Secure Shopping", desc: "Your data and payments are completely safe with strong encryption.", color: "#7C3AED" },
+              { icon: RotateCcw, title: "Easy Returns", desc: "Not satisfied? Return within 7 days for an easy, no fuss refund.", color: "#DC2626" },
+              { icon: Headphones, title: "24/7 Support", desc: "Our team is always here to help. Reach us anytime on WhatsApp.", color: "#B45309" },
             ].map(({ icon: Icon, title, desc, color }) => (
               <div key={title} className="bg-white rounded-2xl p-6 hover:-translate-y-1 transition-transform duration-200"
                 style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08)" }}>
@@ -930,6 +1003,7 @@ function HomePage() {
         </section>
 
         {/* Reviews */}
+        {REVIEWS.length > 0 && (
         <section className="mb-14">
           <SectionHeader title="What Our Customers Say" subtitle="Real reviews from real customers across Pakistan" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -953,6 +1027,7 @@ function HomePage() {
             ))}
           </div>
         </section>
+        )}
 
       </div>
     </div>
@@ -1094,6 +1169,142 @@ function ShopPage() {
   );
 }
 
+// ─── Customer Reviews (write + display, with optional product photo) ──────────
+function ReviewSection({ productId }: { productId: number }) {
+  const [reviews, setReviews] = useState<UserReview[]>(() => getProductReviews(productId));
+  const [name, setName] = useState("");
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [text, setText] = useState("");
+  const [imageData, setImageData] = useState("");
+  const [imageName, setImageName] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => { setReviews(getProductReviews(productId)); }, [productId]);
+
+  const pickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    const v = validateProofFile(file);
+    if (v) { setErr(v); return; }
+    try {
+      const data = await fileToCompressedDataURL(file);
+      setImageData(data); setImageName(file.name); setErr("");
+    } catch {
+      setErr("Could not read that image. Please try another photo.");
+    }
+  };
+
+  const submit = async () => {
+    if (!name.trim()) { setErr("Please enter your name."); return; }
+    if (!rating) { setErr("Please tap the stars to rate this product."); return; }
+    if (text.trim().length < 4) { setErr("Please write a few words about the product."); return; }
+    setBusy(true);
+    const review: UserReview = {
+      id: newReviewId(),
+      productId,
+      name: name.trim(),
+      rating,
+      text: text.trim(),
+      image: imageData || undefined,
+      createdAt: Date.now(),
+    };
+    const ok = saveReview(review);
+    setBusy(false);
+    if (!ok) { setErr("Could not save your review. The photo may be too large — try a smaller one."); return; }
+    setReviews(getProductReviews(productId));
+    setName(""); setRating(0); setText(""); setImageData(""); setImageName(""); setErr("");
+    setDone(true);
+    setTimeout(() => setDone(false), 3000);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Write a review */}
+      <div className="rounded-2xl border border-gray-100 bg-[#F8F9FB] p-5">
+        <h4 className="font-bold text-[#111827] mb-4">Write a Review</h4>
+        {done && (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2 text-sm text-emerald-700 font-semibold">
+            <CheckCircle size={16} /> Thanks for your review! It's now live below.
+          </div>
+        )}
+        <div className="space-y-3">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-white">
+              <span className="text-sm text-[#6b7280] mr-1">Your rating:</span>
+              {[1, 2, 3, 4, 5].map(s => (
+                <button key={s} type="button"
+                  onMouseEnter={() => setHover(s)} onMouseLeave={() => setHover(0)}
+                  onClick={() => setRating(s)} className="transition-transform active:scale-90" aria-label={`${s} star`}>
+                  <Star size={20} className={(hover || rating) >= s ? "fill-[#F59E0B] text-[#F59E0B]" : "text-gray-300"} />
+                </button>
+              ))}
+            </div>
+          </div>
+          <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
+            placeholder="Share your experience with this product..."
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF] resize-none" />
+
+          {/* Photo of received product */}
+          {imageData ? (
+            <div className="flex items-center gap-3">
+              <img src={imageData} alt="Your product" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#111827] truncate max-w-[180px]">{imageName}</p>
+                <button onClick={() => { setImageData(""); setImageName(""); }}
+                  className="text-xs font-semibold text-red-500 hover:text-red-600">Remove photo</button>
+              </div>
+            </div>
+          ) : (
+            <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-gray-300 bg-white text-sm font-semibold text-[#374151] cursor-pointer hover:border-[#1E40AF] transition-colors">
+              <ZoomIn size={15} className="text-[#1E40AF]" /> Add a photo of your product (optional)
+              <input type="file" accept="image/jpeg,image/png" onChange={pickImage} className="hidden" />
+            </label>
+          )}
+
+          {err && <p className="text-xs text-red-500 font-semibold">{err}</p>}
+          <button onClick={submit} disabled={busy}
+            className="px-6 py-3 rounded-xl bg-[#1E40AF] text-white font-bold text-sm hover:bg-[#1e3a8a] transition-all active:scale-95 disabled:opacity-60"
+            style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.3)" }}>
+            {busy ? "Posting..." : "Submit Review"}
+          </button>
+        </div>
+      </div>
+
+      {/* Customer reviews */}
+      {reviews.length > 0 && (
+        <div className="space-y-4">
+          <p className="font-bold text-[#111827] text-sm">Customer Reviews ({reviews.length})</p>
+          {reviews.map(r => (
+            <div key={r.id} className="flex gap-4 p-4 bg-white rounded-xl border border-gray-100">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-xs flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, #1E40AF, #F97316)" }}>
+                {r.name.trim().slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="font-bold text-[#111827] text-sm">{r.name}</span>
+                  <Stars rating={r.rating} size={11} />
+                  <span className="text-xs text-[#6b7280]">{new Date(r.createdAt).toLocaleDateString()}</span>
+                </div>
+                <p className="text-[#374151] text-sm">"{r.text}"</p>
+                {r.image && (
+                  <img src={r.image} alt="Customer product" className="mt-2 w-24 h-24 rounded-xl object-cover border border-gray-200" />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Product Detail Page ──────────────────────────────────────────────────────
 function ProductDetailPage() {
   const { id } = useParams();
@@ -1178,8 +1389,8 @@ function ProductDetailPage() {
           <h1 className="text-2xl sm:text-3xl font-black text-[#111827] mb-3 leading-tight">{product.name}</h1>
 
           <div className="flex items-center gap-3 mb-4">
-            {!product.isService && <Stars rating={product.rating} size={16} />}
-            {!product.isService && <span className="text-sm text-[#6b7280]">({product.reviews} reviews)</span>}
+            {!product.isService && product.reviews > 0 && <Stars rating={product.rating} size={16} />}
+            {!product.isService && product.reviews > 0 && <span className="text-sm text-[#6b7280]">({product.reviews} reviews)</span>}
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${product.inStock ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
               {product.inStock ? (product.isService ? "Available" : "In Stock") : "Out of Stock"}
             </span>
@@ -1260,8 +1471,8 @@ function ProductDetailPage() {
                   { icon: CheckCircle, text: "Pay on WhatsApp" },
                 ]
               : [
-                  { icon: Truck, text: "Free Delivery" },
-                  { icon: RotateCcw, text: "7-Day Return" },
+                  { icon: Truck, text: "Fast Delivery" },
+                  { icon: RotateCcw, text: "7 Day Return" },
                   { icon: Shield, text: "Secure Pay" },
                 ]
             ).map(({ icon: Icon, text }) => (
@@ -1278,7 +1489,7 @@ function ProductDetailPage() {
       <div className="bg-white rounded-2xl mb-10" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
         <div className="flex border-b border-gray-100">
           {(["desc", "specs", "reviews"] as const).filter(t => !(product.isService && t === "reviews")).map(t => {
-            const labels = { desc: "Description", specs: "Specifications", reviews: `Reviews (${product.reviews})` };
+            const labels = { desc: "Description", specs: "Specifications", reviews: `Reviews (${product.reviews + getProductReviews(product.id).length})` };
             return (
               <button key={t} onClick={() => setTab(t)}
                 className={`flex-1 py-4 text-sm font-bold transition-colors relative ${tab === t ? "text-[#1E40AF]" : "text-[#6b7280] hover:text-[#374151]"}`}>
@@ -1301,23 +1512,29 @@ function ProductDetailPage() {
             </div>
           )}
           {tab === "reviews" && (
-            <div className="space-y-4">
-              {REVIEWS.slice(0, 3).map(r => (
-                <div key={r.id} className="flex gap-4 p-4 bg-[#F8F9FB] rounded-xl">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-xs flex-shrink-0"
-                    style={{ background: "linear-gradient(135deg, #1E40AF, #F97316)" }}>
-                    {r.avatar}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-bold text-[#111827] text-sm">{r.name}</span>
-                      <span className="text-xs text-[#6b7280]">— {r.city}</span>
-                      <Stars rating={r.rating} size={11} />
+            <div className="space-y-6">
+              <ReviewSection productId={product.id} />
+              {REVIEWS.length > 0 && (
+              <div className="space-y-4">
+                <p className="text-xs font-bold text-[#6b7280] uppercase tracking-wide">More customer feedback</p>
+                {REVIEWS.slice(0, 3).map(r => (
+                  <div key={r.id} className="flex gap-4 p-4 bg-[#F8F9FB] rounded-xl">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-xs flex-shrink-0"
+                      style={{ background: "linear-gradient(135deg, #1E40AF, #F97316)" }}>
+                      {r.avatar}
                     </div>
-                    <p className="text-[#374151] text-sm">"{r.text}"</p>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-[#111827] text-sm">{r.name}</span>
+                        <span className="text-xs text-[#6b7280]">from {r.city}</span>
+                        <Stars rating={r.rating} size={11} />
+                      </div>
+                      <p className="text-[#374151] text-sm">"{r.text}"</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              )}
             </div>
           )}
         </div>
@@ -1341,24 +1558,30 @@ function CartPage() {
   const { cart, removeFromCart, updateQty, cartTotal } = useContext(Store);
   const [coupon, setCoupon] = useState("");
   const [discount_applied, setDiscountApplied] = useState(0);
+  const [deliveryWaiver, setDeliveryWaiver] = useState(0);
   const [couponMsg, setCouponMsg] = useState("");
   const navigate = useNavigate();
 
   const applyCoupon = () => {
-    if (coupon.toUpperCase() === "AHMADMART20") {
-      setDiscountApplied(Math.round(cartTotal * 0.2));
+    const code = coupon.toUpperCase();
+    if (code === "AHMADMART20") {
+      setDiscountApplied(Math.round(cartTotal * 0.2)); setDeliveryWaiver(0);
       setCouponMsg("20% discount applied!");
-    } else if (coupon.toUpperCase() === "SAVE10") {
-      setDiscountApplied(Math.round(cartTotal * 0.1));
+    } else if (code === "SAVE10") {
+      setDiscountApplied(Math.round(cartTotal * 0.1)); setDeliveryWaiver(0);
       setCouponMsg("10% discount applied!");
+    } else if (code === PROMO_CODE) {
+      setDeliveryWaiver(PROMO_WAIVER); setDiscountApplied(0);
+      setCouponMsg("Rs. 100 off delivery applied!");
     } else {
-      setDiscountApplied(0);
+      setDiscountApplied(0); setDeliveryWaiver(0);
       setCouponMsg("Invalid coupon code");
     }
   };
 
-  const shipping = cartTotal >= 2000 ? 0 : 200;
-  const final = cartTotal - discount_applied + shipping;
+  const shipping = DELIVERY_FEE;
+  const shippingAfter = Math.max(0, shipping - deliveryWaiver);
+  const final = cartTotal - discount_applied + shippingAfter;
 
   if (cart.length === 0) return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
@@ -1418,10 +1641,10 @@ function CartPage() {
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Subtotal</span><span className="font-semibold">{fmt(cartTotal)}</span></div>
               {discount_applied > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Discount</span><span>-{fmt(discount_applied)}</span></div>}
               <div className="flex justify-between text-sm">
-                <span className="text-[#6b7280]">Shipping</span>
-                <span className={shipping === 0 ? "text-emerald-600 font-semibold" : "font-semibold"}>{shipping === 0 ? "Free" : fmt(shipping)}</span>
+                <span className="text-[#6b7280]">Delivery</span>
+                <span className="font-semibold">{fmt(shipping)}</span>
               </div>
-              {shipping > 0 && <p className="text-xs text-[#6b7280]">Add Rs. {fmt(2000 - cartTotal)} more for free shipping</p>}
+              {deliveryWaiver > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Promo ({PROMO_CODE})</span><span>-{fmt(Math.min(deliveryWaiver, shipping))}</span></div>}
               <div className="border-t border-gray-100 pt-3 flex justify-between font-black text-[#111827]">
                 <span>Total</span><span className="text-[#1E40AF] text-lg">{fmt(final)}</span>
               </div>
@@ -1439,7 +1662,7 @@ function CartPage() {
                 </button>
               </div>
               {couponMsg && <p className={`text-xs mt-1.5 font-semibold ${couponMsg.includes("applied") ? "text-emerald-600" : "text-red-500"}`}>{couponMsg}</p>}
-              <p className="text-xs text-[#6b7280] mt-1">Try: AHMADMART20 or SAVE10</p>
+              <p className="text-xs text-[#6b7280] mt-1">Try: DELIVERY100 (Rs. 100 off delivery), AHMADMART20 or SAVE10</p>
             </div>
 
             <button onClick={() => navigate("/checkout")}
@@ -1469,9 +1692,23 @@ function CheckoutPage() {
   const [orderId] = useState(newOrderId());
   const [payment, setPayment] = useState<"jazzcash" | "cod">("jazzcash");
   const isCOD = payment === "cod";
+  const [promo, setPromo] = useState("");
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoMsg, setPromoMsg] = useState("");
 
-  const shipping = cartTotal >= 2000 ? 0 : 200;
-  const total = cartTotal + shipping;
+  const shipping = DELIVERY_FEE;
+  const deliveryWaiver = promoApplied ? Math.min(PROMO_WAIVER, shipping) : 0;
+  const total = cartTotal + shipping - deliveryWaiver;
+
+  const applyPromo = () => {
+    if (promo.trim().toUpperCase() === PROMO_CODE) {
+      setPromoApplied(true);
+      setPromoMsg("Rs. 100 off delivery applied!");
+    } else {
+      setPromoApplied(false);
+      setPromoMsg("Invalid promo code");
+    }
+  };
 
   const copy = (text: string, key: string) => {
     navigator.clipboard?.writeText(text).catch(() => {});
@@ -1505,6 +1742,8 @@ function CheckoutPage() {
       items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
       subtotal: cartTotal,
       shipping,
+      discount: deliveryWaiver || undefined,
+      promoCode: promoApplied ? PROMO_CODE : undefined,
       total,
       paymentMethod: isCOD ? "Cash on Delivery" : "JazzCash (Manual)",
       status: "Pending Verification", // never auto-paid — payment/order is verified on WhatsApp
@@ -1530,6 +1769,7 @@ function CheckoutPage() {
           <p className="text-xs text-[#6b7280] mb-1">Order ID</p>
           <p className="font-black text-[#1E40AF] text-lg">#{placedOrder.id}</p>
           <div className="mt-3 space-y-1 text-sm">
+            {placedOrder.discount ? <div className="flex justify-between"><span className="text-[#6b7280]">Delivery ({placedOrder.promoCode}):</span><span className="font-semibold text-emerald-600">-{fmt(placedOrder.discount)}</span></div> : null}
             <div className="flex justify-between"><span className="text-[#6b7280]">{isCashOnDelivery(placedOrder) ? "Amount Due (COD):" : "Amount Paid:"}</span><span className="font-black text-[#1E40AF]">{fmt(placedOrder.total)}</span></div>
             <div className="flex justify-between"><span className="text-[#6b7280]">Payment:</span><span className="font-semibold">{placedOrder.paymentMethod}</span></div>
             <div className="flex justify-between"><span className="text-[#6b7280]">Status:</span><span className="font-semibold text-amber-600">Pending Verification</span></div>
@@ -1782,11 +2022,25 @@ function CheckoutPage() {
                 </div>
               ))}
             </div>
-            <div className="border-t border-gray-100 pt-4 space-y-2 mb-5">
+            {/* Promo code */}
+            <div className="border-t border-gray-100 pt-4 mb-4">
+              <div className="flex gap-2">
+                <input value={promo} onChange={e => { setPromo(e.target.value); setPromoApplied(false); setPromoMsg(""); }}
+                  placeholder="Promo code (e.g. DELIVERY100)"
+                  className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1E40AF] bg-gray-50" />
+                <button onClick={applyPromo}
+                  className="px-4 py-2 rounded-xl bg-gray-100 text-[#374151] text-sm font-bold hover:bg-gray-200 transition-colors flex items-center gap-1.5">
+                  <Tag size={14} /> Apply
+                </button>
+              </div>
+              {promoMsg && <p className={`text-xs mt-1.5 font-semibold ${promoApplied ? "text-emerald-600" : "text-red-500"}`}>{promoMsg}</p>}
+            </div>
+            <div className="space-y-2 mb-5">
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Subtotal</span><span className="font-semibold">{fmt(cartTotal)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Shipping</span><span className={shipping === 0 ? "text-emerald-600 font-semibold" : "font-semibold"}>{shipping === 0 ? "Free" : fmt(shipping)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Delivery</span><span className="font-semibold">{fmt(shipping)}</span></div>
+              {deliveryWaiver > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Promo ({PROMO_CODE})</span><span>-{fmt(deliveryWaiver)}</span></div>}
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Payment</span><span className="font-semibold">{isCOD ? "Cash on Delivery" : "JazzCash"}</span></div>
-              <div className="flex justify-between font-black text-[#111827] text-base"><span>{isCOD ? "Due on Delivery" : "Total"}</span><span className="text-[#1E40AF]">{fmt(total)}</span></div>
+              <div className="flex justify-between font-black text-[#111827] text-base border-t border-gray-100 pt-2"><span>{isCOD ? "Due on Delivery" : "Total"}</span><span className="text-[#1E40AF]">{fmt(total)}</span></div>
             </div>
             <button onClick={handleSubmit}
               className="w-full py-3.5 rounded-xl text-white font-black text-sm transition-transform active:scale-95 flex items-center justify-center gap-2"
