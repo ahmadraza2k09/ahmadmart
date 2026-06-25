@@ -1,7 +1,7 @@
 
-  # Build e-commerce website
+  # Ahmad Mart
 
-  This is a code bundle for Build e-commerce website. The original project is available at https://www.figma.com/design/ZK7mpraTU8D5QlHXzQChdk/Build-e-commerce-website.
+  This is a code bundle for Ahmad Mart. The original project is available at https://www.figma.com/design/ZK7mpraTU8D5QlHXzQChdk/Build-e-commerce-website.
 
   ## Running the code
 

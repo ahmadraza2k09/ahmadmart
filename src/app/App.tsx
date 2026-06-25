@@ -1,12 +1,12 @@
-import { useState, useEffect, useContext, createContext } from "react";
+import { useState, useEffect, useContext, createContext, useCallback, useMemo, memo } from "react";
 import { BrowserRouter, Routes, Route, Link, useNavigate, useParams, useLocation } from "react-router-dom";
-import razaMartLogo from "@/imports/7cb9ae7d-dd2c-4f95-85cd-2a721e631acf.png";
+import ahmadMartLogo from "@/imports/ahmad-logo.png";
 import {
   ShoppingCart, Heart, Search, Menu, X, Star, ChevronRight, ChevronLeft,
   Package, Truck, Shield, Headphones, Clock, Zap, Filter, SlidersHorizontal,
   Plus, Minus, Trash2, Tag, MapPin, Phone, User, Eye, EyeOff,
   CheckCircle, ArrowRight, TrendingUp, Award, Gift,
-  Facebook, Instagram, Twitter, Youtube, Send, Smartphone,
+  Instagram, Mail, Send, Smartphone,
   Battery, Plug, Wifi, RotateCcw, ZoomIn
 } from "lucide-react";
 
@@ -191,7 +191,7 @@ const PRODUCTS: Product[] = [
 ];
 
 const REVIEWS = [
-  { id: 1, name: "Zainab Fatima", city: "Karachi", rating: 5, text: "Amazing quality! The earbuds sound incredible and the packaging was so professional. Will definitely order again from Raza Mart.", product: "Pro Elite Wireless Earbuds", avatar: "ZF" },
+  { id: 1, name: "Zainab Fatima", city: "Karachi", rating: 5, text: "Amazing quality! The earbuds sound incredible and the packaging was so professional. Will definitely order again from Ahmad Mart.", product: "Pro Elite Wireless Earbuds", avatar: "ZF" },
   { id: 2, name: "Muhammad Ali", city: "Lahore", rating: 5, text: "Fast delivery and the power bank is exactly as described. 20000mAh lasts me 3 full phone charges. Great value for money!", product: "20000mAh Power Bank Pro", avatar: "MA" },
   { id: 3, name: "Ayesha Khan", city: "Islamabad", rating: 5, text: "The wall clock is absolutely gorgeous! It looks so expensive but was very affordable. My living room looks amazing now.", product: "Luxury Silent Wall Clock", avatar: "AK" },
   { id: 4, name: "Hassan Raza", city: "Faisalabad", rating: 4, text: "Good quality cable, very durable. Been using it for 3 months with no issues. The braiding feels premium and strong.", product: "Braided USB-C Cable", avatar: "HR" },
@@ -216,35 +216,37 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
 
-  const addToCart = (p: Product, qty = 1) => {
+  const addToCart = useCallback((p: Product, qty = 1) => {
     setCart(prev => {
       const ex = prev.find(i => i.id === p.id);
       if (ex) return prev.map(i => i.id === p.id ? { ...i, qty: i.qty + qty } : i);
       return [...prev, { ...p, qty }];
     });
-  };
-  const removeFromCart = (id: number) => setCart(prev => prev.filter(i => i.id !== id));
-  const updateQty = (id: number, qty: number) => {
+  }, []);
+  const removeFromCart = useCallback((id: number) => setCart(prev => prev.filter(i => i.id !== id)), []);
+  const updateQty = useCallback((id: number, qty: number) => {
     if (qty < 1) return removeFromCart(id);
     setCart(prev => prev.map(i => i.id === id ? { ...i, qty } : i));
-  };
-  const toggleWishlist = (p: Product) => {
+  }, [removeFromCart]);
+  const toggleWishlist = useCallback((p: Product) => {
     setWishlist(prev => prev.find(i => i.id === p.id) ? prev.filter(i => i.id !== p.id) : [...prev, p]);
-  };
-  const inWishlist = (id: number) => wishlist.some(i => i.id === id);
-  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
-  const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const login = (name: string, email: string) => setUser({ name, email });
-  const logout = () => setUser(null);
-  const addRecentlyViewed = (p: Product) => {
+  }, []);
+  const inWishlist = useCallback((id: number) => wishlist.some(i => i.id === id), [wishlist]);
+  const cartCount = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart]);
+  const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.price * i.qty, 0), [cart]);
+  const login = useCallback((name: string, email: string) => setUser({ name, email }), []);
+  const logout = useCallback(() => setUser(null), []);
+  const addRecentlyViewed = useCallback((p: Product) => {
     setRecentlyViewed(prev => [p, ...prev.filter(i => i.id !== p.id)].slice(0, 6));
-  };
+  }, []);
 
-  return (
-    <Store.Provider value={{ cart, wishlist, addToCart, removeFromCart, updateQty, toggleWishlist, inWishlist, cartCount, cartTotal, user, login, logout, recentlyViewed, addRecentlyViewed }}>
-      {children}
-    </Store.Provider>
-  );
+  const value = useMemo(() => ({
+    cart, wishlist, addToCart, removeFromCart, updateQty, toggleWishlist, inWishlist,
+    cartCount, cartTotal, user, login, logout, recentlyViewed, addRecentlyViewed,
+  }), [cart, wishlist, addToCart, removeFromCart, updateQty, toggleWishlist, inWishlist,
+    cartCount, cartTotal, user, login, logout, recentlyViewed, addRecentlyViewed]);
+
+  return <Store.Provider value={value}>{children}</Store.Provider>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -272,7 +274,7 @@ function Badge({ type }: { type: "new" | "sale" | "bestseller" }) {
 }
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-function ProductCard({ product }: { product: Product }) {
+function ProductCardBase({ product }: { product: Product }) {
   const { addToCart, toggleWishlist, inWishlist } = useContext(Store);
   const navigate = useNavigate();
   const [adding, setAdding] = useState(false);
@@ -294,6 +296,8 @@ function ProductCard({ product }: { product: Product }) {
         <img
           src={product.image}
           alt={product.name}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop"; }}
         />
@@ -339,6 +343,8 @@ function ProductCard({ product }: { product: Product }) {
   );
 }
 
+const ProductCard = memo(ProductCardBase);
+
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 function Navbar() {
   const { cartCount, user } = useContext(Store);
@@ -351,7 +357,7 @@ function Navbar() {
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", fn);
+    window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
@@ -381,9 +387,9 @@ function Navbar() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-              <img src={razaMartLogo} alt="Raza Mart" className="h-10 w-10 object-contain" />
+              <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-10 w-10 object-contain" />
               <div className="hidden sm:block">
-                <span className="text-xl font-black text-[#1E40AF] tracking-tight">Raza</span>
+                <span className="text-xl font-black text-[#1E40AF] tracking-tight">Ahmad</span>
                 <span className="text-xl font-black text-[#F97316] tracking-tight">Mart</span>
               </div>
             </Link>
@@ -492,7 +498,7 @@ function Footer() {
               <input
                 type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="flex-1 md:w-64 px-4 py-2.5 rounded-xl text-sm text-gray-900 outline-none"
+                className="flex-1 md:w-64 px-4 py-2.5 rounded-xl text-sm text-gray-900 bg-white border border-white placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#F97316]"
               />
               <button type="submit" className="px-5 py-2.5 rounded-xl bg-[#F97316] text-white text-sm font-semibold hover:bg-orange-500 transition-colors flex items-center gap-2">
                 <Send size={14} /> Subscribe
@@ -506,19 +512,22 @@ function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <img src={razaMartLogo} alt="Raza Mart" className="h-10 w-10 object-contain" />
+              <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-10 w-10 object-contain" />
               <div>
-                <span className="text-xl font-black text-white">Raza</span>
+                <span className="text-xl font-black text-white">Ahmad</span>
                 <span className="text-xl font-black text-[#F97316]">Mart</span>
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">Pakistan's trusted online store for premium mobile accessories and beautiful home décor at affordable prices.</p>
-            <div className="flex gap-3 mt-4">
-              {[Facebook, Instagram, Twitter, Youtube].map((Icon, i) => (
-                <a key={i} href="#" className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-[#F97316] transition-colors">
-                  <Icon size={15} />
-                </a>
-              ))}
+            <div className="mt-4">
+              <a
+                href="https://www.instagram.com/ahmadmart.store"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-[#F97316] transition-colors text-sm font-semibold text-white"
+              >
+                <Instagram size={18} /> Follow us on Instagram
+              </a>
             </div>
           </div>
 
@@ -547,19 +556,23 @@ function Footer() {
                 <li key={l}><a href="#" className="text-gray-400 text-sm hover:text-[#F97316] transition-colors">{l}</a></li>
               ))}
             </ul>
-            <div className="flex items-center gap-2 text-sm text-gray-400">
+            <a href="tel:+923405463601" className="flex items-center gap-2 text-sm text-gray-400 hover:text-[#F97316] transition-colors">
               <Phone size={14} className="text-[#F97316]" />
-              <span>+92 300 1234567</span>
-            </div>
+              <span>+92 340 5463601</span>
+            </a>
+            <a href="mailto:tryahmadmart.store@gmail.com" className="flex items-center gap-2 text-sm text-gray-400 hover:text-[#F97316] transition-colors mt-1 break-all">
+              <Mail size={14} className="text-[#F97316] flex-shrink-0" />
+              <span>tryahmadmart.store@gmail.com</span>
+            </a>
             <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
               <MapPin size={14} className="text-[#F97316]" />
-              <span>Karachi, Pakistan</span>
+              <span>Multan, Pakistan</span>
             </div>
           </div>
         </div>
 
         <div className="border-t border-white/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-gray-500 text-sm">© 2025 Raza Mart. All rights reserved.</p>
+          <p className="text-gray-500 text-sm">© 2025 Ahmad Mart. All rights reserved.</p>
           <div className="flex gap-2 items-center">
             <span className="text-gray-500 text-xs">We accept:</span>
             <div className="flex gap-2">
@@ -635,9 +648,6 @@ function HomePage() {
           <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${i === activeSlide ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className={`w-full h-full bg-gradient-to-r ${slide.bg} flex flex-col lg:flex-row items-center min-h-[340px] sm:min-h-[420px]`}>
               <div className="flex-1 px-8 sm:px-12 py-10 text-white z-10">
-                <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-semibold mb-4">
-                  <Zap size={12} /> Best Deals of the Season
-                </div>
                 <h1 className="text-2xl sm:text-4xl font-black leading-tight mb-4 max-w-md">{slide.title}</h1>
                 <p className="text-blue-100 text-sm sm:text-base mb-6 max-w-sm">{slide.sub}</p>
                 <div className="flex flex-wrap gap-3">
@@ -693,7 +703,7 @@ function HomePage() {
             <div key={title} className="bg-white rounded-2xl p-5 flex items-center gap-4 transition-all duration-200 hover:-translate-y-0.5"
               style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07), 0 1px 4px rgba(0,0,0,0.05)" }}>
               <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: `${color}18`, color }}>
+                style={{ background: color, color: "#fff" }}>
                 <Icon size={22} />
               </div>
               <div>
@@ -713,7 +723,7 @@ function HomePage() {
                 className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl text-center transition-all duration-200 hover:-translate-y-1 group"
                 style={{ boxShadow: "0 4px 14px rgba(30,64,175,0.07)" }}>
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110"
-                  style={{ background: cat.bg, color: cat.color }}>
+                  style={{ background: cat.color, color: "#fff" }}>
                   <cat.icon size={22} />
                 </div>
                 <span className="text-xs font-semibold text-[#111827] leading-tight">{cat.name}</span>
@@ -813,7 +823,7 @@ function HomePage() {
 
         {/* Why Choose Us */}
         <section className="mb-14">
-          <SectionHeader title="Why Choose Raza Mart?" subtitle="We put our customers first, always." />
+          <SectionHeader title="Why Choose Ahmad Mart?" subtitle="We put our customers first, always." />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
               { icon: Award, title: "Premium Quality", desc: "Every product is quality-checked and sourced from verified suppliers.", color: "#1E40AF" },
@@ -826,7 +836,7 @@ function HomePage() {
               <div key={title} className="bg-white rounded-2xl p-6 hover:-translate-y-1 transition-transform duration-200"
                 style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08)" }}>
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                  style={{ background: `${color}15`, color }}>
+                  style={{ background: color, color: "#fff" }}>
                   <Icon size={24} />
                 </div>
                 <h4 className="font-bold text-[#111827] mb-2">{title}</h4>
@@ -861,22 +871,6 @@ function HomePage() {
           </div>
         </section>
 
-        {/* Promo Banner */}
-        <section className="mb-14 rounded-2xl overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #1E40AF 0%, #1e3a8a 50%, #F97316 100%)", boxShadow: "0 8px 32px rgba(30,64,175,0.2)" }}>
-          <div className="p-8 sm:p-12 flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="text-white text-center sm:text-left">
-              <p className="text-sm font-semibold text-blue-200 mb-2">Limited Time Offer</p>
-              <h3 className="text-2xl sm:text-3xl font-black mb-2">Get 20% Off Your First Order</h3>
-              <p className="text-blue-100 text-sm">Use code <span className="font-black bg-white/20 px-2 py-0.5 rounded">RAZAMART20</span> at checkout</p>
-            </div>
-            <button onClick={() => navigate("/shop")}
-              className="flex-shrink-0 px-8 py-3.5 bg-white text-[#1E40AF] font-black rounded-xl hover:bg-gray-50 transition-colors text-sm"
-              style={{ boxShadow: "0 4px 16px rgba(0,0,0,0.15)" }}>
-              Shop Now & Save
-            </button>
-          </div>
-        </section>
       </div>
     </div>
   );
@@ -1238,7 +1232,7 @@ function CartPage() {
   const navigate = useNavigate();
 
   const applyCoupon = () => {
-    if (coupon.toUpperCase() === "RAZAMART20") {
+    if (coupon.toUpperCase() === "AHMADMART20") {
       setDiscountApplied(Math.round(cartTotal * 0.2));
       setCouponMsg("20% discount applied!");
     } else if (coupon.toUpperCase() === "SAVE10") {
@@ -1332,7 +1326,7 @@ function CartPage() {
                 </button>
               </div>
               {couponMsg && <p className={`text-xs mt-1.5 font-semibold ${couponMsg.includes("applied") ? "text-emerald-600" : "text-red-500"}`}>{couponMsg}</p>}
-              <p className="text-xs text-[#6b7280] mt-1">Try: RAZAMART20 or SAVE10</p>
+              <p className="text-xs text-[#6b7280] mt-1">Try: AHMADMART20 or SAVE10</p>
             </div>
 
             <button onClick={() => navigate("/checkout")}
@@ -1533,9 +1527,9 @@ function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-[#F8F9FB]">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src={razaMartLogo} alt="Raza Mart" className="h-16 w-16 mx-auto mb-3 object-contain" />
+          <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-16 w-16 mx-auto mb-3 object-contain" />
           <h1 className="text-2xl font-black text-[#111827]">Welcome Back</h1>
-          <p className="text-[#6b7280] text-sm mt-1">Sign in to your Raza Mart account</p>
+          <p className="text-[#6b7280] text-sm mt-1">Sign in to your Ahmad Mart account</p>
         </div>
         <div className="bg-white rounded-2xl p-8" style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.1)" }}>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -1601,9 +1595,9 @@ function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-[#F8F9FB]">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src={razaMartLogo} alt="Raza Mart" className="h-16 w-16 mx-auto mb-3 object-contain" />
+          <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-16 w-16 mx-auto mb-3 object-contain" />
           <h1 className="text-2xl font-black text-[#111827]">Create Account</h1>
-          <p className="text-[#6b7280] text-sm mt-1">Join Raza Mart for exclusive deals</p>
+          <p className="text-[#6b7280] text-sm mt-1">Join Ahmad Mart for exclusive deals</p>
         </div>
         <div className="bg-white rounded-2xl p-8" style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.1)" }}>
           <form onSubmit={handleRegister} className="space-y-4">
@@ -1745,7 +1739,7 @@ function AccountPage() {
                   { label: "Full Name", value: user.name },
                   { label: "Email Address", value: user.email },
                   { label: "Phone Number", value: "+92 300 1234567" },
-                  { label: "City", value: "Karachi, Pakistan" },
+                  { label: "City", value: "Multan, Pakistan" },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <label className="text-xs font-bold text-[#6b7280] uppercase tracking-wide mb-1 block">{label}</label>
@@ -1803,6 +1797,17 @@ function AccountPage() {
   );
 }
 
+// ─── Scroll To Top ────────────────────────────────────────────────────────────
+// Reset scroll position the moment the route changes so navigation feels instant
+// instead of landing the new page at the previous scroll offset.
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, [pathname]);
+  return null;
+}
+
 // ─── App Shell ────────────────────────────────────────────────────────────────
 function AppShell() {
   const location = useLocation();
@@ -1810,6 +1815,7 @@ function AppShell() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FB]" style={{ fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+      <ScrollToTop />
       {!isAuth && <Navbar />}
       <main>
         <Routes>
