@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, createContext, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useContext, createContext, useCallback, useMemo, memo, type CSSProperties } from "react";
 import { BrowserRouter, Routes, Route, Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import ahmadMartLogo from "@/imports/ahmad-logo.png";
 import {
@@ -494,13 +494,10 @@ function ProductCardBase({ product }: { product: Product }) {
       style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08), 0 1px 4px rgba(0,0,0,0.06)" }}
     >
       <div className="relative overflow-hidden bg-gray-50" style={{ aspectRatio: "1/1" }}>
-        <img
+        <ProductImage
           src={product.image}
           alt={product.name}
-          loading="lazy"
-          decoding="async"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop"; }}
         />
         <div className="absolute top-3 left-3 flex flex-col gap-1">
           {product.badge && <Badge type={product.badge} />}
@@ -732,7 +729,7 @@ function Navbar() {
                   ) : results.map(p => (
                     <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchOpen(false); setSearchQ(""); }}
                       className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#F8F9FB] transition-colors border-b border-gray-50 last:border-0">
-                      <img src={p.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50 flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                      <ProductImage src={p.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-[#111827] truncate">{p.name}</p>
                         <p className="text-xs text-[#6b7280] truncate">{p.subcategory}{p.sellerStore ? ` · ${p.sellerStore}` : ""}</p>
@@ -1027,10 +1024,9 @@ function HomePage() {
                 <div className="relative mx-auto" style={{ maxWidth: 380 }}>
                   <div className="absolute inset-4 rounded-full bg-white/15 blur-3xl" />
                   <div className="relative rounded-3xl bg-white/10 backdrop-blur-sm p-3 border border-white/15">
-                    <img src={slide.img} alt={slide.title}
+                    <ProductImage src={slide.img} alt={slide.title}
                       className="w-full h-48 sm:h-60 object-cover rounded-2xl"
                       style={{ boxShadow: "0 12px 36px rgba(0,0,0,0.25)" }}
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                   </div>
                   <div className="absolute -bottom-3 right-1 bg-white rounded-xl px-3 py-2 flex items-center gap-2" style={{ boxShadow: "0 10px 28px rgba(0,0,0,0.22)" }}>
@@ -1139,8 +1135,7 @@ function HomePage() {
                   <Link key={p.id} to={`/product/${p.id}`}
                     className="bg-white rounded-xl p-3 hover:-translate-y-0.5 transition-transform"
                     style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                    <img src={p.image} alt={p.name} className="w-full h-24 object-cover rounded-lg mb-2"
-                      onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=200&h=200&fit=crop"; }} />
+                    <ProductImage src={p.image} alt={p.name} className="w-full h-24 object-cover rounded-lg mb-2" />
                     <p className="text-xs font-semibold text-[#111827] line-clamp-2 mb-1">{p.name}</p>
                     <p className="text-xs font-bold text-[#1E40AF]">{fmt(p.price)}</p>
                   </Link>
@@ -1165,8 +1160,7 @@ function HomePage() {
                   <Link key={p.id} to={`/product/${p.id}`}
                     className="bg-white rounded-xl p-3 hover:-translate-y-0.5 transition-transform"
                     style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                    <img src={p.image} alt={p.name} className="w-full h-24 object-cover rounded-lg mb-2"
-                      onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?w=200&h=200&fit=crop"; }} />
+                    <ProductImage src={p.image} alt={p.name} className="w-full h-24 object-cover rounded-lg mb-2" />
                     <p className="text-xs font-semibold text-[#111827] line-clamp-2 mb-1">{p.name}</p>
                     <p className="text-xs font-bold text-[#B45309]">{fmt(p.price)}</p>
                   </Link>
@@ -1612,9 +1606,8 @@ function ProductDetailPage() {
         <div>
           <div className="bg-white rounded-2xl overflow-hidden mb-3 relative group"
             style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.1)", aspectRatio: "1/1" }}>
-            <img src={product.images[activeImg]} alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={e => { (e.target as HTMLImageElement).src = product.image; }} />
+            <ProductImage src={product.images[activeImg]} alt={product.name}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             {product.badge && (
               <div className="absolute top-4 left-4"><Badge type={product.badge} /></div>
             )}
@@ -1628,8 +1621,7 @@ function ProductDetailPage() {
               <button key={i} onClick={() => setActiveImg(i)}
                 className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${i === activeImg ? "border-[#1E40AF] scale-95" : "border-transparent"}`}
                 style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-                <img src={img} alt="" className="w-full h-full object-cover"
-                  onError={e => { (e.target as HTMLImageElement).src = product.image; }} />
+                <ProductImage src={img} alt="" className="w-full h-full object-cover" />
               </button>
             ))}
           </div>
@@ -1841,9 +1833,8 @@ function CartPage() {
           {cart.map(item => (
             <div key={item.id} className="bg-white rounded-2xl p-4 flex gap-4"
               style={{ boxShadow: "0 4px 14px rgba(30,64,175,0.07)" }}>
-              <img src={item.image} alt={item.name}
-                className="w-24 h-24 object-cover rounded-xl flex-shrink-0"
-                onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=100&h=100&fit=crop"; }} />
+              <ProductImage src={item.image} alt={item.name}
+                className="w-24 h-24 object-cover rounded-xl flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <Link to={`/product/${item.id}`} className="font-bold text-[#111827] text-sm hover:text-[#1E40AF] line-clamp-2">{item.name}</Link>
                 <p className="text-xs text-[#6b7280] mt-0.5">{item.subcategory}</p>
@@ -2292,8 +2283,7 @@ function CheckoutPage() {
                     <div className="space-y-2">
                       {g.items.map(item => (
                         <div key={item.id} className="flex gap-2 items-center">
-                          <img src={item.image} alt={item.name} className="w-9 h-9 object-cover rounded-lg flex-shrink-0"
-                            onError={e => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                          <ProductImage src={item.image} alt={item.name} className="w-9 h-9 object-cover rounded-lg flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold text-[#111827] line-clamp-1">{item.name}</p>
                             <p className="text-[11px] text-[#6b7280]">Qty: {item.qty}</p>
@@ -2840,7 +2830,7 @@ function MessagesPage() {
             ) : conversations.map(c => (
               <button key={`${c.productId}-${c.buyerId}-${c.sellerId}`} onClick={() => openThread(c)}
                 className={`w-full text-left flex items-center gap-3 p-3 border-b border-gray-100 last:border-0 transition-colors ${active && active.productId === c.productId && active.buyerId === c.buyerId && active.sellerId === c.sellerId ? "bg-blue-50/60" : "hover:bg-gray-50"}`}>
-                <img src={c.productImage} alt="" className="w-10 h-10 rounded-lg object-cover bg-gray-50 flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                <ProductImage src={c.productImage} alt="" className="w-10 h-10 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-[#111827] truncate">{other(c)}</p>
                   <p className="text-xs text-[#6b7280] truncate">{c.productName}: {c.lastBody}</p>
@@ -2861,7 +2851,7 @@ function MessagesPage() {
             <div className="bg-white rounded-2xl flex flex-col" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)", height: "70vh" }}>
               <div className="flex items-center gap-2 p-4 border-b border-gray-100">
                 <button onClick={() => setActive(null)} className="lg:hidden text-[#1E40AF]"><ChevronLeft size={20} /></button>
-                <img src={active.productImage} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50" onError={e => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                <ProductImage src={active.productImage} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-[#111827] truncate">{other(active)}</p>
                   <Link to={`/product/${active.productId}`} className="text-xs text-[#6b7280] truncate hover:text-[#1E40AF]">About: {active.productName}</Link>
@@ -2965,21 +2955,45 @@ function AdminAnalytics({ dbMode }: { dbMode: boolean }) {
 // ─── Admin: Product create / edit form ────────────────────────────────────────
 const ADMIN_CATEGORIES = ["Mobile Accessories", "Home Decoration", "Digital Services"];
 
+// Builds an image-proxy URL. The proxy fetches the picture server-side and
+// re-serves it with permissive CORS, so it loads even from sites that block
+// hotlinking entirely (not just referer-based blocks).
+function proxiedImage(url: string): string {
+  return `https://wsrv.nl/?url=${encodeURIComponent(url)}`;
+}
+
+// Renders any product image so a pasted link "just works", whatever the source
+// site's hotlink rules are:
+//   1. load the URL directly (fast — local files, Unsplash, referer-friendly hosts);
+//   2. if that fails, retry through an image proxy (handles strict hotlink blocks);
+//   3. if it still fails, show a neutral placeholder instead of a broken icon.
+function ProductImage({ src, alt = "", className = "", style }: { src?: string; alt?: string; className?: string; style?: CSSProperties }) {
+  const url = (src ?? "").trim();
+  const remote = /^https?:\/\//i.test(url);
+  const [stage, setStage] = useState(0); // 0 = direct · 1 = proxy · 2 = failed
+  useEffect(() => { setStage(0); }, [url]);
+
+  // No src, all attempts exhausted, or a local path that can't be proxied → placeholder.
+  if (!url || stage >= 2 || (stage === 1 && !remote)) {
+    return <div className={`${className} grid place-items-center bg-gray-50`} style={style}><ImageOff size={20} className="text-gray-300" /></div>;
+  }
+  const realSrc = stage === 1 ? proxiedImage(url) : url;
+  return (
+    <img src={realSrc} alt={alt} className={className} style={style}
+      loading="lazy" decoding="async" referrerPolicy="no-referrer"
+      onError={() => setStage(s => s + 1)} />
+  );
+}
+
 // Live image preview for the admin product form. As soon as a URL is pasted the
-// real image loads here; a broken/empty URL shows a neutral placeholder.
+// real image loads here; a broken/empty URL shows a neutral placeholder. Uses
+// the same direct→proxy fallback as ProductImage so previews match the store.
 function ImageThumb({ url, main }: { url: string; main?: boolean }) {
-  const [err, setErr] = useState(false);
-  const trimmed = url.trim();
-  useEffect(() => { setErr(false); }, [trimmed]);
   const size = main ? "w-20 h-20" : "w-16 h-16";
   return (
-    <div className={`shrink-0 ${size} rounded-xl border ${main ? "border-[#1E40AF]/40" : "border-gray-200"} bg-gray-50 overflow-hidden grid place-items-center relative`}>
-      {trimmed && !err ? (
-        <img src={trimmed} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" onError={() => setErr(true)} />
-      ) : (
-        <ImageOff size={main ? 22 : 18} className="text-gray-300" />
-      )}
-      {main && <span className="absolute bottom-0 inset-x-0 bg-[#1E40AF] text-white text-[9px] font-bold text-center py-0.5 leading-tight">MAIN</span>}
+    <div className={`shrink-0 ${size} rounded-xl border ${main ? "border-[#1E40AF]/40" : "border-gray-200"} bg-gray-50 overflow-hidden relative`}>
+      <ProductImage src={url} className="w-full h-full object-cover" />
+      {main && <span className="absolute bottom-0 inset-x-0 bg-[#1E40AF] text-white text-[9px] font-bold text-center py-0.5 leading-tight z-10">MAIN</span>}
     </div>
   );
 }
@@ -3149,7 +3163,7 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
           <div className="p-10 text-center text-sm text-[#6b7280]">No products in this category.</div>
         ) : list.map(p => (
           <div key={p.id} className="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0">
-            <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+            <ProductImage src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-[#111827] truncate">{p.name}</p>
               <p className="text-xs text-[#6b7280]">{p.category} · {p.subcategory} · {fmt(p.price)}{p.priceNote ? ` ${p.priceNote}` : ""}{!p.inStock && <span className="text-red-500 font-semibold"> · Out of stock</span>}</p>
@@ -3511,7 +3525,7 @@ function SellerPage() {
           <div className="p-10 text-center text-sm text-[#6b7280]">You haven't added any products yet. Click <strong>Add Product</strong> to start.</div>
         ) : products.map(p => (
           <div key={p.id} className="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0">
-            <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+            <ProductImage src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-[#111827] truncate">{p.name}</p>
               <p className="text-xs text-[#6b7280]">{p.category} · {p.subcategory} · {fmt(p.price)}{!p.inStock && <span className="text-red-500 font-semibold"> · Out of stock</span>}</p>
