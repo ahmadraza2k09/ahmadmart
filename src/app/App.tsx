@@ -2,7 +2,7 @@ import { useState, useEffect, useContext, createContext, useCallback, useMemo, m
 import { BrowserRouter, Routes, Route, Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import ahmadMartLogo from "@/imports/ahmad-logo.png";
 import {
-  ShoppingCart, Heart, Search, Menu, X, Star, ChevronRight, ChevronLeft,
+  ShoppingCart, Heart, Search, Menu, X, Star, ChevronRight, ChevronLeft, ChevronDown,
   Package, Truck, Shield, Headphones, Clock, Zap, Filter, SlidersHorizontal,
   Plus, Minus, Trash2, Tag, MapPin, Phone, User, Eye, EyeOff,
   CheckCircle, ArrowRight, TrendingUp, Award, Gift,
@@ -601,11 +601,22 @@ function Navbar() {
   // adds shows up in the main bar automatically (built-ins always listed first).
   const baseCats = ["Mobile Accessories", "Home Decoration", "Digital Services"];
   const allCats = Array.from(new Set([...baseCats, ...products.map(p => p.category)])).filter(Boolean);
+  // category -> its sub-categories (for the hover mega-menus)
+  const catTree: Record<string, string[]> = {};
+  for (const p of products) {
+    (catTree[p.category] ||= []);
+    if (!catTree[p.category].includes(p.subcategory)) catTree[p.category].push(p.subcategory);
+  }
   const navLinks = [
     { label: "Home", to: "/" },
     { label: "Shop", to: "/shop" },
     ...allCats.map(c => ({ label: c, to: `/shop?cat=${encodeURIComponent(c)}` })),
   ];
+  // Live search results shown in the search dropdown.
+  const q = searchQ.trim().toLowerCase();
+  const results = q
+    ? products.filter(p => p.name.toLowerCase().includes(q) || p.subcategory.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)).slice(0, 6)
+    : [];
 
   return (
     <>
@@ -622,14 +633,32 @@ function Navbar() {
             </Link>
 
             {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-6">
-              {navLinks.map(l => (
-                <Link key={l.to} to={l.to}
-                  className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors relative group">
-                  {l.label}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#F97316] group-hover:w-full transition-all duration-200" />
-                </Link>
-              ))}
+            <div className="hidden lg:flex items-center gap-5">
+              <Link to="/" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors">Home</Link>
+              <Link to="/shop" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors">Shop</Link>
+              {allCats.map(c => {
+                const subs = catTree[c] || [];
+                return (
+                  <div key={c} className="relative group">
+                    <Link to={`/shop?cat=${encodeURIComponent(c)}`}
+                      className="flex items-center gap-1 text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors py-2">
+                      {c}{subs.length > 0 && <ChevronDown size={13} className="text-gray-400 group-hover:text-[#1E40AF] group-hover:rotate-180 transition-transform" />}
+                    </Link>
+                    {subs.length > 0 && (
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 hidden group-hover:block z-50">
+                        <div className="bg-white rounded-xl border border-gray-100 py-2 min-w-[200px]" style={{ boxShadow: "0 14px 36px rgba(30,64,175,0.16)" }}>
+                          {subs.map(s => (
+                            <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`}
+                              className="block px-4 py-2 text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">
+                              {s}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Actions */}
@@ -673,18 +702,37 @@ function Navbar() {
             </div>
           </div>
 
-          {/* Search bar */}
+          {/* Search bar + live results */}
           {searchOpen && (
-            <form onSubmit={handleSearch} className="pb-3">
-              <div className="flex gap-2">
-                <input
-                  autoFocus value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                  placeholder="Search products..."
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-[#1E40AF]/20 text-sm outline-none focus:border-[#1E40AF] bg-[#F8F9FB]"
-                />
-                <button type="submit" className="px-5 py-2.5 rounded-xl bg-[#1E40AF] text-white text-sm font-semibold">Search</button>
-              </div>
-            </form>
+            <div className="pb-3">
+              <form onSubmit={handleSearch}>
+                <div className="flex gap-2">
+                  <input
+                    autoFocus value={searchQ} onChange={e => setSearchQ(e.target.value)}
+                    placeholder="Search products..."
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-[#1E40AF]/20 text-sm outline-none focus:border-[#1E40AF] bg-[#F8F9FB]"
+                  />
+                  <button type="submit" className="px-5 py-2.5 rounded-xl bg-[#1E40AF] text-white text-sm font-semibold">Search</button>
+                </div>
+              </form>
+              {searchQ.trim() && (
+                <div className="mt-2 bg-white rounded-xl border border-gray-100 overflow-hidden" style={{ boxShadow: "0 14px 36px rgba(30,64,175,0.16)" }}>
+                  {results.length === 0 ? (
+                    <p className="px-4 py-3 text-sm text-[#6b7280]">No products match “{searchQ}”.</p>
+                  ) : results.map(p => (
+                    <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchOpen(false); setSearchQ(""); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#F8F9FB] transition-colors border-b border-gray-50 last:border-0">
+                      <img src={p.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50 flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#111827] truncate">{p.name}</p>
+                        <p className="text-xs text-[#6b7280] truncate">{p.subcategory}{p.sellerStore ? ` · ${p.sellerStore}` : ""}</p>
+                      </div>
+                      <span className="text-sm font-bold text-[#1E40AF] flex-shrink-0">{fmt(p.price)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -857,25 +905,46 @@ function HomePage() {
 
   const slides = [
     {
-      title: "Quality Products at Affordable Prices",
+      badge: "Trusted Across Pakistan",
+      title: "Quality Products at", highlight: "Affordable Prices",
       sub: "Shop premium mobile accessories and beautiful wall clocks with confidence.",
       cta: "Shop Now", link: "/shop",
       bg: "from-[#1E40AF] to-[#1e3a8a]",
       img: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=500&h=400&fit=crop&auto=format",
+      promise: "Quality Assured",
+      features: [
+        { icon: ShieldCheck, title: "Verified Quality", sub: "Checked products" },
+        { icon: Truck, title: "Fast Delivery", sub: "Across Pakistan" },
+        { icon: Headphones, title: "24/7 Support", sub: "Always here to help" },
+      ],
     },
     {
-      title: "Premium Earbuds Starting at Rs. 1,799",
+      badge: "Best Sound. Ultimate Comfort.",
+      title: "Premium Earbuds Starting at", highlight: "Rs. 1,799",
       sub: "Crystal clear sound with 30 hours of battery life. ANC technology included.",
       cta: "Explore Earbuds", link: "/shop?sub=Earbuds",
       bg: "from-[#1E40AF] to-[#3730a3]",
       img: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&h=400&fit=crop&auto=format",
+      promise: "1 Year Warranty",
+      features: [
+        { icon: Zap, title: "Crystal Clear Sound", sub: "High definition audio" },
+        { icon: Battery, title: "30 Hours Battery", sub: "Long lasting power" },
+        { icon: Wifi, title: "ANC Technology", sub: "Noise cancellation" },
+      ],
     },
     {
-      title: "Beautiful Wall Clocks for Your Home",
+      badge: "Timeless Designs",
+      title: "Beautiful Wall Clocks for Your", highlight: "Home",
       sub: "Silent quartz movement, premium materials, and timeless designs.",
       cta: "Shop Wall Clocks", link: "/shop?sub=Wall Clocks",
       bg: "from-[#92400e] to-[#B45309]",
       img: "https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?w=500&h=400&fit=crop&auto=format",
+      promise: "Quality Assured",
+      features: [
+        { icon: Clock, title: "Silent Movement", sub: "Whisper quiet" },
+        { icon: Award, title: "Premium Materials", sub: "Built to last" },
+        { icon: Package, title: "Easy Mount", sub: "Hook included" },
+      ],
     },
   ];
 
@@ -889,15 +958,6 @@ function HomePage() {
   const mobileAcc = products.filter(p => p.category === "Mobile Accessories").slice(0, 4);
   const clocks = products.filter(p => p.subcategory === "Wall Clocks");
 
-  // Category tiles: the built-in ones, plus any new sub-category a seller introduces
-  // (given a default icon and a colour from the palette).
-  const catPalette = [["#1E40AF", "#EFF6FF"], ["#F97316", "#FFF7ED"], ["#059669", "#ECFDF5"], ["#7C3AED", "#F5F3FF"], ["#0891B2", "#ECFEFF"], ["#B45309", "#FFFBEB"], ["#DC2626", "#FEF2F2"]];
-  const knownSubs = new Set(CATEGORIES.map(c => c.subcategory));
-  const extraCategories = Array.from(new Set(products.map(p => p.subcategory)))
-    .filter(sub => sub && !knownSubs.has(sub))
-    .map((sub, i) => ({ name: sub, icon: Package, subcategory: sub, color: catPalette[i % catPalette.length][0], bg: catPalette[i % catPalette.length][1] }));
-  const allCategories = [...CATEGORIES, ...extraCategories];
-
   return (
     <div>
       {/* Hero Slider */}
@@ -905,33 +965,53 @@ function HomePage() {
         style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.18)" }}>
         {slides.map((slide, i) => (
           <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${i === activeSlide ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-            <div className={`w-full h-full bg-gradient-to-r ${slide.bg} flex flex-col lg:flex-row items-center min-h-[340px] sm:min-h-[420px]`}>
-              <div className="flex-1 px-8 sm:px-12 py-10 text-white z-10">
-                <h1 className="text-2xl sm:text-4xl font-black leading-tight mb-4 max-w-md">{slide.title}</h1>
-                <p className="text-blue-100 text-sm sm:text-base mb-6 max-w-sm">{slide.sub}</p>
-                <div className="flex flex-wrap gap-3">
+            <div className={`w-full h-full bg-gradient-to-br ${slide.bg} flex flex-col lg:flex-row items-center min-h-[380px] sm:min-h-[470px] relative overflow-hidden`}>
+              {/* soft dot texture */}
+              <div className="absolute top-0 left-0 w-40 h-40 opacity-20" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.6) 1.5px, transparent 1.5px)", backgroundSize: "16px 16px" }} />
+              <div className="flex-1 px-8 sm:px-12 py-9 text-white z-10">
+                <span className="inline-block px-4 py-1.5 rounded-full bg-[#F97316] text-white text-xs font-bold mb-4 shadow-lg">{slide.badge}</span>
+                <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] mb-4 max-w-xl">{slide.title} <span className="text-[#F97316]">{slide.highlight}</span></h1>
+                <p className="text-blue-100 text-sm sm:text-base mb-6 max-w-md">{slide.sub}</p>
+                <div className="flex flex-wrap gap-3 mb-7">
                   <button onClick={() => navigate(slide.link)}
-                    className="px-6 py-3 rounded-xl bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-all active:scale-95"
-                    style={{ boxShadow: "0 4px 16px rgba(249,115,22,0.4)" }}>
-                    {slide.cta} <ArrowRight size={14} className="inline ml-1" />
+                    className="px-6 py-3 rounded-xl bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-all active:scale-95 inline-flex items-center gap-2"
+                    style={{ boxShadow: "0 8px 20px rgba(249,115,22,0.45)" }}>
+                    {slide.cta} <ArrowRight size={16} />
                   </button>
                   <button onClick={() => navigate("/shop")}
-                    className="px-6 py-3 rounded-xl bg-white/20 text-white font-bold text-sm hover:bg-white/30 transition-all border border-white/30">
-                    Explore Categories
+                    className="px-6 py-3 rounded-xl bg-white/15 text-white font-bold text-sm hover:bg-white/25 transition-all border border-white/30 inline-flex items-center gap-2 backdrop-blur-sm">
+                    <SlidersHorizontal size={15} /> Explore Categories
                   </button>
                 </div>
+                <div className="hidden sm:flex items-center gap-6 flex-wrap">
+                  {slide.features.map((f, fi) => (
+                    <div key={fi} className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-full bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0"><f.icon size={16} className="text-white" /></div>
+                      <div><p className="text-xs font-bold leading-tight">{f.title}</p><p className="text-[11px] text-blue-200 leading-tight">{f.sub}</p></div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="lg:w-80 xl:w-96 p-6 flex-shrink-0">
-                <img src={slide.img} alt={slide.title}
-                  className="w-full h-52 sm:h-64 object-cover rounded-2xl"
-                  style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
+              <div className="lg:w-[26rem] xl:w-[30rem] px-6 pb-8 lg:py-6 flex-shrink-0 relative w-full">
+                <div className="relative mx-auto" style={{ maxWidth: 380 }}>
+                  <div className="absolute inset-4 rounded-full bg-white/15 blur-3xl" />
+                  <div className="relative rounded-3xl bg-white/10 backdrop-blur-sm p-3 border border-white/15">
+                    <img src={slide.img} alt={slide.title}
+                      className="w-full h-48 sm:h-60 object-cover rounded-2xl"
+                      style={{ boxShadow: "0 12px 36px rgba(0,0,0,0.25)" }}
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </div>
+                  <div className="absolute -bottom-3 right-1 bg-white rounded-xl px-3 py-2 flex items-center gap-2" style={{ boxShadow: "0 10px 28px rgba(0,0,0,0.22)" }}>
+                    <ShieldCheck size={20} className="text-[#1E40AF] flex-shrink-0" />
+                    <div><p className="text-xs font-black text-[#111827] leading-tight">{slide.promise}</p><p className="text-[10px] text-[#6b7280] leading-tight">Quality promise</p></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         ))}
-        <div className={`relative bg-gradient-to-r ${slides[0].bg} min-h-[340px] sm:min-h-[420px] opacity-0 pointer-events-none`} />
+        <div className={`relative bg-gradient-to-br ${slides[0].bg} min-h-[380px] sm:min-h-[470px] opacity-0 pointer-events-none`} />
 
         {/* Slide controls */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
@@ -951,6 +1031,21 @@ function HomePage() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Feature bar */}
+        <div className="bg-white rounded-2xl mb-6 grid grid-cols-2 lg:grid-cols-4 lg:divide-x divide-gray-100" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+          {[
+            { icon: Truck, title: "Fast Delivery", sub: "Across Pakistan" },
+            { icon: RotateCcw, title: "7 Days Return", sub: "Hassle free returns" },
+            { icon: Shield, title: "Secure Payment", sub: "100% secure checkout" },
+            { icon: Headphones, title: "24/7 Support", sub: "We're here to help" },
+          ].map(({ icon: Icon, title, sub }) => (
+            <div key={title} className="flex items-center gap-3 px-5 py-5">
+              <div className="w-11 h-11 rounded-full bg-[#EFF6FF] flex items-center justify-center flex-shrink-0"><Icon size={20} className="text-[#1E40AF]" /></div>
+              <div className="min-w-0"><p className="font-bold text-[#111827] text-sm">{title}</p><p className="text-xs text-[#6b7280] truncate">{sub}</p></div>
+            </div>
+          ))}
+        </div>
+
         {/* Promo strip */}
         <div className="mb-12 rounded-2xl px-5 py-4 flex items-center justify-center gap-3 text-center flex-wrap"
           style={{ background: "linear-gradient(135deg, #1E40AF, #1e3a8a)", boxShadow: "0 4px 16px rgba(30,64,175,0.18)" }}>
@@ -960,24 +1055,6 @@ function HomePage() {
             <span className="font-black tracking-wide bg-white/15 px-2 py-0.5 rounded-md whitespace-nowrap">{PROMO_CODE}</span> at checkout
           </p>
         </div>
-
-        {/* Categories */}
-        <section className="mb-14">
-          <SectionHeader title="Shop by Category" subtitle="Find exactly what you need" />
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            {allCategories.map(cat => (
-              <Link key={cat.name} to={`/shop?sub=${cat.subcategory}`}
-                className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl text-center transition-all duration-200 hover:-translate-y-1 group"
-                style={{ boxShadow: "0 4px 14px rgba(30,64,175,0.07)" }}>
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110"
-                  style={{ background: cat.color, color: "#fff" }}>
-                  <cat.icon size={22} />
-                </div>
-                <span className="text-xs font-semibold text-[#111827] leading-tight">{cat.name}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
 
         {/* Featured Products */}
         <section className="mb-14">
