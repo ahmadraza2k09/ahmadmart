@@ -2975,7 +2975,7 @@ function ImageThumb({ url, main }: { url: string; main?: boolean }) {
   return (
     <div className={`shrink-0 ${size} rounded-xl border ${main ? "border-[#1E40AF]/40" : "border-gray-200"} bg-gray-50 overflow-hidden grid place-items-center relative`}>
       {trimmed && !err ? (
-        <img src={trimmed} alt="" className="w-full h-full object-cover" loading="lazy" onError={() => setErr(true)} />
+        <img src={trimmed} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" onError={() => setErr(true)} />
       ) : (
         <ImageOff size={main ? 22 : 18} className="text-gray-300" />
       )}
