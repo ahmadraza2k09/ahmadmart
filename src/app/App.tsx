@@ -11,8 +11,8 @@ import {
   Copy, ShieldCheck, Lock, RefreshCw, MessageCircle
 } from "lucide-react";
 import {
-  JAZZCASH_NUMBER, JAZZCASH_TITLE, ADMIN_PASSCODE, WHATSAPP_DISPLAY, WHATSAPP_NUMBER,
-  ORDER_STATUSES, getOrders, saveOrder, updateOrderStatus, newOrderId,
+  JAZZCASH_NUMBER, JAZZCASH_TITLE, WHATSAPP_DISPLAY, WHATSAPP_NUMBER,
+  ORDER_STATUSES, newOrderId,
   sendOrderEmail, whatsappOrderUrl, toWaNumber, isCashOnDelivery,
   fileToCompressedDataURL, validateProofFile,
   type Order, type OrderStatus,
@@ -20,6 +20,9 @@ import {
 import {
   getProductReviews, saveReview, newReviewId, type UserReview,
 } from "./reviewStore";
+import {
+  createOrder, getMyOrders, adminGetOrders, adminUpdateOrderStatus,
+} from "./ordersApi";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 import type { Product } from "./types";
@@ -1724,6 +1727,8 @@ function CheckoutPage() {
   const [orderId] = useState(newOrderId());
   const [payment, setPayment] = useState<"jazzcash" | "cod">("jazzcash");
   const isCOD = payment === "cod";
+  const [submitting, setSubmitting] = useState(false);
+  const [submitErr, setSubmitErr] = useState("");
   const [promo, setPromo] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoMsg, setPromoMsg] = useState("");
@@ -1759,10 +1764,12 @@ function CheckoutPage() {
     return Object.keys(e).length === 0;
   };
 
-  // Runs synchronously so opening WhatsApp stays inside the click gesture and is
-  // not blocked by the browser pop-up blocker.
-  const handleSubmit = () => {
+  // Saves the order to the database (tied to the signed-in user) so it appears in
+  // their profile and the admin can approve it. The customer then sends payment
+  // proof from the success screen's WhatsApp button.
+  const handleSubmit = async () => {
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (!user) { navigate("/login"); return; }
     const order: Order = {
       id: orderId,
       createdAt: Date.now(),
@@ -1778,15 +1785,21 @@ function CheckoutPage() {
       promoCode: promoApplied ? PROMO_CODE : undefined,
       total,
       paymentMethod: isCOD ? "Cash on Delivery" : "JazzCash (Manual)",
-      status: "Pending Verification", // never auto-paid — payment/order is verified on WhatsApp
+      status: "Pending Approval", // admin approves before the order proceeds
     };
-    const url = whatsappOrderUrl(order);
-    setWaUrl(url);
-    window.open(url, "_blank"); // opens the customer's WhatsApp, pre-filled, to the store
-    saveOrder(order);
+    setSubmitting(true); setSubmitErr("");
+    try {
+      await createOrder(order);
+    } catch (e) {
+      setSubmitErr(e instanceof Error ? e.message : "Could not place your order. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+    setWaUrl(whatsappOrderUrl(order));
     sendOrderEmail(order, null); // optional email backup (only sends if a key is set)
     clearCart();
     setPlacedOrder(order);
+    setSubmitting(false);
   };
 
   if (placedOrder) return (
@@ -1795,8 +1808,8 @@ function CheckoutPage() {
         <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-5">
           <Clock size={38} className="text-amber-500" />
         </div>
-        <h2 className="text-2xl font-black text-[#111827] mb-2">Order Received!</h2>
-        <p className="text-[#374151] text-sm mb-4 font-semibold">Your order has been received and is awaiting payment verification.</p>
+        <h2 className="text-2xl font-black text-[#111827] mb-2">Order Placed!</h2>
+        <p className="text-[#374151] text-sm mb-4 font-semibold">Your order has been saved to your account and is awaiting admin approval. You can track its status in your profile.</p>
         <div className="bg-[#F8F9FB] rounded-xl p-4 mb-5 text-left">
           <p className="text-xs text-[#6b7280] mb-1">Order ID</p>
           <p className="font-black text-[#1E40AF] text-lg">#{placedOrder.id}</p>
@@ -1804,7 +1817,7 @@ function CheckoutPage() {
             {placedOrder.discount ? <div className="flex justify-between"><span className="text-[#6b7280]">Delivery ({placedOrder.promoCode}):</span><span className="font-semibold text-emerald-600">-{fmt(placedOrder.discount)}</span></div> : null}
             <div className="flex justify-between"><span className="text-[#6b7280]">{isCashOnDelivery(placedOrder) ? "Amount Due (COD):" : "Amount Paid:"}</span><span className="font-black text-[#1E40AF]">{fmt(placedOrder.total)}</span></div>
             <div className="flex justify-between"><span className="text-[#6b7280]">Payment:</span><span className="font-semibold">{placedOrder.paymentMethod}</span></div>
-            <div className="flex justify-between"><span className="text-[#6b7280]">Status:</span><span className="font-semibold text-amber-600">Pending Verification</span></div>
+            <div className="flex justify-between"><span className="text-[#6b7280]">Status:</span><span className="font-semibold text-amber-600">{placedOrder.status}</span></div>
           </div>
         </div>
 
@@ -1813,8 +1826,8 @@ function CheckoutPage() {
           <p className="font-bold text-green-800 text-sm flex items-center gap-1.5 mb-1"><MessageCircle size={16} /> One last step on WhatsApp</p>
           <p className="text-xs text-green-700">
             {isCashOnDelivery(placedOrder)
-              ? <>WhatsApp has opened with your order details. <strong>Press send to confirm your Cash on Delivery order.</strong> We'll confirm it on WhatsApp and deliver to your Multan address — pay the rider in cash.</>
-              : <>WhatsApp has opened with your order details. <strong>Attach your JazzCash payment screenshot in that chat and press send.</strong> We'll verify it and confirm your order on WhatsApp.</>}
+              ? <>Tap below to send your order on WhatsApp. <strong>Press send to confirm your Cash on Delivery order.</strong> We'll confirm it and deliver to your Multan address — pay the rider in cash.</>
+              : <>Tap below to open WhatsApp with your order. <strong>Attach your JazzCash payment screenshot and press send.</strong> Once we verify it, the admin marks your order Payment Received.</>}
           </p>
         </div>
 
@@ -1828,6 +1841,17 @@ function CheckoutPage() {
           Continue Shopping
         </button>
       </div>
+    </div>
+  );
+
+  if (!user) return (
+    <div className="max-w-md mx-auto px-4 py-20 text-center">
+      <User size={56} className="mx-auto text-gray-300 mb-4" />
+      <h2 className="font-black text-xl text-[#111827] mb-2">Please sign in to checkout</h2>
+      <p className="text-sm text-[#6b7280] mb-6">Your order is saved to your account so you can track its status and the admin can confirm it.</p>
+      <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm mr-3"
+        style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.3)" }}>Sign In</button>
+      <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-xl font-bold text-sm">Register</button>
     </div>
   );
 
@@ -1973,7 +1997,7 @@ function CheckoutPage() {
 
               <p className="text-[11px] text-[#6b7280] flex items-start gap-1.5">
                 <ShieldCheck size={14} className="text-[#1E40AF] flex-shrink-0 mt-0.5" />
-                This is a manual payment system. Your order will be marked <strong>Pending Verification</strong> until we confirm your payment on WhatsApp — it is never auto-approved.
+                This is a manual payment system. Your order stays <strong>Pending Approval</strong> until the admin confirms your payment — it becomes <strong>Payment Received</strong> after approval, never automatically.
               </p>
             </div>
           </div>
@@ -2030,7 +2054,7 @@ function CheckoutPage() {
 
               <p className="text-[11px] text-[#6b7280] flex items-start gap-1.5">
                 <ShieldCheck size={14} className="text-[#059669] flex-shrink-0 mt-0.5" />
-                Your order will be marked <strong>Pending Verification</strong> until we confirm it on WhatsApp — it is never auto-approved.
+                Your order stays <strong>Pending Approval</strong> until the admin confirms it on WhatsApp, then becomes <strong>Confirmed (COD)</strong> for delivery.
               </p>
             </div>
           </div>
@@ -2074,15 +2098,16 @@ function CheckoutPage() {
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Payment</span><span className="font-semibold">{isCOD ? "Cash on Delivery" : "JazzCash"}</span></div>
               <div className="flex justify-between font-black text-[#111827] text-base border-t border-gray-100 pt-2"><span>{isCOD ? "Due on Delivery" : "Total"}</span><span className="text-[#1E40AF]">{fmt(total)}</span></div>
             </div>
-            <button onClick={handleSubmit}
-              className="w-full py-3.5 rounded-xl text-white font-black text-sm transition-transform active:scale-95 flex items-center justify-center gap-2"
+            <button onClick={handleSubmit} disabled={submitting}
+              className="w-full py-3.5 rounded-xl text-white font-black text-sm transition-transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
               style={{ background: "#25D366", boxShadow: "0 4px 16px rgba(37,211,102,0.35)" }}>
-              <MessageCircle size={18} /> Submit on WhatsApp — {fmt(total)}
+              <MessageCircle size={18} /> {submitting ? "Placing order…" : `Place Order — ${fmt(total)}`}
             </button>
+            {submitErr && <p className="text-xs text-red-500 font-semibold text-center mt-2">{submitErr}</p>}
             <p className="text-[11px] text-[#6b7280] text-center mt-3">
               {isCOD
-                ? "After tapping submit, send the order in the WhatsApp chat that opens to confirm your Cash on Delivery order."
-                : "After tapping submit, attach your JazzCash screenshot in the WhatsApp chat that opens."}
+                ? "We'll save your order and confirm it on WhatsApp. Cash is collected on delivery in Multan."
+                : "We'll save your order, then you send your JazzCash screenshot on WhatsApp for the admin to approve."}
             </p>
           </div>
         </div>
@@ -2294,6 +2319,8 @@ function AccountPage() {
   const [roleBusy, setRoleBusy] = useState(false);
   const [roleMsg, setRoleMsg] = useState("");
   const [roleErr, setRoleErr] = useState("");
+  const [myOrders, setMyOrders] = useState<Order[]>([]);
+  useEffect(() => { if (user) getMyOrders().then(setMyOrders).catch(() => {}); }, [user]);
   const switchRole = async (r: Role) => {
     if (!user || user.role === r) return;
     setRoleBusy(true); setRoleMsg(""); setRoleErr("");
@@ -2318,12 +2345,6 @@ function AccountPage() {
     );
   }
 
-  const mockOrders = [
-    { id: "RM847291", date: "June 20, 2025", items: 3, total: 5997, status: "Delivered" },
-    { id: "RM741038", date: "June 15, 2025", items: 1, total: 2499, status: "Processing" },
-    { id: "RM693045", date: "June 8, 2025", items: 2, total: 4298, status: "Delivered" },
-  ];
-
   const tabs = [
     { key: "profile", label: "Profile", icon: User },
     { key: "orders", label: "Orders", icon: Package },
@@ -2337,7 +2358,7 @@ function AccountPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
-          { label: "Total Orders", value: mockOrders.length, icon: Package, color: "#1E40AF" },
+          { label: "Total Orders", value: myOrders.length, icon: Package, color: "#1E40AF" },
           { label: "Wishlist Items", value: wishlist.length, icon: Heart, color: "#F97316" },
           { label: "Cart Items", value: cart.length, icon: ShoppingCart, color: "#059669" },
         ].map(({ label, value, icon: Icon, color }) => (
@@ -2428,22 +2449,36 @@ function AccountPage() {
           {tab === "orders" && (
             <div className="bg-white rounded-2xl p-6" style={{ boxShadow: "0 4px 14px rgba(30,64,175,0.07)" }}>
               <h3 className="font-bold text-[#111827] mb-5">Order History</h3>
-              <div className="space-y-3">
-                {mockOrders.map(o => (
-                  <div key={o.id} className="p-4 rounded-xl bg-[#F8F9FB] flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="font-bold text-[#1E40AF] text-sm">#{o.id}</p>
-                      <p className="text-xs text-[#6b7280] mt-0.5">{o.date} • {o.items} items</p>
+              {myOrders.length === 0 ? (
+                <div className="text-center py-10">
+                  <Package size={44} className="mx-auto text-gray-300 mb-3" />
+                  <p className="font-bold text-[#111827] text-sm mb-1">No orders yet</p>
+                  <p className="text-xs text-[#6b7280] mb-4">Your orders will appear here once you place them.</p>
+                  <Link to="/shop" className="inline-block px-5 py-2.5 bg-[#1E40AF] text-white rounded-xl font-bold text-sm">Start Shopping</Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {myOrders.map(o => (
+                    <div key={o.id} className="p-4 rounded-xl bg-[#F8F9FB]">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-bold text-[#1E40AF] text-sm">#{o.id}</p>
+                          <p className="text-xs text-[#6b7280] mt-0.5">{new Date(o.createdAt).toLocaleDateString()} • {o.items.reduce((s, it) => s + it.qty, 0)} item(s) • {o.paymentMethod}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-black text-[#111827] text-sm">{fmt(o.total)}</p>
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full inline-block mt-1" style={{ background: STATUS_STYLE[o.status].bg, color: STATUS_STYLE[o.status].text }}>
+                            {o.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-[#6b7280] truncate">
+                        {o.items.map(it => `${it.name} ×${it.qty}`).join(", ")}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-black text-[#111827] text-sm">{fmt(o.total)}</p>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${o.status === "Delivered" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                        {o.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -2470,8 +2505,9 @@ function AccountPage() {
 
 // ─── Admin: Order Verification ────────────────────────────────────────────────
 const STATUS_STYLE: Record<OrderStatus, { bg: string; text: string }> = {
-  "Pending Verification": { bg: "#FFF7ED", text: "#9A3412" },
-  "Verified": { bg: "#EFF6FF", text: "#1E40AF" },
+  "Pending Approval": { bg: "#FFF7ED", text: "#9A3412" },
+  "Payment Received": { bg: "#EFF6FF", text: "#1E40AF" },
+  "Confirmed (COD)": { bg: "#ECFEFF", text: "#0E7490" },
   "Shipped": { bg: "#F5F3FF", text: "#6D28D9" },
   "Delivered": { bg: "#ECFDF5", text: "#047857" },
   "Cancelled": { bg: "#FEF2F2", text: "#B91C1C" },
@@ -2687,7 +2723,8 @@ function AdminPage() {
   const [tab, setTab] = useState<"products" | "analytics" | "orders">("products");
   const [orders, setOrders] = useState<Order[]>([]);
 
-  useEffect(() => { if (isAdmin) { setOrders(getOrders()); refreshProducts(); } }, [isAdmin]);
+  const loadOrders = () => { adminGetOrders().then(setOrders).catch(() => {}); };
+  useEffect(() => { if (isAdmin) { loadOrders(); refreshProducts(); } }, [isAdmin]);
 
   const doLogin = async () => {
     if (!form.email || !form.password) { setPassErr("Enter the admin email and password."); return; }
@@ -2696,7 +2733,13 @@ function AdminPage() {
     catch (e) { setPassErr(e instanceof Error ? e.message : "Login failed."); }
     setBusy(false);
   };
-  const setStatus = (id: string, status: OrderStatus) => setOrders(updateOrderStatus(id, status));
+  const setStatus = async (id: string, status: OrderStatus) => {
+    try {
+      const updated = await adminUpdateOrderStatus(id, status);
+      setOrders(prev => prev.map(o => (o.id === id ? updated : o)));
+    } catch { /* ignore — keep current state */ }
+  };
+  const approve = (o: Order) => setStatus(o.id, isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received");
 
   if (!authReady) return <div className="max-w-sm mx-auto px-4 py-20 text-center text-sm text-[#6b7280]">Loading…</div>;
 
@@ -2752,7 +2795,7 @@ function AdminPage() {
       {tab === "orders" && (
         <div>
           <div className="flex justify-end mb-3">
-            <button onClick={() => setOrders(getOrders())} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-bold text-[#374151] hover:border-[#1E40AF] transition-colors">
+            <button onClick={loadOrders} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-bold text-[#374151] hover:border-[#1E40AF] transition-colors">
               <RefreshCw size={15} /> Refresh
             </button>
           </div>
@@ -2816,6 +2859,13 @@ function AdminPage() {
                     </div>
                   </div>
 
+                  {o.status === "Pending Approval" && (
+                    <button onClick={() => approve(o)}
+                      className="mb-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#059669] text-white text-xs font-black hover:bg-[#047857] transition-colors">
+                      <CheckCircle size={14} /> Approve order → {isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received"}
+                    </button>
+                  )}
+
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-[#6b7280]">Update status:</span>
                     {ORDER_STATUSES.map(s => (
@@ -2855,7 +2905,7 @@ function AppShell() {
   const isAuth = location.pathname === "/login" || location.pathname === "/register";
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB]" style={{ fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-[#F8F9FB] overflow-x-hidden" style={{ fontFamily: "'Outfit', 'Inter', sans-serif" }}>
       <ScrollToTop />
       {!isAuth && <Navbar />}
       <main>

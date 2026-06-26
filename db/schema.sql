@@ -39,3 +39,29 @@ create table if not exists users (
 );
 
 create index if not exists users_email_idx on users (lower(email));
+
+-- ─── Orders ───────────────────────────────────────────────────────────────────
+-- Every checkout creates an order tied to the signed-in user. New orders start as
+-- "Pending Approval" and only move forward once the admin approves them.
+create table if not exists orders (
+  id             text primary key,         -- e.g. AM123456
+  user_id        integer references users(id) on delete set null,
+  name           text not null,
+  phone          text not null,
+  email          text,
+  address        text not null,
+  notes          text,
+  items          jsonb not null default '[]'::jsonb,
+  subtotal       integer not null,
+  shipping       integer not null default 0,
+  discount       integer not null default 0,
+  promo_code     text,
+  total          integer not null,
+  payment_method text not null,
+  status         text not null default 'Pending Approval',
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+
+create index if not exists orders_user_idx   on orders (user_id);
+create index if not exists orders_status_idx on orders (status);

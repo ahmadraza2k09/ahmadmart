@@ -16,7 +16,15 @@ export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 async function postJson(url: string, body: unknown, auth = false) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (auth) headers.Authorization = `Bearer ${getToken()}`;
-  const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+  } catch {
+    throw new Error("Cannot reach the server. Check your connection and try again.");
+  }
+  if (res.status === 404) {
+    throw new Error("Sign-in service is unavailable. The app must be deployed on Vercel with the database connected.");
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as { error?: string }).error || `Request failed (${res.status})`);
   return data;

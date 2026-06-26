@@ -52,6 +52,28 @@ export function requireAdmin(req, res) {
   return true;
 }
 
+// Map an order row to the Order shape the frontend uses.
+export function rowToOrder(r) {
+  return {
+    id: r.id,
+    userId: r.user_id ?? undefined,
+    createdAt: new Date(r.created_at).getTime(),
+    name: r.name,
+    phone: r.phone,
+    email: r.email || "",
+    address: r.address,
+    notes: r.notes || undefined,
+    items: r.items || [],
+    subtotal: r.subtotal,
+    shipping: r.shipping,
+    discount: r.discount || undefined,
+    promoCode: r.promo_code || undefined,
+    total: r.total,
+    paymentMethod: r.payment_method,
+    status: r.status,
+  };
+}
+
 // Map a DB row (snake_case) to the Product shape the frontend uses (camelCase).
 export function rowToProduct(r) {
   return {

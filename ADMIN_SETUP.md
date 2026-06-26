@@ -55,7 +55,7 @@ get full access to the dashboard. To change the admin password later, update
   Changes save to Neon and show on the storefront on next load.
 - **Analytics tab** — totals, in/out of stock, services, discounts, catalog value,
   and product counts by category and sub-category.
-- **Orders tab** — the existing order verification (still stored in the browser).
+- **Orders tab** — every order from the database, with **Approve** + status controls.
 
 ## 6. Accounts & roles
 
@@ -64,6 +64,19 @@ get full access to the dashboard. To change the admin password later, update
 - In **/account**, a buyer can switch to seller and back at any time.
 - (Seller-specific tools, e.g. sellers listing their own products, are a future
   phase — for now the role is stored and shown.)
+
+## 7. Orders (approval flow)
+
+- Checkout **requires sign-in**, so every order is tied to the user's account and
+  shows in **/account → Orders** with its live status.
+- New orders are created in the `orders` table as **Pending Approval**.
+- In **/admin → Orders**, the admin clicks **Approve**:
+  - JazzCash orders → **Payment Received**
+  - Cash on Delivery orders → **Confirmed (COD)** (cash collected on delivery)
+- The admin can then move the order to **Shipped** / **Delivered** / **Cancelled**;
+  the customer sees each change in their profile.
+- ⚠️ **Re-run [`db/schema.sql`](db/schema.sql) in Neon** — it now also creates the
+  `orders` table (safe to run again; everything is `create table if not exists`).
 
 ## How security works
 
@@ -84,10 +97,11 @@ containing `DATABASE_URL`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`
 
 ## Files
 
-- `db/schema.sql` — `products` + `users` tables
+- `db/schema.sql` — `products` + `users` + `orders` tables
 - `api/products.js` — public product list
-- `api/admin/products.js` / `analytics.js` / `seed.js` — admin-only (JWT role admin)
+- `api/admin/products.js` / `analytics.js` / `seed.js` / `orders.js` — admin-only (JWT role admin)
+- `api/orders.js` — place an order / list my orders (signed-in users)
 - `api/auth/signup.js` / `login.js` / `me.js` / `role.js` — accounts, login, role switch
 - `api/_db.js` — Neon client + JWT / auth helpers
 - `vercel.json` — SPA routing that leaves `/api` to the functions
-- `src/app/auth.ts`, `src/app/adminApi.ts`, `src/app/types.ts` — frontend clients + types
+- `src/app/auth.ts`, `src/app/adminApi.ts`, `src/app/ordersApi.ts`, `src/app/types.ts` — frontend clients + types

@@ -28,8 +28,9 @@ export const ADMIN_PASSCODE = "ahmadmart-admin";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export const ORDER_STATUSES = [
-  "Pending Verification",
-  "Verified",
+  "Pending Approval",
+  "Payment Received",
+  "Confirmed (COD)",
   "Shipped",
   "Delivered",
   "Cancelled",
@@ -45,6 +46,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  userId?: number;
   createdAt: number;
   name: string;
   phone: string;
@@ -151,7 +153,7 @@ export function buildWhatsAppText(order: Order): string {
     `*Total: Rs. ${order.total}*`,
     ``,
     paymentLine,
-    `Status: Pending Verification`,
+    `Status: ${order.status}`,
     ``,
     closingLine,
   ]
