@@ -2,25 +2,20 @@
 @import './tailwind.css';
 @import './theme.css';
 
-/* Continuous scrolling marquee for the top announcement bar. The track holds two
-   identical halves and slides by -50%, so the loop is seamless. */
+/* Continuous scrolling marquee for the top promo bar. The track holds two
+   identical halves and slides by -50%, so the loop is seamless and never stops. */
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
 .animate-marquee {
-  animation: marquee 22s linear infinite;
+  animation: marquee 20s linear infinite;
   will-change: transform;
 }
-.animate-marquee:hover {
-  animation-play-state: paused;
-}
 
-/* Liquid-glass main navigation bar (kept). */
+/* Main navigation bar — solid white (no glass effect). */
 .glass-nav {
-  background: rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(18px) saturate(180%);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 6px 24px rgba(30, 64, 175, 0.07);
+  background: #ffffff;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.08);
+  box-shadow: 0 4px 16px rgba(30, 64, 175, 0.05);
 }

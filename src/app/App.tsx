@@ -571,6 +571,7 @@ function Navbar() {
   const [searchQ, setSearchQ] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [openCat, setOpenCat] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -590,7 +591,7 @@ function Navbar() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
-  useEffect(() => { setMenuOpen(false); setSearchOpen(false); }, [location]);
+  useEffect(() => { setMenuOpen(false); setSearchOpen(false); setOpenCat(null); }, [location]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -607,11 +608,6 @@ function Navbar() {
     (catTree[p.category] ||= []);
     if (!catTree[p.category].includes(p.subcategory)) catTree[p.category].push(p.subcategory);
   }
-  const navLinks = [
-    { label: "Home", to: "/" },
-    { label: "Shop", to: "/shop" },
-    ...allCats.map(c => ({ label: c, to: `/shop?cat=${encodeURIComponent(c)}` })),
-  ];
   // Live search results shown in the search dropdown.
   const q = searchQ.trim().toLowerCase();
   const results = q
@@ -621,6 +617,20 @@ function Navbar() {
   return (
     <>
       <nav className={`fixed top-0 left-0 right-0 z-50 glass-nav transition-all duration-300 ${scrolled ? "shadow-lg" : ""}`}>
+        {/* Seller promo bar — continuously scrolling */}
+        <Link to="/register" className="block bg-[#1E40AF] text-white py-2 overflow-hidden hover:bg-[#1e3a8a] transition-colors">
+          <div className="flex w-max animate-marquee">
+            {[0, 1].map(g => (
+              <div key={g} className="flex shrink-0" aria-hidden={g === 1}>
+                {[0, 1, 2, 3].map(i => (
+                  <span key={i} className="px-10 text-xs sm:text-sm font-semibold whitespace-nowrap">
+                    🛍️ Sell your products on Ahmad Mart with <span className="text-[#F97316] font-bold">0% commission</span> — start selling today
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </Link>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -740,12 +750,30 @@ function Navbar() {
         {menuOpen && (
           <div className="lg:hidden border-t border-gray-100 bg-white">
             <div className="px-4 py-3 flex flex-col gap-1">
-              {navLinks.map(l => (
-                <Link key={l.to} to={l.to}
-                  className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">
-                  {l.label}
-                </Link>
-              ))}
+              <Link to="/" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">Home</Link>
+              <Link to="/shop" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">Shop</Link>
+              {allCats.map(c => {
+                const subs = catTree[c] || [];
+                const open = openCat === c;
+                return (
+                  <div key={c}>
+                    <button
+                      onClick={() => (subs.length ? setOpenCat(open ? null : c) : navigate(`/shop?cat=${encodeURIComponent(c)}`))}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center justify-between">
+                      <span>{c}</span>
+                      {subs.length > 0 && <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />}
+                    </button>
+                    {open && subs.length > 0 && (
+                      <div className="pl-3 ml-2 border-l-2 border-[#EFF6FF] flex flex-col mt-0.5 mb-1">
+                        <Link to={`/shop?cat=${encodeURIComponent(c)}`} className="px-3 py-2 rounded-xl text-sm font-semibold text-[#1E40AF] hover:bg-[#EFF6FF] transition-colors">All {c}</Link>
+                        {subs.map(s => (
+                          <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`} className="px-3 py-2 rounded-xl text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">{s}</Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               <div className="border-t border-gray-100 mt-2 pt-2 flex flex-col gap-1">
                 <Link to="/wishlist" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#FFF7ED] hover:text-[#F97316] transition-colors flex items-center gap-2">
                   <Heart size={16} /> Wishlist
@@ -769,7 +797,7 @@ function Navbar() {
           </div>
         )}
       </nav>
-      <div className="h-16" />
+      <div className="h-[100px] sm:h-[104px]" />
     </>
   );
 }
@@ -869,11 +897,14 @@ function Footer() {
         </div>
 
         <div className="border-t border-white/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-gray-500 text-sm">© 2025 Ahmad Mart. All rights reserved.</p>
+          <div className="text-center sm:text-left">
+            <p className="text-gray-500 text-sm">© 2026 Ahmad Mart. All rights reserved.</p>
+            <p className="text-gray-500 text-xs mt-1">Made by <a href="https://linkin.bio/ahmadraza/" target="_blank" rel="noopener noreferrer" className="text-[#F97316] font-semibold hover:underline">Ahmad Raza</a></p>
+          </div>
           <div className="flex gap-2 items-center">
             <span className="text-gray-500 text-xs">We accept:</span>
             <div className="flex gap-2">
-              {["COD", "JazzCash", "EasyPaisa"].map(m => (
+              {["JazzCash", "COD"].map(m => (
                 <span key={m} className="px-2 py-1 bg-white/10 rounded text-xs text-gray-300 font-medium">{m}</span>
               ))}
             </div>
@@ -1783,32 +1814,11 @@ function ProductDetailPage() {
 // ─── Cart Page ────────────────────────────────────────────────────────────────
 function CartPage() {
   const { cart, removeFromCart, updateQty, cartTotal } = useContext(Store);
-  const [coupon, setCoupon] = useState("");
-  const [discount_applied, setDiscountApplied] = useState(0);
-  const [deliveryWaiver, setDeliveryWaiver] = useState(0);
-  const [couponMsg, setCouponMsg] = useState("");
   const navigate = useNavigate();
 
-  const applyCoupon = () => {
-    const code = coupon.toUpperCase();
-    if (code === "AHMADMART20") {
-      setDiscountApplied(Math.round(cartTotal * 0.2)); setDeliveryWaiver(0);
-      setCouponMsg("20% discount applied!");
-    } else if (code === "SAVE10") {
-      setDiscountApplied(Math.round(cartTotal * 0.1)); setDeliveryWaiver(0);
-      setCouponMsg("10% discount applied!");
-    } else if (code === PROMO_CODE) {
-      setDeliveryWaiver(PROMO_WAIVER); setDiscountApplied(0);
-      setCouponMsg("Rs. 100 off delivery applied!");
-    } else {
-      setDiscountApplied(0); setDeliveryWaiver(0);
-      setCouponMsg("Invalid coupon code");
-    }
-  };
-
+  // Delivery is a flat fee here. The DELIVERY100 promo is applied once, at checkout.
   const shipping = DELIVERY_FEE;
-  const shippingAfter = Math.max(0, shipping - deliveryWaiver);
-  const final = cartTotal - discount_applied + shippingAfter;
+  const final = cartTotal + shipping;
 
   if (cart.length === 0) return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
@@ -1866,31 +1876,18 @@ function CartPage() {
 
             <div className="space-y-3 mb-5">
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Subtotal</span><span className="font-semibold">{fmt(cartTotal)}</span></div>
-              {discount_applied > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Discount</span><span>-{fmt(discount_applied)}</span></div>}
               <div className="flex justify-between text-sm">
                 <span className="text-[#6b7280]">Delivery</span>
                 <span className="font-semibold">{fmt(shipping)}</span>
               </div>
-              {deliveryWaiver > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Promo ({PROMO_CODE})</span><span>-{fmt(Math.min(deliveryWaiver, shipping))}</span></div>}
               <div className="border-t border-gray-100 pt-3 flex justify-between font-black text-[#111827]">
                 <span>Total</span><span className="text-[#1E40AF] text-lg">{fmt(final)}</span>
               </div>
             </div>
 
-            {/* Coupon */}
-            <div className="mb-5">
-              <div className="flex gap-2">
-                <input value={coupon} onChange={e => setCoupon(e.target.value)}
-                  placeholder="Coupon code"
-                  className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1E40AF] bg-gray-50" />
-                <button onClick={applyCoupon}
-                  className="px-4 py-2 rounded-xl bg-gray-100 text-[#374151] text-sm font-bold hover:bg-gray-200 transition-colors">
-                  <Tag size={14} />
-                </button>
-              </div>
-              {couponMsg && <p className={`text-xs mt-1.5 font-semibold ${couponMsg.includes("applied") ? "text-emerald-600" : "text-red-500"}`}>{couponMsg}</p>}
-              <p className="text-xs text-[#6b7280] mt-1">Try: DELIVERY100 (Rs. 100 off delivery), AHMADMART20 or SAVE10</p>
-            </div>
+            <p className="text-xs text-[#6b7280] mb-5 bg-gray-50 rounded-xl px-3 py-2.5">
+              Have a promo code? Apply <span className="font-bold text-[#1E40AF]">{PROMO_CODE}</span> at checkout to get Rs. 100 off delivery.
+            </p>
 
             <button onClick={() => navigate("/checkout")}
               className="w-full py-3.5 rounded-xl bg-[#1E40AF] text-white font-black text-sm hover:bg-[#1e3a8a] transition-all active:scale-95 mb-3"
