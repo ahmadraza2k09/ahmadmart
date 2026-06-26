@@ -8,7 +8,7 @@ import {
   CheckCircle, ArrowRight, TrendingUp, Award, Gift,
   Instagram, Mail, Send, Smartphone,
   Battery, Plug, Wifi, RotateCcw, ZoomIn,
-  Copy, ShieldCheck, Lock, RefreshCw, MessageCircle
+  Copy, ShieldCheck, Lock, RefreshCw, MessageCircle, ImageOff
 } from "lucide-react";
 import {
   JAZZCASH_NUMBER, JAZZCASH_TITLE, WHATSAPP_DISPLAY, WHATSAPP_NUMBER,
@@ -2965,6 +2965,27 @@ function AdminAnalytics({ dbMode }: { dbMode: boolean }) {
 // ─── Admin: Product create / edit form ────────────────────────────────────────
 const ADMIN_CATEGORIES = ["Mobile Accessories", "Home Decoration", "Digital Services"];
 
+// Live image preview for the admin product form. As soon as a URL is pasted the
+// real image loads here; a broken/empty URL shows a neutral placeholder.
+function ImageThumb({ url, main }: { url: string; main?: boolean }) {
+  const [err, setErr] = useState(false);
+  const trimmed = url.trim();
+  useEffect(() => { setErr(false); }, [trimmed]);
+  const size = main ? "w-20 h-20" : "w-16 h-16";
+  return (
+    <div className={`shrink-0 ${size} rounded-xl border ${main ? "border-[#1E40AF]/40" : "border-gray-200"} bg-gray-50 overflow-hidden grid place-items-center relative`}>
+      {trimmed && !err ? (
+        <img src={trimmed} alt="" className="w-full h-full object-cover" loading="lazy" onError={() => setErr(true)} />
+      ) : (
+        <ImageOff size={main ? 22 : 18} className="text-gray-300" />
+      )}
+      {main && <span className="absolute bottom-0 inset-x-0 bg-[#1E40AF] text-white text-[9px] font-bold text-center py-0.5 leading-tight">MAIN</span>}
+    </div>
+  );
+}
+
+const MAX_PRODUCT_IMAGES = 6;
+
 function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { initial: Product | null; onSave: (p: Partial<Product>) => void; onCancel: () => void; busy: boolean; allowBadge?: boolean }) {
   const [f, setF] = useState(() => ({
     name: initial?.name ?? "",
@@ -2973,18 +2994,27 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
     priceNote: initial?.priceNote ?? "",
     category: initial?.category ?? "Mobile Accessories",
     subcategory: initial?.subcategory ?? "",
-    image: initial?.image ?? "",
-    images: (initial?.images ?? []).join("\n"),
     badge: initial?.badge ?? "",
     inStock: initial?.inStock ?? true,
     isService: initial?.isService ?? false,
     description: initial?.description ?? "",
     specs: Object.entries(initial?.specs ?? {}).map(([k, v]) => `${k}: ${v}`).join("\n"),
   }));
+  // Product images managed as a list: the first item is the main image, the rest
+  // are gallery images. Each is added/edited by URL with a live preview.
+  const [imgs, setImgs] = useState<string[]>(() => {
+    const arr = (initial?.images && initial.images.length)
+      ? [...initial.images]
+      : (initial?.image ? [initial.image] : []);
+    return arr.length ? arr : [""];
+  });
+  const setImg = (i: number, v: string) => setImgs(prev => prev.map((u, idx) => (idx === i ? v : u)));
+  const addImg = () => setImgs(prev => (prev.length < MAX_PRODUCT_IMAGES ? [...prev, ""] : prev));
+  const removeImg = (i: number) => setImgs(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
   const set = (k: string, v: string | boolean) => setF(prev => ({ ...prev, [k]: v }));
   const submit = () => {
-    const images = f.images.split("\n").map(s => s.trim()).filter(Boolean);
-    const image = f.image.trim() || images[0] || "";
+    const images = imgs.map(s => s.trim()).filter(Boolean);
+    const image = images[0] || "";
     const specs: Record<string, string> = {};
     f.specs.split("\n").forEach(line => { const i = line.indexOf(":"); if (i > 0) specs[line.slice(0, i).trim()] = line.slice(i + 1).trim(); });
     onSave({
@@ -3018,8 +3048,35 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Original Price (optional)</span><input className={inp} type="number" value={f.originalPrice} onChange={e => set("originalPrice", e.target.value)} /></label>
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Price Note (e.g. per month)</span><input className={inp} value={f.priceNote} onChange={e => set("priceNote", e.target.value)} /></label>
         {allowBadge && <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Badge</span><select className={inp} value={f.badge} onChange={e => set("badge", e.target.value)}><option value="">None</option><option value="new">new</option><option value="sale">sale</option><option value="bestseller">bestseller</option></select></label>}
-        <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Main Image URL</span><input className={inp} value={f.image} onChange={e => set("image", e.target.value)} placeholder="/earbuds/x.jpg or https://..." /></label>
-        <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Gallery Images (one URL per line)</span><textarea className={inp + " resize-none"} rows={2} value={f.images} onChange={e => set("images", e.target.value)} /></label>
+        <div className="text-sm sm:col-span-2">
+          <span className="font-semibold text-[#374151] block mb-1">Product Images</span>
+          <p className="text-xs text-[#6b7280] mb-2">Paste an image URL and it loads instantly in the preview. The first image is the main one shown on the product. You can add up to {MAX_PRODUCT_IMAGES} images.</p>
+          <div className="space-y-2">
+            {imgs.map((url, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <ImageThumb url={url} main={i === 0} />
+                <input
+                  className={inp}
+                  value={url}
+                  onChange={e => setImg(i, e.target.value)}
+                  placeholder={i === 0 ? "Main image URL — /earbuds/x.jpg or https://..." : "Image URL — paste link here"}
+                />
+                {imgs.length > 1 && (
+                  <button type="button" onClick={() => removeImg(i)} title="Remove image"
+                    className="shrink-0 w-9 h-9 grid place-items-center rounded-xl border border-gray-200 text-red-500 hover:bg-red-50 transition-colors">
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {imgs.length < MAX_PRODUCT_IMAGES && (
+            <button type="button" onClick={addImg}
+              className="mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-[#1E40AF]/40 text-[#1E40AF] text-sm font-bold hover:bg-[#1E40AF]/5 transition-colors">
+              <Plus size={16} /> Add another image
+            </button>
+          )}
+        </div>
         <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Description</span><textarea className={inp + " resize-none"} rows={3} value={f.description} onChange={e => set("description", e.target.value)} /></label>
         <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Specs (one "Key: Value" per line)</span><textarea className={inp + " resize-none"} rows={3} value={f.specs} onChange={e => set("specs", e.target.value)} /></label>
         <label className="flex items-center gap-2 text-sm font-semibold text-[#374151]"><input type="checkbox" checked={f.inStock} onChange={e => set("inStock", e.target.checked)} /> In stock</label>
