@@ -14,6 +14,7 @@ export default async function handler(req, res) {
     if (action === "login") return await login(req, res);
     if (action === "me") return await me(req, res);
     if (action === "role") return await role(req, res);
+    if (action === "store") return await store(req, res);
     res.status(404).json({ error: "Unknown auth action." });
   } catch (e) {
     res.status(500).json({ error: e.message || "Database error" });
@@ -91,4 +92,22 @@ async function role(req, res) {
   const rows = await sql`update users set role = ${newRole}, updated_at = now() where id = ${auth.id} returning *`;
   const user = userPublic(rows[0]);
   res.status(200).json({ token: signToken(user), user });
+}
+
+// Seller updates their own store details (name, WhatsApp, JazzCash).
+async function store(req, res) {
+  if (req.method !== "POST" && req.method !== "PATCH") { res.status(405).json({ error: "Method not allowed" }); return; }
+  const auth = getAuthUser(req);
+  if (!auth) { res.status(401).json({ error: "Not authenticated" }); return; }
+  if (auth.role !== "seller" && auth.role !== "admin") { res.status(403).json({ error: "Only sellers have a store." }); return; }
+  const { storeName, whatsapp, jazzcashNumber, jazzcashTitle } = await readJsonBody(req);
+  if (!storeName || !String(storeName).trim()) { res.status(400).json({ error: "Store name is required." }); return; }
+  if (!whatsapp || !String(whatsapp).trim()) { res.status(400).json({ error: "WhatsApp number is required." }); return; }
+  const sql = getSql();
+  const rows = await sql`
+    update users set store_name = ${storeName}, whatsapp = ${whatsapp},
+      jazzcash_number = ${jazzcashNumber ?? null}, jazzcash_title = ${jazzcashTitle ?? null}, updated_at = now()
+    where id = ${auth.id} returning *`;
+  if (!rows.length) { res.status(404).json({ error: "User not found." }); return; }
+  res.status(200).json({ user: userPublic(rows[0]) });
 }

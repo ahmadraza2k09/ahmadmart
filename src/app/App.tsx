@@ -32,7 +32,7 @@ import {
   fetchAnalytics, seedProducts, type Analytics,
 } from "./adminApi";
 import {
-  apiLogin, apiSignup, apiMe, apiChangeRole,
+  apiLogin, apiSignup, apiMe, apiChangeRole, apiUpdateStore,
   setToken, clearToken, type AuthUser, type Role, type SellerSignup,
 } from "./auth";
 import {
@@ -65,6 +65,7 @@ interface StoreCtx {
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string, role: Role, seller?: SellerSignup) => Promise<void>;
   changeRole: (role: Role) => Promise<void>;
+  updateStore: (fields: { storeName: string; whatsapp: string; jazzcashNumber?: string; jazzcashTitle?: string }) => Promise<void>;
   logout: () => void;
   recentlyViewed: Product[];
   addRecentlyViewed: (p: Product) => void;
@@ -418,6 +419,10 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
     const { token, user } = await apiChangeRole(role);
     setToken(token); setUser(user);
   }, []);
+  const updateStore = useCallback(async (fields: { storeName: string; whatsapp: string; jazzcashNumber?: string; jazzcashTitle?: string }) => {
+    const { user } = await apiUpdateStore(fields);
+    setUser(user);
+  }, []);
   const logout = useCallback(() => { clearToken(); setUser(null); }, []);
   const addRecentlyViewed = useCallback((p: Product) => {
     setRecentlyViewed(prev => [p, ...prev.filter(i => i.id !== p.id)].slice(0, 6));
@@ -426,9 +431,9 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(() => ({
     products, refreshProducts,
     cart, wishlist, addToCart, removeFromCart, clearCart, updateQty, toggleWishlist, inWishlist,
-    cartCount, cartTotal, user, authReady, login, signup, changeRole, logout, recentlyViewed, addRecentlyViewed,
+    cartCount, cartTotal, user, authReady, login, signup, changeRole, updateStore, logout, recentlyViewed, addRecentlyViewed,
   }), [products, refreshProducts, cart, wishlist, addToCart, removeFromCart, clearCart, updateQty, toggleWishlist, inWishlist,
-    cartCount, cartTotal, user, authReady, login, signup, changeRole, logout, recentlyViewed, addRecentlyViewed]);
+    cartCount, cartTotal, user, authReady, login, signup, changeRole, updateStore, logout, recentlyViewed, addRecentlyViewed]);
 
   return <Store.Provider value={value}>{children}</Store.Provider>;
 }
@@ -2886,7 +2891,7 @@ function AdminAnalytics({ dbMode }: { dbMode: boolean }) {
 // ─── Admin: Product create / edit form ────────────────────────────────────────
 const ADMIN_CATEGORIES = ["Mobile Accessories", "Home Decoration", "Digital Services"];
 
-function ProductForm({ initial, onSave, onCancel, busy }: { initial: Product | null; onSave: (p: Partial<Product>) => void; onCancel: () => void; busy: boolean }) {
+function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { initial: Product | null; onSave: (p: Partial<Product>) => void; onCancel: () => void; busy: boolean; allowBadge?: boolean }) {
   const [f, setF] = useState(() => ({
     name: initial?.name ?? "",
     price: initial?.price != null ? String(initial.price) : "",
@@ -2918,7 +2923,7 @@ function ProductForm({ initial, onSave, onCancel, busy }: { initial: Product | n
       subcategory: f.subcategory.trim(),
       image,
       images: images.length ? images : (image ? [image] : []),
-      badge: (f.badge || undefined) as Product["badge"],
+      badge: allowBadge ? ((f.badge || undefined) as Product["badge"]) : undefined,
       inStock: f.inStock,
       isService: f.isService || undefined,
       description: f.description.trim(),
@@ -2938,7 +2943,7 @@ function ProductForm({ initial, onSave, onCancel, busy }: { initial: Product | n
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Price (Rs.)</span><input className={inp} type="number" value={f.price} onChange={e => set("price", e.target.value)} /></label>
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Original Price (optional)</span><input className={inp} type="number" value={f.originalPrice} onChange={e => set("originalPrice", e.target.value)} /></label>
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Price Note (e.g. per month)</span><input className={inp} value={f.priceNote} onChange={e => set("priceNote", e.target.value)} /></label>
-        <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Badge</span><select className={inp} value={f.badge} onChange={e => set("badge", e.target.value)}><option value="">None</option><option value="new">new</option><option value="sale">sale</option><option value="bestseller">bestseller</option></select></label>
+        {allowBadge && <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Badge</span><select className={inp} value={f.badge} onChange={e => set("badge", e.target.value)}><option value="">None</option><option value="new">new</option><option value="sale">sale</option><option value="bestseller">bestseller</option></select></label>}
         <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Main Image URL</span><input className={inp} value={f.image} onChange={e => set("image", e.target.value)} placeholder="/earbuds/x.jpg or https://..." /></label>
         <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Gallery Images (one URL per line)</span><textarea className={inp + " resize-none"} rows={2} value={f.images} onChange={e => set("images", e.target.value)} /></label>
         <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Description</span><textarea className={inp + " resize-none"} rows={3} value={f.description} onChange={e => set("description", e.target.value)} /></label>
@@ -3252,13 +3257,32 @@ function AdminPage() {
 
 // ─── Seller Dashboard ─────────────────────────────────────────────────────────
 function SellerPage() {
-  const { user, authReady, refreshProducts } = useContext(Store);
+  const { user, authReady, refreshProducts, updateStore } = useContext(Store);
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState<Product | null | "new">(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [storeOpen, setStoreOpen] = useState(false);
+  const [storeForm, setStoreForm] = useState({ storeName: "", whatsapp: "", jazzcashNumber: "", jazzcashTitle: "" });
+  const [storeBusy, setStoreBusy] = useState(false);
+  const [storeMsg, setStoreMsg] = useState("");
+
+  const openStoreEdit = () => {
+    setStoreForm({ storeName: user?.storeName || "", whatsapp: user?.whatsapp || "", jazzcashNumber: user?.jazzcashNumber || "", jazzcashTitle: user?.jazzcashTitle || "" });
+    setStoreMsg(""); setStoreOpen(true);
+  };
+  const saveStore = async () => {
+    if (!storeForm.storeName.trim()) { setStoreMsg("Store name is required."); return; }
+    if (!/^0\d{9,10}$/.test(storeForm.whatsapp.trim())) { setStoreMsg("Enter a valid WhatsApp number (e.g. 03001234567)."); return; }
+    setStoreBusy(true); setStoreMsg("");
+    try {
+      await updateStore({ storeName: storeForm.storeName.trim(), whatsapp: storeForm.whatsapp.trim(), jazzcashNumber: storeForm.jazzcashNumber.trim() || undefined, jazzcashTitle: storeForm.jazzcashTitle.trim() || undefined });
+      setStoreOpen(false);
+    } catch (e) { setStoreMsg(e instanceof Error ? e.message : "Could not save store details."); }
+    setStoreBusy(false);
+  };
 
   const isSeller = !!user && (user.role === "seller" || user.role === "admin");
   const load = () => { sellerGetProducts().then(setProducts).catch(e => setErr(e instanceof Error ? e.message : "Failed to load products")); };
@@ -3317,16 +3341,38 @@ function SellerPage() {
           <p className="text-xs font-semibold text-[#6b7280]">Your Products</p>
         </div>
         <div className="bg-white rounded-2xl p-4 sm:col-span-2 text-sm" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
-          <p className="text-xs font-bold text-[#6b7280] uppercase tracking-wide mb-1">Store contact (used at checkout)</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-bold text-[#6b7280] uppercase tracking-wide">Store contact (used at checkout)</p>
+            <button onClick={openStoreEdit} className="text-xs font-bold text-[#1E40AF] hover:underline">Edit</button>
+          </div>
+          <p className="text-[#374151]">Store: <span className="font-semibold">{user.storeName || "—"}</span></p>
           <p className="text-[#374151]">WhatsApp: <span className="font-semibold">{user.whatsapp || "—"}</span></p>
           <p className="text-[#374151]">JazzCash: <span className="font-semibold">{user.jazzcashNumber || "—"}{user.jazzcashTitle ? ` (${user.jazzcashTitle})` : ""}</span></p>
         </div>
       </div>
 
+      {storeOpen && (
+        <div className="bg-white rounded-2xl p-5 mb-6" style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.12)" }}>
+          <p className="font-bold text-[#111827] mb-1">Edit store details</p>
+          <p className="text-xs text-[#6b7280] mb-4">Buyers check out and contact you on this WhatsApp; payments go to this JazzCash.</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Store Name *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.storeName} onChange={e => setStoreForm(f => ({ ...f, storeName: e.target.value }))} /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Store WhatsApp *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.whatsapp} onChange={e => setStoreForm(f => ({ ...f, whatsapp: e.target.value }))} placeholder="03001234567" /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">JazzCash Number</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.jazzcashNumber} onChange={e => setStoreForm(f => ({ ...f, jazzcashNumber: e.target.value }))} placeholder="03001234567" /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">JazzCash Title</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.jazzcashTitle} onChange={e => setStoreForm(f => ({ ...f, jazzcashTitle: e.target.value }))} placeholder="Account holder name" /></label>
+          </div>
+          {storeMsg && <p className="text-xs text-red-500 font-semibold mt-2">{storeMsg}</p>}
+          <div className="flex gap-2 mt-4">
+            <button onClick={saveStore} disabled={storeBusy} className="px-5 py-2.5 rounded-xl bg-[#1E40AF] text-white font-bold text-sm disabled:opacity-60">{storeBusy ? "Saving…" : "Save store details"}</button>
+            <button onClick={() => setStoreOpen(false)} className="px-5 py-2.5 rounded-xl border border-gray-200 text-[#374151] font-bold text-sm">Cancel</button>
+          </div>
+        </div>
+      )}
+
       {(msg || err) && <div className={`mb-4 rounded-xl p-3 text-sm font-semibold ${err ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"}`}>{err || msg}</div>}
 
       {editing !== null && (
-        <ProductForm initial={editing === "new" ? null : editing} busy={busy} onSave={save} onCancel={() => setEditing(null)} />
+        <ProductForm initial={editing === "new" ? null : editing} busy={busy} onSave={save} onCancel={() => setEditing(null)} allowBadge={false} />
       )}
 
       <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
