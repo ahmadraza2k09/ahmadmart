@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Keep private / transactional pages out of search results
+Disallow: /cart
+Disallow: /checkout
+Disallow: /account
+Disallow: /admin
+Disallow: /seller
+Disallow: /messages
+Disallow: /api/
+
+Sitemap: https://ahmadmart.store/sitemap.xml
