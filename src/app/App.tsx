@@ -485,8 +485,7 @@ function ProductCardBase({ product }: { product: Product }) {
   return (
     <div
       onClick={() => navigate(`/product/${product.id}`)}
-      className="group bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1"
-      style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08), 0 1px 4px rgba(0,0,0,0.06)" }}
+      className="group skeuo-card skeuo-card-hover overflow-hidden cursor-pointer"
     >
       <div className="relative overflow-hidden bg-gray-50" style={{ aspectRatio: "1/1" }}>
         <img
@@ -543,8 +542,7 @@ function ProductCardBase({ product }: { product: Product }) {
           ) : (
             <button
               onClick={handleAdd}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 ${adding ? "bg-emerald-500 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}
-              style={{ boxShadow: adding ? "0 4px 12px rgba(16,185,129,0.4)" : "0 4px 12px rgba(30,64,175,0.3)" }}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white active:scale-95 ${adding ? "bg-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.4)]" : "btn-skeuo"}`}
             >
               {adding ? <CheckCircle size={13} /> : <ShoppingCart size={13} />}
               {adding ? "Added!" : "Add"}
@@ -560,7 +558,7 @@ const ProductCard = memo(ProductCardBase);
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 function Navbar() {
-  const { cartCount, user } = useContext(Store);
+  const { cartCount, user, products } = useContext(Store);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
@@ -592,18 +590,19 @@ function Navbar() {
     if (searchQ.trim()) { navigate(`/shop?q=${encodeURIComponent(searchQ)}`); setSearchOpen(false); setSearchQ(""); }
   };
 
+  // Category links are built from the live catalog, so any new category a seller
+  // adds shows up in the main bar automatically (built-ins always listed first).
+  const baseCats = ["Mobile Accessories", "Home Decoration", "Digital Services"];
+  const allCats = Array.from(new Set([...baseCats, ...products.map(p => p.category)])).filter(Boolean);
   const navLinks = [
     { label: "Home", to: "/" },
     { label: "Shop", to: "/shop" },
-    { label: "Mobile Accessories", to: "/shop?cat=Mobile Accessories" },
-    { label: "Wall Clocks", to: "/shop?cat=Home Decoration" },
-    { label: "Digital Services", to: "/shop?cat=Digital Services" },
+    ...allCats.map(c => ({ label: c, to: `/shop?cat=${encodeURIComponent(c)}` })),
   ];
 
   return (
     <>
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "shadow-lg" : ""}`}
-        style={{ background: scrolled ? "rgba(255,255,255,0.97)" : "#fff", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(30,64,175,0.08)" }}>
+      <nav className={`fixed top-0 left-0 right-0 z-50 glass-nav transition-all duration-300 ${scrolled ? "shadow-lg" : ""}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -883,6 +882,15 @@ function HomePage() {
   const mobileAcc = products.filter(p => p.category === "Mobile Accessories").slice(0, 4);
   const clocks = products.filter(p => p.subcategory === "Wall Clocks");
 
+  // Category tiles: the built-in ones, plus any new sub-category a seller introduces
+  // (given a default icon and a colour from the palette).
+  const catPalette = [["#1E40AF", "#EFF6FF"], ["#F97316", "#FFF7ED"], ["#059669", "#ECFDF5"], ["#7C3AED", "#F5F3FF"], ["#0891B2", "#ECFEFF"], ["#B45309", "#FFFBEB"], ["#DC2626", "#FEF2F2"]];
+  const knownSubs = new Set(CATEGORIES.map(c => c.subcategory));
+  const extraCategories = Array.from(new Set(products.map(p => p.subcategory)))
+    .filter(sub => sub && !knownSubs.has(sub))
+    .map((sub, i) => ({ name: sub, icon: Package, subcategory: sub, color: catPalette[i % catPalette.length][0], bg: catPalette[i % catPalette.length][1] }));
+  const allCategories = [...CATEGORIES, ...extraCategories];
+
   return (
     <div>
       {/* Hero Slider */}
@@ -896,12 +904,11 @@ function HomePage() {
                 <p className="text-blue-100 text-sm sm:text-base mb-6 max-w-sm">{slide.sub}</p>
                 <div className="flex flex-wrap gap-3">
                   <button onClick={() => navigate(slide.link)}
-                    className="px-6 py-3 rounded-xl bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-all active:scale-95"
-                    style={{ boxShadow: "0 4px 16px rgba(249,115,22,0.4)" }}>
+                    className="px-6 py-3 rounded-xl btn-skeuo-orange font-bold text-sm">
                     {slide.cta} <ArrowRight size={14} className="inline ml-1" />
                   </button>
                   <button onClick={() => navigate("/shop")}
-                    className="px-6 py-3 rounded-xl bg-white/20 text-white font-bold text-sm hover:bg-white/30 transition-all border border-white/30">
+                    className="px-6 py-3 rounded-xl btn-glass text-white font-bold text-sm">
                     Explore Categories
                   </button>
                 </div>
@@ -950,12 +957,11 @@ function HomePage() {
         <section className="mb-14">
           <SectionHeader title="Shop by Category" subtitle="Find exactly what you need" />
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            {CATEGORIES.map(cat => (
+            {allCategories.map(cat => (
               <Link key={cat.name} to={`/shop?sub=${cat.subcategory}`}
-                className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl text-center transition-all duration-200 hover:-translate-y-1 group"
-                style={{ boxShadow: "0 4px 14px rgba(30,64,175,0.07)" }}>
+                className="flex flex-col items-center gap-2 p-4 skeuo-card skeuo-card-hover text-center group">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110"
-                  style={{ background: cat.color, color: "#fff" }}>
+                  style={{ background: `linear-gradient(180deg, ${cat.color}, ${cat.color}cc)`, color: "#fff", boxShadow: `0 6px 14px ${cat.color}55, inset 0 1px 0 rgba(255,255,255,0.4)` }}>
                   <cat.icon size={22} />
                 </div>
                 <span className="text-xs font-semibold text-[#111827] leading-tight">{cat.name}</span>
@@ -1065,10 +1071,9 @@ function HomePage() {
               { icon: RotateCcw, title: "Easy Returns", desc: "Not satisfied? Return within 7 days for an easy, no fuss refund.", color: "#DC2626" },
               { icon: Headphones, title: "24/7 Support", desc: "Our team is always here to help. Reach us anytime on WhatsApp.", color: "#B45309" },
             ].map(({ icon: Icon, title, desc, color }) => (
-              <div key={title} className="bg-white rounded-2xl p-6 hover:-translate-y-1 transition-transform duration-200"
-                style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08)" }}>
+              <div key={title} className="skeuo-card skeuo-card-hover p-6">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                  style={{ background: color, color: "#fff" }}>
+                  style={{ background: `linear-gradient(180deg, ${color}, ${color}cc)`, color: "#fff", boxShadow: `0 6px 14px ${color}55, inset 0 1px 0 rgba(255,255,255,0.4)` }}>
                   <Icon size={24} />
                 </div>
                 <h4 className="font-bold text-[#111827] mb-2">{title}</h4>
@@ -1579,14 +1584,12 @@ function ProductDetailPage() {
               </button>
             </div>
             <button onClick={handleAddToCart}
-              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${added ? "bg-emerald-500 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}
-              style={{ boxShadow: added ? "0 4px 16px rgba(16,185,129,0.4)" : "0 4px 16px rgba(30,64,175,0.3)" }}>
+              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white active:scale-95 ${added ? "bg-emerald-500 shadow-[0_4px_16px_rgba(16,185,129,0.4)]" : "btn-skeuo"}`}>
               {added ? <CheckCircle size={16} /> : <ShoppingCart size={16} />}
               {added ? "Added to Cart!" : "Add to Cart"}
             </button>
             <button onClick={() => { addToCart(product, qty); navigate("/checkout"); }}
-              className="flex-1 min-w-[120px] py-3 rounded-xl bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-all active:scale-95"
-              style={{ boxShadow: "0 4px 16px rgba(249,115,22,0.35)" }}>
+              className="flex-1 min-w-[120px] py-3 rounded-xl btn-skeuo-orange font-bold text-sm">
               Buy Now
             </button>
             <button onClick={() => toggleWishlist(product)}
@@ -3355,7 +3358,7 @@ function AppShell() {
   const isAuth = location.pathname === "/login" || location.pathname === "/register";
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] overflow-x-hidden" style={{ fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+    <div className="min-h-screen am-bg overflow-x-hidden" style={{ fontFamily: "'Outfit', 'Inter', sans-serif" }}>
       <ScrollToTop />
       {!isAuth && <Navbar />}
       <main>

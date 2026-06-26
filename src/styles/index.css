@@ -15,3 +15,96 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* ─── Design system: liquid glass + skeuomorphic ──────────────────────────────
+   Reusable surface/button classes so the look stays consistent across the app. */
+
+/* Ambient page background — soft colour wash + light blobs so glass surfaces pop. */
+.am-bg {
+  background:
+    radial-gradient(1100px 560px at 100% -8%, rgba(249, 115, 22, 0.10), transparent 60%),
+    radial-gradient(1000px 560px at -10% 6%, rgba(30, 64, 175, 0.13), transparent 55%),
+    radial-gradient(900px 700px at 50% 120%, rgba(124, 58, 237, 0.08), transparent 60%),
+    linear-gradient(180deg, #eef2fb 0%, #f5f8fd 45%, #f7f9fc 100%);
+  background-attachment: fixed;
+}
+
+/* Liquid glass surfaces */
+.glass {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 30px rgba(30, 64, 175, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.glass-nav {
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 6px 24px rgba(30, 64, 175, 0.07);
+}
+.glass-chip {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 4px 14px rgba(30, 64, 175, 0.08);
+}
+
+/* Skeuomorphic raised card with a soft top highlight and layered depth. */
+.skeuo-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f6f9fe 100%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 26px rgba(30, 64, 175, 0.10),
+    0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: transform .28s cubic-bezier(.2,.7,.3,1), box-shadow .28s ease;
+}
+.skeuo-card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 22px 46px rgba(30, 64, 175, 0.20),
+    0 6px 14px rgba(0, 0, 0, 0.07);
+}
+
+/* Glossy / tactile buttons */
+.btn-skeuo {
+  background: linear-gradient(180deg, #2a52d4 0%, #1E40AF 58%, #18367f 100%);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.20),
+    0 8px 18px rgba(30, 64, 175, 0.35);
+  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+}
+.btn-skeuo:hover { filter: brightness(1.07); }
+.btn-skeuo:active { transform: translateY(1px) scale(.99); box-shadow: inset 0 2px 8px rgba(0,0,0,0.28), 0 3px 8px rgba(30,64,175,0.3); }
+
+.btn-skeuo-orange {
+  background: linear-gradient(180deg, #ffab5e 0%, #F97316 58%, #d9610f 100%);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.18),
+    0 8px 18px rgba(249, 115, 22, 0.38);
+  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+}
+.btn-skeuo-orange:hover { filter: brightness(1.06); }
+.btn-skeuo-orange:active { transform: translateY(1px) scale(.99); box-shadow: inset 0 2px 8px rgba(0,0,0,0.25), 0 3px 8px rgba(249,115,22,0.32); }
+
+.btn-glass {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 6px 16px rgba(0, 0, 0, 0.12);
+  transition: transform .12s ease, background .2s ease;
+}
+.btn-glass:hover { background: rgba(255, 255, 255, 0.28); }
+.btn-glass:active { transform: translateY(1px) scale(.99); }
