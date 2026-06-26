@@ -485,7 +485,8 @@ function ProductCardBase({ product }: { product: Product }) {
   return (
     <div
       onClick={() => navigate(`/product/${product.id}`)}
-      className="group skeuo-card skeuo-card-hover overflow-hidden cursor-pointer"
+      className="group bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1"
+      style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08), 0 1px 4px rgba(0,0,0,0.06)" }}
     >
       <div className="relative overflow-hidden bg-gray-50" style={{ aspectRatio: "1/1" }}>
         <img
@@ -542,7 +543,8 @@ function ProductCardBase({ product }: { product: Product }) {
           ) : (
             <button
               onClick={handleAdd}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white active:scale-95 ${adding ? "bg-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.4)]" : "btn-skeuo"}`}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95 ${adding ? "bg-emerald-500 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}
+              style={{ boxShadow: adding ? "0 4px 12px rgba(16,185,129,0.4)" : "0 4px 12px rgba(30,64,175,0.3)" }}
             >
               {adding ? <CheckCircle size={13} /> : <ShoppingCart size={13} />}
               {adding ? "Added!" : "Add"}
@@ -904,11 +906,12 @@ function HomePage() {
                 <p className="text-blue-100 text-sm sm:text-base mb-6 max-w-sm">{slide.sub}</p>
                 <div className="flex flex-wrap gap-3">
                   <button onClick={() => navigate(slide.link)}
-                    className="px-6 py-3 rounded-xl btn-skeuo-orange font-bold text-sm">
+                    className="px-6 py-3 rounded-xl bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-all active:scale-95"
+                    style={{ boxShadow: "0 4px 16px rgba(249,115,22,0.4)" }}>
                     {slide.cta} <ArrowRight size={14} className="inline ml-1" />
                   </button>
                   <button onClick={() => navigate("/shop")}
-                    className="px-6 py-3 rounded-xl btn-glass text-white font-bold text-sm">
+                    className="px-6 py-3 rounded-xl bg-white/20 text-white font-bold text-sm hover:bg-white/30 transition-all border border-white/30">
                     Explore Categories
                   </button>
                 </div>
@@ -959,9 +962,10 @@ function HomePage() {
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {allCategories.map(cat => (
               <Link key={cat.name} to={`/shop?sub=${cat.subcategory}`}
-                className="flex flex-col items-center gap-2 p-4 skeuo-card skeuo-card-hover text-center group">
+                className="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl text-center transition-all duration-200 hover:-translate-y-1 group"
+                style={{ boxShadow: "0 4px 14px rgba(30,64,175,0.07)" }}>
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110"
-                  style={{ background: `linear-gradient(180deg, ${cat.color}, ${cat.color}cc)`, color: "#fff", boxShadow: `0 6px 14px ${cat.color}55, inset 0 1px 0 rgba(255,255,255,0.4)` }}>
+                  style={{ background: cat.color, color: "#fff" }}>
                   <cat.icon size={22} />
                 </div>
                 <span className="text-xs font-semibold text-[#111827] leading-tight">{cat.name}</span>
@@ -1071,9 +1075,10 @@ function HomePage() {
               { icon: RotateCcw, title: "Easy Returns", desc: "Not satisfied? Return within 7 days for an easy, no fuss refund.", color: "#DC2626" },
               { icon: Headphones, title: "24/7 Support", desc: "Our team is always here to help. Reach us anytime on WhatsApp.", color: "#B45309" },
             ].map(({ icon: Icon, title, desc, color }) => (
-              <div key={title} className="skeuo-card skeuo-card-hover p-6">
+              <div key={title} className="bg-white rounded-2xl p-6 hover:-translate-y-1 transition-transform duration-200"
+                style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08)" }}>
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                  style={{ background: `linear-gradient(180deg, ${color}, ${color}cc)`, color: "#fff", boxShadow: `0 6px 14px ${color}55, inset 0 1px 0 rgba(255,255,255,0.4)` }}>
+                  style={{ background: color, color: "#fff" }}>
                   <Icon size={24} />
                 </div>
                 <h4 className="font-bold text-[#111827] mb-2">{title}</h4>
@@ -1584,12 +1589,14 @@ function ProductDetailPage() {
               </button>
             </div>
             <button onClick={handleAddToCart}
-              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white active:scale-95 ${added ? "bg-emerald-500 shadow-[0_4px_16px_rgba(16,185,129,0.4)]" : "btn-skeuo"}`}>
+              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${added ? "bg-emerald-500 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}
+              style={{ boxShadow: added ? "0 4px 16px rgba(16,185,129,0.4)" : "0 4px 16px rgba(30,64,175,0.3)" }}>
               {added ? <CheckCircle size={16} /> : <ShoppingCart size={16} />}
               {added ? "Added to Cart!" : "Add to Cart"}
             </button>
             <button onClick={() => { addToCart(product, qty); navigate("/checkout"); }}
-              className="flex-1 min-w-[120px] py-3 rounded-xl btn-skeuo-orange font-bold text-sm">
+              className="flex-1 min-w-[120px] py-3 rounded-xl bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-all active:scale-95"
+              style={{ boxShadow: "0 4px 16px rgba(249,115,22,0.35)" }}>
               Buy Now
             </button>
             <button onClick={() => toggleWishlist(product)}
@@ -3358,7 +3365,7 @@ function AppShell() {
   const isAuth = location.pathname === "/login" || location.pathname === "/register";
 
   return (
-    <div className="min-h-screen am-bg overflow-x-hidden" style={{ fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-[#F8F9FB] overflow-x-hidden" style={{ fontFamily: "'Outfit', 'Inter', sans-serif" }}>
       <ScrollToTop />
       {!isAuth && <Navbar />}
       <main>
