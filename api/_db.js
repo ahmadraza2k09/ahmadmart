@@ -39,7 +39,16 @@ export function getAuthUser(req) {
 
 // Strip the password hash before sending a user to the client.
 export function userPublic(row) {
-  return { id: row.id, name: row.name, email: row.email, role: row.role };
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    storeName: row.store_name ?? undefined,
+    whatsapp: row.whatsapp ?? undefined,
+    jazzcashNumber: row.jazzcash_number ?? undefined,
+    jazzcashTitle: row.jazzcash_title ?? undefined,
+  };
 }
 
 // Gate every admin write: requires a valid Bearer token whose role is "admin".
@@ -71,10 +80,14 @@ export function rowToOrder(r) {
     total: r.total,
     paymentMethod: r.payment_method,
     status: r.status,
+    sellerId: r.seller_id ?? undefined,
+    sellerStore: r.seller_store ?? undefined,
   };
 }
 
 // Map a DB row (snake_case) to the Product shape the frontend uses (camelCase).
+// When the query joins the seller (users), the seller_* aliases are included so
+// the storefront can show "Sold by …" and route checkout to that seller.
 export function rowToProduct(r) {
   return {
     id: r.id,
@@ -93,6 +106,11 @@ export function rowToProduct(r) {
     isService: r.is_service || undefined,
     description: r.description || "",
     specs: r.specs || {},
+    sellerId: r.seller_id ?? undefined,
+    sellerStore: r.seller_store ?? undefined,
+    sellerWhatsapp: r.seller_whatsapp ?? undefined,
+    sellerJazzcashNumber: r.seller_jazzcash_number ?? undefined,
+    sellerJazzcashTitle: r.seller_jazzcash_title ?? undefined,
   };
 }
 

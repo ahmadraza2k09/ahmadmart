@@ -65,7 +65,22 @@ get full access to the dashboard. To change the admin password later, update
 - (Seller-specific tools, e.g. sellers listing their own products, are a future
   phase — for now the role is stored and shown.)
 
-## 7. Orders (approval flow)
+## 7. Marketplace (sellers)
+
+- A **seller** signs up with a **store name + WhatsApp + JazzCash** (number/title).
+- Sellers manage **only their own** products at **/seller** (add/edit/delete);
+  admin manages every product at **/admin**.
+- Every product shows **"Sold by [store]"**, and checkout/contact route to that
+  seller's WhatsApp + JazzCash.
+- **Split-per-seller checkout:** a cart with items from multiple stores creates
+  one order per store, each routed to that seller's WhatsApp.
+- Admin **Sellers** tab shows each seller with product count, order count, and
+  earnings (sum of their approved/fulfilled orders).
+- ⚠️ **Re-run [`db/schema.sql`](db/schema.sql)** — it adds the seller columns
+  (`store_name`, `whatsapp`, `jazzcash_*` on `users`; `seller_id` on `products`
+  and `orders`). All statements are idempotent (`add column if not exists`).
+
+## 8. Orders (approval flow)
 
 - Checkout **requires sign-in**, so every order is tied to the user's account and
   shows in **/account → Orders** with its live status.
@@ -97,11 +112,12 @@ containing `DATABASE_URL`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`
 
 ## Files
 
-- `db/schema.sql` — `products` + `users` + `orders` tables
-- `api/products.js` — public product list
-- `api/admin/products.js` / `analytics.js` / `seed.js` / `orders.js` — admin-only (JWT role admin)
+- `db/schema.sql` — `products` + `users` + `orders` tables (+ seller columns)
+- `api/products.js` — public product list (joined with seller store/contact)
+- `api/admin/products.js` / `analytics.js` / `seed.js` / `orders.js` / `sellers.js` — admin-only
+- `api/seller/products.js` — a seller manages their own products
 - `api/orders.js` — place an order / list my orders (signed-in users)
 - `api/auth/signup.js` / `login.js` / `me.js` / `role.js` — accounts, login, role switch
-- `api/_db.js` — Neon client + JWT / auth helpers
+- `api/_db.js` — Neon client + JWT / auth helpers + row mappers
 - `vercel.json` — SPA routing that leaves `/api` to the functions
-- `src/app/auth.ts`, `src/app/adminApi.ts`, `src/app/ordersApi.ts`, `src/app/types.ts` — frontend clients + types
+- `src/app/auth.ts`, `adminApi.ts`, `ordersApi.ts`, `sellerApi.ts`, `types.ts` — frontend clients + types

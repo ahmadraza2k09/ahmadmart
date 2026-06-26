@@ -8,7 +8,10 @@ export default async function handler(req, res) {
     const sql = getSql();
 
     if (req.method === "GET") {
-      const rows = await sql`select * from orders order by created_at desc`;
+      const rows = await sql`
+        select o.*, su.store_name as seller_store
+        from orders o left join users su on su.id = o.seller_id
+        order by o.created_at desc`;
       res.status(200).json({ orders: rows.map(rowToOrder) });
       return;
     }

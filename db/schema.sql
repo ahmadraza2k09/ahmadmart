@@ -65,3 +65,20 @@ create table if not exists orders (
 
 create index if not exists orders_user_idx   on orders (user_id);
 create index if not exists orders_status_idx on orders (status);
+
+-- ─── Marketplace (sellers) ────────────────────────────────────────────────────
+-- Run this block again any time — every statement is idempotent.
+
+-- Seller store details (filled in when a seller signs up).
+alter table users add column if not exists store_name      text;
+alter table users add column if not exists whatsapp        text;
+alter table users add column if not exists jazzcash_number text;
+alter table users add column if not exists jazzcash_title  text;
+
+-- Which seller owns a product. NULL = official Ahmad Mart (admin) product.
+alter table products add column if not exists seller_id integer references users(id) on delete set null;
+create index if not exists products_seller_idx on products (seller_id);
+
+-- With split-per-seller checkout every order belongs to one seller (NULL = official).
+alter table orders add column if not exists seller_id integer references users(id) on delete set null;
+create index if not exists orders_seller_idx on orders (seller_id);

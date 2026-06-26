@@ -6,6 +6,18 @@ export interface AuthUser {
   name: string;
   email: string;
   role: Role;
+  // Seller store details (only present for sellers).
+  storeName?: string;
+  whatsapp?: string;
+  jazzcashNumber?: string;
+  jazzcashTitle?: string;
+}
+
+export interface SellerSignup {
+  storeName: string;
+  whatsapp: string;
+  jazzcashNumber?: string;
+  jazzcashTitle?: string;
 }
 
 const TOKEN_KEY = "ahmadmart_token";
@@ -30,8 +42,8 @@ async function postJson(url: string, body: unknown, auth = false) {
   return data;
 }
 
-export async function apiSignup(name: string, email: string, password: string, role: Role) {
-  return postJson("/api/auth/signup", { name, email, password, role }) as Promise<{ token: string; user: AuthUser }>;
+export async function apiSignup(name: string, email: string, password: string, role: Role, seller?: SellerSignup) {
+  return postJson("/api/auth/signup", { name, email, password, role, ...(seller || {}) }) as Promise<{ token: string; user: AuthUser }>;
 }
 export async function apiLogin(email: string, password: string) {
   return postJson("/api/auth/login", { email, password }) as Promise<{ token: string; user: AuthUser }>;

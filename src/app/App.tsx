@@ -33,8 +33,12 @@ import {
 } from "./adminApi";
 import {
   apiLogin, apiSignup, apiMe, apiChangeRole,
-  setToken, clearToken, type AuthUser, type Role,
+  setToken, clearToken, type AuthUser, type Role, type SellerSignup,
 } from "./auth";
+import {
+  sellerGetProducts, sellerCreateProduct, sellerUpdateProduct, sellerDeleteProduct,
+  adminGetSellers, type SellerSummary,
+} from "./sellerApi";
 
 interface CartItem extends Product { qty: number; }
 interface WishlistItem extends Product {}
@@ -55,7 +59,7 @@ interface StoreCtx {
   user: AuthUser | null;
   authReady: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string, role: Role) => Promise<void>;
+  signup: (name: string, email: string, password: string, role: Role, seller?: SellerSignup) => Promise<void>;
   changeRole: (role: Role) => Promise<void>;
   logout: () => void;
   recentlyViewed: Product[];
@@ -402,8 +406,8 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
     const { token, user } = await apiLogin(email, password);
     setToken(token); setUser(user);
   }, []);
-  const signup = useCallback(async (name: string, email: string, password: string, role: Role) => {
-    const { token, user } = await apiSignup(name, email, password, role);
+  const signup = useCallback(async (name: string, email: string, password: string, role: Role, seller?: SellerSignup) => {
+    const { token, user } = await apiSignup(name, email, password, role, seller);
     setToken(token); setUser(user);
   }, []);
   const changeRole = useCallback(async (role: Role) => {
@@ -507,6 +511,7 @@ function ProductCardBase({ product }: { product: Product }) {
       </div>
       <div className="p-4">
         <p className="text-xs text-[#F97316] font-semibold mb-1">{product.subcategory}</p>
+        {product.sellerStore && <p className="text-[11px] text-[#6b7280] mb-1 truncate">Sold by <span className="font-semibold text-[#374151]">{product.sellerStore}</span></p>}
         <h3 className="font-semibold text-[#111827] text-sm leading-snug mb-2 line-clamp-2 group-hover:text-[#1E40AF] transition-colors">{product.name}</h3>
         {!product.isService && product.reviews > 0 && (
           <div className="flex items-center gap-2 mb-3">
@@ -1088,8 +1093,9 @@ function ShopPage() {
     if (p.get("sub")) setSubcategory(p.get("sub") || "All");
   }, [location.search]);
 
-  const cats = ["All", "Mobile Accessories", "Home Decoration", "Digital Services"];
-  const subs = ["All", ...CATEGORIES.map(c => c.subcategory)];
+  // Categories include the built-in ones plus any new ones sellers introduce.
+  const cats = ["All", ...Array.from(new Set(["Mobile Accessories", "Home Decoration", "Digital Services", ...products.map(p => p.category)]))];
+  const subs = ["All", ...Array.from(new Set([...CATEGORIES.map(c => c.subcategory), ...products.map(p => p.subcategory)]))];
 
   let filtered = products.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.subcategory.toLowerCase().includes(search.toLowerCase());
@@ -1422,6 +1428,11 @@ function ProductDetailPage() {
         <div>
           <p className="text-sm font-semibold text-[#F97316] mb-2">{product.subcategory}</p>
           <h1 className="text-2xl sm:text-3xl font-black text-[#111827] mb-3 leading-tight">{product.name}</h1>
+          {product.sellerStore && (
+            <div className="inline-flex items-center gap-1.5 mb-3 px-3 py-1.5 rounded-full bg-[#EFF6FF] text-[#1E40AF] text-xs font-bold">
+              <User size={13} /> Sold by {product.sellerStore}
+            </div>
+          )}
 
           <div className="flex items-center gap-3 mb-4">
             {!product.isService && product.reviews > 0 && <Stars rating={product.rating} size={16} />}
@@ -1722,9 +1733,8 @@ function CheckoutPage() {
   const [form, setForm] = useState({ name: user?.name || "", phone: "", email: user?.email || "", address: "", notes: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState("");
-  const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
-  const [waUrl, setWaUrl] = useState("");
-  const [orderId] = useState(newOrderId());
+  const [placedOrders, setPlacedOrders] = useState<Order[] | null>(null);
+  const [orderBaseId] = useState(newOrderId());
   const [payment, setPayment] = useState<"jazzcash" | "cod">("jazzcash");
   const isCOD = payment === "cod";
   const [submitting, setSubmitting] = useState(false);
@@ -1733,9 +1743,28 @@ function CheckoutPage() {
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoMsg, setPromoMsg] = useState("");
 
-  const shipping = DELIVERY_FEE;
-  const deliveryWaiver = promoApplied ? Math.min(PROMO_WAIVER, shipping) : 0;
-  const total = cartTotal + shipping - deliveryWaiver;
+  // Split-per-seller: group the cart by seller so each store gets its own order
+  // routed to that seller's WhatsApp / JazzCash. Official products group together.
+  const groups = useMemo(() => {
+    const map = new Map<string, { sellerId?: number; sellerStore?: string; sellerWhatsapp?: string; sellerJazzcashNumber?: string; sellerJazzcashTitle?: string; items: CartItem[] }>();
+    for (const it of cart) {
+      const key = it.sellerId ? `s${it.sellerId}` : "official";
+      let g = map.get(key);
+      if (!g) { g = { sellerId: it.sellerId, sellerStore: it.sellerStore, sellerWhatsapp: it.sellerWhatsapp, sellerJazzcashNumber: it.sellerJazzcashNumber, sellerJazzcashTitle: it.sellerJazzcashTitle, items: [] }; map.set(key, g); }
+      g.items.push(it);
+    }
+    return Array.from(map.values());
+  }, [cart]);
+
+  const groupTotals = (g: { items: CartItem[] }, i: number) => {
+    const subtotal = g.items.reduce((s, it) => s + it.price * it.qty, 0);
+    const groupShipping = DELIVERY_FEE;
+    const waiver = i === 0 && promoApplied ? Math.min(PROMO_WAIVER, groupShipping) : 0;
+    return { subtotal, groupShipping, waiver, groupTotal: subtotal + groupShipping - waiver };
+  };
+  const grandTotal = groups.reduce((sum, g, i) => sum + groupTotals(g, i).groupTotal, 0);
+  const totalDelivery = groups.length * DELIVERY_FEE;
+  const totalWaiver = promoApplied ? Math.min(PROMO_WAIVER, DELIVERY_FEE) : 0;
 
   const applyPromo = () => {
     if (promo.trim().toUpperCase() === PROMO_CODE) {
@@ -1764,80 +1793,94 @@ function CheckoutPage() {
     return Object.keys(e).length === 0;
   };
 
-  // Saves the order to the database (tied to the signed-in user) so it appears in
-  // their profile and the admin can approve it. The customer then sends payment
-  // proof from the success screen's WhatsApp button.
+  // Creates one DB order per seller (tied to the signed-in buyer). Each order is
+  // routed to its seller and the customer sends payment proof per store on WhatsApp.
   const handleSubmit = async () => {
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     if (!user) { navigate("/login"); return; }
-    const order: Order = {
-      id: orderId,
-      createdAt: Date.now(),
-      name: form.name.trim(),
-      phone: form.phone.trim(),
-      email: form.email.trim(),
-      address: form.address.trim(),
-      notes: form.notes.trim() || undefined,
-      items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
-      subtotal: cartTotal,
-      shipping,
-      discount: deliveryWaiver || undefined,
-      promoCode: promoApplied ? PROMO_CODE : undefined,
-      total,
-      paymentMethod: isCOD ? "Cash on Delivery" : "JazzCash (Manual)",
-      status: "Pending Approval", // admin approves before the order proceeds
-    };
     setSubmitting(true); setSubmitErr("");
+    const created: Order[] = [];
     try {
-      await createOrder(order);
+      for (let i = 0; i < groups.length; i++) {
+        const g = groups[i];
+        const { subtotal, groupShipping, waiver, groupTotal } = groupTotals(g, i);
+        const order: Order = {
+          id: i === 0 ? orderBaseId : `${orderBaseId}-${i}`,
+          createdAt: Date.now(),
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          address: form.address.trim(),
+          notes: form.notes.trim() || undefined,
+          items: g.items.map(it => ({ id: it.id, name: it.name, qty: it.qty, price: it.price })),
+          subtotal,
+          shipping: groupShipping,
+          discount: waiver || undefined,
+          promoCode: waiver ? PROMO_CODE : undefined,
+          total: groupTotal,
+          paymentMethod: isCOD ? "Cash on Delivery" : "JazzCash (Manual)",
+          status: "Pending Approval",
+          sellerId: g.sellerId,
+          sellerStore: g.sellerStore,
+          sellerWhatsapp: g.sellerWhatsapp,
+          sellerJazzcashNumber: g.sellerJazzcashNumber,
+          sellerJazzcashTitle: g.sellerJazzcashTitle,
+        };
+        await createOrder(order);
+        created.push(order);
+      }
     } catch (e) {
       setSubmitErr(e instanceof Error ? e.message : "Could not place your order. Please try again.");
       setSubmitting(false);
       return;
     }
-    setWaUrl(whatsappOrderUrl(order));
-    sendOrderEmail(order, null); // optional email backup (only sends if a key is set)
     clearCart();
-    setPlacedOrder(order);
+    setPlacedOrders(created);
     setSubmitting(false);
   };
 
-  if (placedOrder) return (
-    <div className="max-w-lg mx-auto px-4 py-16 text-center">
-      <div className="bg-white rounded-3xl p-8 sm:p-10" style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.12)" }}>
-        <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-5">
-          <Clock size={38} className="text-amber-500" />
-        </div>
-        <h2 className="text-2xl font-black text-[#111827] mb-2">Order Placed!</h2>
-        <p className="text-[#374151] text-sm mb-4 font-semibold">Your order has been saved to your account and is awaiting admin approval. You can track its status in your profile.</p>
-        <div className="bg-[#F8F9FB] rounded-xl p-4 mb-5 text-left">
-          <p className="text-xs text-[#6b7280] mb-1">Order ID</p>
-          <p className="font-black text-[#1E40AF] text-lg">#{placedOrder.id}</p>
-          <div className="mt-3 space-y-1 text-sm">
-            {placedOrder.discount ? <div className="flex justify-between"><span className="text-[#6b7280]">Delivery ({placedOrder.promoCode}):</span><span className="font-semibold text-emerald-600">-{fmt(placedOrder.discount)}</span></div> : null}
-            <div className="flex justify-between"><span className="text-[#6b7280]">{isCashOnDelivery(placedOrder) ? "Amount Due (COD):" : "Amount Paid:"}</span><span className="font-black text-[#1E40AF]">{fmt(placedOrder.total)}</span></div>
-            <div className="flex justify-between"><span className="text-[#6b7280]">Payment:</span><span className="font-semibold">{placedOrder.paymentMethod}</span></div>
-            <div className="flex justify-between"><span className="text-[#6b7280]">Status:</span><span className="font-semibold text-amber-600">{placedOrder.status}</span></div>
+  if (placedOrders) return (
+    <div className="max-w-lg mx-auto px-4 py-16">
+      <div className="bg-white rounded-3xl p-6 sm:p-8" style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.12)" }}>
+        <div className="text-center mb-5">
+          <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+            <Clock size={38} className="text-amber-500" />
           </div>
-        </div>
-
-        {/* Final WhatsApp step */}
-        <div className="rounded-xl border border-green-200 bg-green-50 p-4 mb-4 text-left">
-          <p className="font-bold text-green-800 text-sm flex items-center gap-1.5 mb-1"><MessageCircle size={16} /> One last step on WhatsApp</p>
-          <p className="text-xs text-green-700">
-            {isCashOnDelivery(placedOrder)
-              ? <>Tap below to send your order on WhatsApp. <strong>Press send to confirm your Cash on Delivery order.</strong> We'll confirm it and deliver to your Multan address — pay the rider in cash.</>
-              : <>Tap below to open WhatsApp with your order. <strong>Attach your JazzCash payment screenshot and press send.</strong> Once we verify it, the admin marks your order Payment Received.</>}
+          <h2 className="text-2xl font-black text-[#111827] mb-2">Order Placed!</h2>
+          <p className="text-[#374151] text-sm font-semibold">
+            {placedOrders.length > 1
+              ? `Your cart had items from ${placedOrders.length} stores, so we created ${placedOrders.length} separate orders. Send each store's WhatsApp message below.`
+              : "Your order is saved to your account and awaits approval. Send it on WhatsApp below."}
           </p>
         </div>
 
-        <a href={waUrl} target="_blank" rel="noopener noreferrer"
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-white font-black text-sm mb-2.5 transition-transform active:scale-95"
-          style={{ background: "#25D366", boxShadow: "0 4px 16px rgba(37,211,102,0.35)" }}>
-          <MessageCircle size={18} /> Open WhatsApp & Send Order
-        </a>
-        <button onClick={() => navigate("/")} className="w-full py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm"
-          style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.3)" }}>
+        <div className="space-y-3 mb-4">
+          {placedOrders.map(o => (
+            <div key={o.id} className="rounded-xl border border-gray-100 bg-[#F8F9FB] p-4 text-left">
+              <div className="flex items-center justify-between mb-1 gap-2">
+                <p className="font-bold text-[#111827] text-sm truncate">{o.sellerStore || "Ahmad Mart"}</p>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex-shrink-0">{o.status}</span>
+              </div>
+              <p className="text-xs text-[#6b7280] mb-2">Order #{o.id} · {o.items.reduce((s, it) => s + it.qty, 0)} item(s) · <strong className="text-[#1E40AF]">{fmt(o.total)}</strong>{isCashOnDelivery(o) ? " (COD)" : ""}</p>
+              <a href={whatsappOrderUrl(o)} target="_blank" rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white font-bold text-sm transition-transform active:scale-95"
+                style={{ background: "#25D366", boxShadow: "0 4px 12px rgba(37,211,102,0.3)" }}>
+                <MessageCircle size={16} /> Send to {o.sellerStore || "Ahmad Mart"} on WhatsApp
+              </a>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-xl border border-green-200 bg-green-50 p-3 mb-4 text-xs text-green-700 text-left">
+          {isCOD
+            ? "Send each WhatsApp message to confirm your Cash on Delivery order. Cash is collected on delivery in Multan."
+            : "For each store: send the WhatsApp message, pay the JazzCash amount shown there, and attach your payment screenshot. The order then becomes Payment Received once approved."}
+        </div>
+
+        <button onClick={() => navigate("/account")} className="w-full py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm mb-2" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.3)" }}>
+          View My Orders
+        </button>
+        <button onClick={() => navigate("/shop")} className="w-full py-3 border border-gray-200 text-[#374151] rounded-xl font-bold text-sm">
           Continue Shopping
         </button>
       </div>
@@ -1940,37 +1983,33 @@ function CheckoutPage() {
             </div>
 
             <div className="p-6">
-              {/* Amount to pay */}
-              <div className="rounded-2xl p-5 mb-5 text-center" style={{ background: "linear-gradient(135deg, #FFF7ED, #FFEDD5)", border: "1px solid #FED7AA" }}>
-                <p className="text-xs font-bold uppercase tracking-wide text-[#9A3412]">Amount to Pay</p>
-                <p className="text-3xl sm:text-4xl font-black text-[#F97316] mt-1">{fmt(total)}</p>
-                <p className="text-xs text-[#9A3412] mt-1">Send this <strong>exact</strong> amount to the number below.</p>
-              </div>
-
-              {/* Account details */}
-              <div className="space-y-2.5 mb-5">
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="text-xs text-[#6b7280]">JazzCash Number</p>
-                    <p className="font-black text-[#111827] text-lg tracking-wide">{JAZZCASH_NUMBER}</p>
-                  </div>
-                  <button onClick={() => copy(JAZZCASH_NUMBER, "num")}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1E40AF] text-white text-xs font-bold hover:bg-[#1e3a8a] transition-colors flex-shrink-0">
-                    {copied === "num" ? <CheckCircle size={14} /> : <Copy size={14} />}
-                    {copied === "num" ? "Copied" : "Copy"}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="text-xs text-[#6b7280]">Account Title</p>
-                    <p className="font-bold text-[#111827]">{JAZZCASH_TITLE}</p>
-                  </div>
-                  <button onClick={() => copy(JAZZCASH_TITLE, "title")}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-gray-200 text-[#374151] text-xs font-bold hover:border-[#1E40AF] transition-colors flex-shrink-0">
-                    {copied === "title" ? <CheckCircle size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                    {copied === "title" ? "Copied" : "Copy"}
-                  </button>
-                </div>
+              {/* Per-store payment breakdown */}
+              <p className="text-xs font-bold uppercase tracking-wide text-[#9A3412] mb-2">Pay each store the exact amount</p>
+              <div className="space-y-3 mb-5">
+                {groups.map((g, i) => {
+                  const { groupTotal } = groupTotals(g, i);
+                  const num = g.sellerJazzcashNumber || JAZZCASH_NUMBER;
+                  const title = g.sellerJazzcashTitle || JAZZCASH_TITLE;
+                  return (
+                    <div key={i} className="rounded-2xl border border-[#FED7AA] p-4" style={{ background: "linear-gradient(135deg, #FFF7ED, #FFEDD5)" }}>
+                      <div className="flex items-center justify-between mb-2 gap-2">
+                        <p className="text-sm font-bold text-[#9A3412] truncate">{g.sellerStore || "Ahmad Mart"}</p>
+                        <p className="text-xl font-black text-[#F97316] flex-shrink-0">{fmt(groupTotal)}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 rounded-xl bg-white/70 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="text-[11px] text-[#9A3412]">JazzCash · {title}</p>
+                          <p className="font-black text-[#111827] tracking-wide">{num}</p>
+                        </div>
+                        <button onClick={() => copy(num, `num${i}`)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E40AF] text-white text-xs font-bold flex-shrink-0">
+                          {copied === `num${i}` ? <CheckCircle size={13} /> : <Copy size={13} />}
+                          {copied === `num${i}` ? "Copied" : "Copy"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Instructions */}
@@ -1991,7 +2030,7 @@ function CheckoutPage() {
                 </ol>
                 <p className="text-xs text-green-700 mt-3 flex items-start gap-1.5">
                   <MessageCircle size={14} className="flex-shrink-0 mt-0.5" />
-                  <span>Your order is sent to our WhatsApp <strong className="whitespace-nowrap">{WHATSAPP_DISPLAY}</strong> for verification.</span>
+                  <span>When you place the order, each store's WhatsApp opens with the order and payment details for verification.</span>
                 </p>
               </div>
 
@@ -2020,7 +2059,7 @@ function CheckoutPage() {
               {/* Amount due on delivery */}
               <div className="rounded-2xl p-5 mb-5 text-center" style={{ background: "linear-gradient(135deg, #ECFDF5, #D1FAE5)", border: "1px solid #A7F3D0" }}>
                 <p className="text-xs font-bold uppercase tracking-wide text-[#065F46]">Amount Due on Delivery</p>
-                <p className="text-3xl sm:text-4xl font-black text-[#059669] mt-1">{fmt(total)}</p>
+                <p className="text-3xl sm:text-4xl font-black text-[#059669] mt-1">{fmt(grandTotal)}</p>
                 <p className="text-xs text-[#065F46] mt-1">Keep the <strong>exact</strong> amount ready for the rider.</p>
               </div>
 
@@ -2048,7 +2087,7 @@ function CheckoutPage() {
                 </ol>
                 <p className="text-xs text-green-700 mt-3 flex items-start gap-1.5">
                   <MessageCircle size={14} className="flex-shrink-0 mt-0.5" />
-                  <span>Your order is sent to our WhatsApp <strong className="whitespace-nowrap">{WHATSAPP_DISPLAY}</strong> for confirmation.</span>
+                  <span>When you place the order, each store's WhatsApp opens with your order for confirmation.</span>
                 </p>
               </div>
 
@@ -2065,18 +2104,33 @@ function CheckoutPage() {
         <div>
           <div className="bg-white rounded-2xl p-6 sticky top-24" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08)" }}>
             <h3 className="font-bold text-[#111827] mb-4">Order Summary</h3>
-            <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
-              {cart.map(item => (
-                <div key={item.id} className="flex gap-3">
-                  <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-xl"
-                    onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=50&h=50&fit=crop"; }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-[#111827] line-clamp-1">{item.name}</p>
-                    <p className="text-xs text-[#6b7280]">Qty: {item.qty}</p>
+            {groups.length > 1 && <p className="text-xs text-[#6b7280] -mt-2 mb-3">Your cart has items from {groups.length} stores — a separate order is created for each.</p>}
+            <div className="space-y-4 mb-4 max-h-60 overflow-y-auto">
+              {groups.map((g, gi) => {
+                const { subtotal, waiver, groupTotal } = groupTotals(g, gi);
+                return (
+                  <div key={gi} className="rounded-xl bg-[#F8F9FB] p-3">
+                    <p className="text-xs font-bold text-[#111827] mb-2 flex items-center gap-1.5"><User size={12} className="text-[#1E40AF]" /> {g.sellerStore || "Ahmad Mart"}</p>
+                    <div className="space-y-2">
+                      {g.items.map(item => (
+                        <div key={item.id} className="flex gap-2 items-center">
+                          <img src={item.image} alt={item.name} className="w-9 h-9 object-cover rounded-lg flex-shrink-0"
+                            onError={e => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-[#111827] line-clamp-1">{item.name}</p>
+                            <p className="text-[11px] text-[#6b7280]">Qty: {item.qty}</p>
+                          </div>
+                          <span className="text-xs font-bold text-[#1E40AF] flex-shrink-0">{fmt(item.price * item.qty)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-gray-200 text-[11px] text-[#6b7280] flex justify-between">
+                      <span>Items {fmt(subtotal)} + Delivery {fmt(DELIVERY_FEE)}{waiver ? ` − ${fmt(waiver)}` : ""}</span>
+                      <span className="font-bold text-[#111827]">{fmt(groupTotal)}</span>
+                    </div>
                   </div>
-                  <span className="text-xs font-bold text-[#1E40AF] flex-shrink-0">{fmt(item.price * item.qty)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {/* Promo code */}
             <div className="border-t border-gray-100 pt-4 mb-4">
@@ -2093,15 +2147,15 @@ function CheckoutPage() {
             </div>
             <div className="space-y-2 mb-5">
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Subtotal</span><span className="font-semibold">{fmt(cartTotal)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Delivery</span><span className="font-semibold">{fmt(shipping)}</span></div>
-              {deliveryWaiver > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Promo ({PROMO_CODE})</span><span>-{fmt(deliveryWaiver)}</span></div>}
+              <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Delivery {groups.length > 1 ? `(${groups.length} stores)` : ""}</span><span className="font-semibold">{fmt(totalDelivery)}</span></div>
+              {totalWaiver > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Promo ({PROMO_CODE})</span><span>-{fmt(totalWaiver)}</span></div>}
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Payment</span><span className="font-semibold">{isCOD ? "Cash on Delivery" : "JazzCash"}</span></div>
-              <div className="flex justify-between font-black text-[#111827] text-base border-t border-gray-100 pt-2"><span>{isCOD ? "Due on Delivery" : "Total"}</span><span className="text-[#1E40AF]">{fmt(total)}</span></div>
+              <div className="flex justify-between font-black text-[#111827] text-base border-t border-gray-100 pt-2"><span>{isCOD ? "Due on Delivery" : "Total"}</span><span className="text-[#1E40AF]">{fmt(grandTotal)}</span></div>
             </div>
             <button onClick={handleSubmit} disabled={submitting}
               className="w-full py-3.5 rounded-xl text-white font-black text-sm transition-transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
               style={{ background: "#25D366", boxShadow: "0 4px 16px rgba(37,211,102,0.35)" }}>
-              <MessageCircle size={18} /> {submitting ? "Placing order…" : `Place Order — ${fmt(total)}`}
+              <MessageCircle size={18} /> {submitting ? "Placing order…" : `Place ${groups.length > 1 ? `${groups.length} Orders` : "Order"} — ${fmt(grandTotal)}`}
             </button>
             {submitErr && <p className="text-xs text-red-500 font-semibold text-center mt-2">{submitErr}</p>}
             <p className="text-[11px] text-[#6b7280] text-center mt-3">
@@ -2214,7 +2268,7 @@ function LoginPage() {
 // ─── Register Page ────────────────────────────────────────────────────────────
 function RegisterPage() {
   const { signup } = useContext(Store);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "", role: "buyer" as Role });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "", role: "buyer" as Role, storeName: "", whatsapp: "", jazzcashNumber: "", jazzcashTitle: "" });
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -2225,9 +2279,16 @@ function RegisterPage() {
     if (!form.name || !form.email || !form.password) { setErr("Please fill in all required fields"); return; }
     if (form.password !== form.confirm) { setErr("Passwords do not match"); return; }
     if (form.password.length < 6) { setErr("Password must be at least 6 characters"); return; }
+    if (form.role === "seller") {
+      if (!form.storeName.trim()) { setErr("Please enter your store name"); return; }
+      if (!/^0\d{9,10}$/.test(form.whatsapp.trim())) { setErr("Enter a valid store WhatsApp number (e.g. 03001234567)"); return; }
+    }
+    const seller: SellerSignup | undefined = form.role === "seller"
+      ? { storeName: form.storeName.trim(), whatsapp: form.whatsapp.trim(), jazzcashNumber: form.jazzcashNumber.trim() || undefined, jazzcashTitle: form.jazzcashTitle.trim() || undefined }
+      : undefined;
     setBusy(true); setErr("");
     try {
-      await signup(form.name.trim(), form.email.trim(), form.password, form.role);
+      await signup(form.name.trim(), form.email.trim(), form.password, form.role, seller);
       navigate("/account");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not create account. Please try again.");
@@ -2294,6 +2355,39 @@ function RegisterPage() {
               </div>
               <p className="text-[11px] text-[#6b7280] mt-1.5">You can change this anytime in your profile.</p>
             </div>
+
+            {form.role === "seller" && (
+              <div className="space-y-3 rounded-xl bg-[#F8F9FB] border border-gray-100 p-4">
+                <p className="text-sm font-bold text-[#111827]">Store details</p>
+                <div>
+                  <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Store Name *</label>
+                  <input type="text" value={form.storeName} onChange={e => setForm(f => ({ ...f, storeName: e.target.value }))}
+                    placeholder="e.g. Bilal Electronics"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Store WhatsApp Number *</label>
+                  <input type="tel" value={form.whatsapp} onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))}
+                    placeholder="03001234567"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+                  <p className="text-[11px] text-[#6b7280] mt-1">Buyers check out and contact you on this number.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-semibold text-[#374151] mb-1.5 block">JazzCash Number</label>
+                    <input type="tel" value={form.jazzcashNumber} onChange={e => setForm(f => ({ ...f, jazzcashNumber: e.target.value }))}
+                      placeholder="03001234567"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-[#374151] mb-1.5 block">JazzCash Title</label>
+                    <input type="text" value={form.jazzcashTitle} onChange={e => setForm(f => ({ ...f, jazzcashTitle: e.target.value }))}
+                      placeholder="Account holder name"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+                  </div>
+                </div>
+              </div>
+            )}
             {err && <p className="text-xs text-red-500 font-semibold">{err}</p>}
             <button type="submit" disabled={busy}
               className="w-full py-3.5 rounded-xl bg-[#1E40AF] text-white font-black text-sm hover:bg-[#1e3a8a] transition-all active:scale-95 disabled:opacity-60"
@@ -2421,12 +2515,19 @@ function AccountPage() {
                   </div>
                 </div>
 
-                {user.role === "admin" ? (
+                {user.role === "admin" && (
                   <Link to="/admin" className="inline-flex items-center gap-2 px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm"
                     style={{ boxShadow: "0 4px 12px rgba(30,64,175,0.3)" }}>
                     <ShieldCheck size={16} /> Go to Admin Dashboard
                   </Link>
-                ) : (
+                )}
+                {user.role === "seller" && (
+                  <Link to="/seller" className="inline-flex items-center gap-2 px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm"
+                    style={{ boxShadow: "0 4px 12px rgba(30,64,175,0.3)" }}>
+                    <Package size={16} /> Go to Seller Dashboard
+                  </Link>
+                )}
+                {user.role !== "admin" && (
                   <div>
                     <label className="text-xs font-bold text-[#6b7280] uppercase tracking-wide mb-1.5 block">Switch Role</label>
                     <div className="grid grid-cols-2 gap-3">
@@ -2439,7 +2540,7 @@ function AccountPage() {
                     </div>
                     {roleMsg && <p className="text-xs mt-1.5 font-semibold text-emerald-600">{roleMsg}</p>}
                     {roleErr && <p className="text-xs mt-1.5 font-semibold text-red-500">{roleErr}</p>}
-                    <p className="text-[11px] text-[#6b7280] mt-1.5">Buyers shop and order; sellers can list products (seller tools coming soon).</p>
+                    <p className="text-[11px] text-[#6b7280] mt-1.5">Buyers shop and order; switch to seller to list your own products. {user.role === "seller" && "Note: switching to buyer hides your seller tools."}</p>
                   </div>
                 )}
               </div>
@@ -2714,13 +2815,61 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
   );
 }
 
+// ─── Admin: Sellers ───────────────────────────────────────────────────────────
+function AdminSellers() {
+  const [sellers, setSellers] = useState<SellerSummary[]>([]);
+  const [err, setErr] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { adminGetSellers().then(setSellers).catch(e => setErr(e instanceof Error ? e.message : "Failed to load sellers")).finally(() => setLoaded(true)); }, []);
+  if (err) return <div className="bg-white rounded-2xl p-8 text-center text-sm text-red-500" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>{err}</div>;
+  if (!loaded) return <div className="bg-white rounded-2xl p-8 text-center text-sm text-[#6b7280]">Loading sellers…</div>;
+  const totalEarnings = sellers.reduce((s, x) => s + x.earnings, 0);
+  const totalProducts = sellers.reduce((s, x) => s + x.productCount, 0);
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Sellers", value: sellers.length },
+          { label: "Seller Products", value: totalProducts },
+          { label: "Seller Earnings", value: fmt(totalEarnings) },
+        ].map(c => (
+          <div key={c.label} className="bg-white rounded-2xl p-4" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+            <p className="text-2xl font-black text-[#1E40AF]">{c.value}</p>
+            <p className="text-xs font-semibold text-[#6b7280] mt-0.5">{c.label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+        {sellers.length === 0 ? (
+          <div className="p-10 text-center text-sm text-[#6b7280]">No sellers have signed up yet.</div>
+        ) : sellers.map(s => (
+          <div key={s.id} className="p-4 border-b border-gray-100 last:border-0">
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div className="min-w-0">
+                <p className="font-bold text-[#111827]">{s.storeName || "(no store name)"}</p>
+                <p className="text-xs text-[#6b7280]">{s.name} · {s.email}</p>
+                <p className="text-xs text-[#6b7280] mt-1">WhatsApp: <span className="font-semibold text-[#374151]">{s.whatsapp || "—"}</span> · JazzCash: <span className="font-semibold text-[#374151]">{s.jazzcashNumber || "—"}{s.jazzcashTitle ? ` (${s.jazzcashTitle})` : ""}</span></p>
+              </div>
+              <div className="flex gap-4 text-center flex-shrink-0">
+                <div><p className="text-lg font-black text-[#111827]">{s.productCount}</p><p className="text-[11px] text-[#6b7280]">Products</p></div>
+                <div><p className="text-lg font-black text-[#111827]">{s.orderCount}</p><p className="text-[11px] text-[#6b7280]">Orders</p></div>
+                <div><p className="text-lg font-black text-[#059669]">{fmt(s.earnings)}</p><p className="text-[11px] text-[#6b7280]">Earnings</p></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AdminPage() {
   const { user, authReady, login, logout, refreshProducts } = useContext(Store);
   const isAdmin = user?.role === "admin";
   const [form, setForm] = useState({ email: "", password: "" });
   const [passErr, setPassErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<"products" | "analytics" | "orders">("products");
+  const [tab, setTab] = useState<"products" | "sellers" | "analytics" | "orders">("products");
   const [orders, setOrders] = useState<Order[]>([]);
 
   const loadOrders = () => { adminGetOrders().then(setOrders).catch(() => {}); };
@@ -2766,7 +2915,7 @@ function AdminPage() {
 
   const dbMode = true;
   const counts = ORDER_STATUSES.map(s => ({ s, n: orders.filter(o => o.status === s).length }));
-  const tabs = [{ k: "products", label: "Products" }, { k: "analytics", label: "Analytics" }, { k: "orders", label: "Orders" }] as const;
+  const tabs = [{ k: "products", label: "Products" }, { k: "sellers", label: "Sellers" }, { k: "analytics", label: "Analytics" }, { k: "orders", label: "Orders" }] as const;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -2791,6 +2940,7 @@ function AdminPage() {
       </div>
 
       {tab === "products" && <AdminProducts dbMode={dbMode} />}
+      {tab === "sellers" && <AdminSellers />}
       {tab === "analytics" && <AdminAnalytics dbMode={dbMode} />}
       {tab === "orders" && (
         <div>
@@ -2888,6 +3038,104 @@ function AdminPage() {
   );
 }
 
+// ─── Seller Dashboard ─────────────────────────────────────────────────────────
+function SellerPage() {
+  const { user, authReady, refreshProducts } = useContext(Store);
+  const navigate = useNavigate();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [editing, setEditing] = useState<Product | null | "new">(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const isSeller = !!user && (user.role === "seller" || user.role === "admin");
+  const load = () => { sellerGetProducts().then(setProducts).catch(e => setErr(e instanceof Error ? e.message : "Failed to load products")); };
+  useEffect(() => { if (isSeller) load(); }, [isSeller]);
+
+  if (!authReady) return <div className="max-w-sm mx-auto px-4 py-20 text-center text-sm text-[#6b7280]">Loading…</div>;
+  if (!user) return (
+    <div className="max-w-md mx-auto px-4 py-20 text-center">
+      <User size={56} className="mx-auto text-gray-300 mb-4" />
+      <h2 className="font-black text-xl text-[#111827] mb-2">Sign in to your seller account</h2>
+      <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm mr-3">Sign In</button>
+      <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-xl font-bold text-sm">Register</button>
+    </div>
+  );
+  if (user.role !== "seller" && user.role !== "admin") return (
+    <div className="max-w-md mx-auto px-4 py-20 text-center">
+      <Package size={56} className="mx-auto text-gray-300 mb-4" />
+      <h2 className="font-black text-xl text-[#111827] mb-2">Become a seller</h2>
+      <p className="text-sm text-[#6b7280] mb-6">Switch your account to a seller in your profile to list products.</p>
+      <button onClick={() => navigate("/account")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm">Go to Profile</button>
+    </div>
+  );
+
+  const save = async (p: Partial<Product>) => {
+    setBusy(true); setErr(""); setMsg("");
+    try {
+      if (p.id) await sellerUpdateProduct(p); else await sellerCreateProduct(p);
+      load(); refreshProducts(); setEditing(null); setMsg("Saved.");
+    } catch (e) { setErr(e instanceof Error ? e.message : "Save failed"); }
+    setBusy(false);
+  };
+  const remove = async (p: Product) => {
+    if (!window.confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
+    setErr(""); setMsg("");
+    try { await sellerDeleteProduct(p.id); load(); refreshProducts(); setMsg("Deleted."); }
+    catch (e) { setErr(e instanceof Error ? e.message : "Delete failed"); }
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] flex items-center gap-2">
+            <Package size={26} className="text-[#1E40AF]" /> {user.storeName || "Seller Dashboard"}
+          </h1>
+          <p className="text-sm text-[#6b7280] mt-0.5">Manage the products in your store.</p>
+        </div>
+        <button onClick={() => setEditing("new")} className="px-4 py-2.5 rounded-xl bg-[#1E40AF] text-white text-sm font-bold flex items-center gap-1.5">
+          <Plus size={15} /> Add Product
+        </button>
+      </div>
+
+      <div className="grid sm:grid-cols-3 gap-3 mb-6">
+        <div className="bg-white rounded-2xl p-4" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+          <p className="text-2xl font-black text-[#1E40AF]">{products.length}</p>
+          <p className="text-xs font-semibold text-[#6b7280]">Your Products</p>
+        </div>
+        <div className="bg-white rounded-2xl p-4 sm:col-span-2 text-sm" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+          <p className="text-xs font-bold text-[#6b7280] uppercase tracking-wide mb-1">Store contact (used at checkout)</p>
+          <p className="text-[#374151]">WhatsApp: <span className="font-semibold">{user.whatsapp || "—"}</span></p>
+          <p className="text-[#374151]">JazzCash: <span className="font-semibold">{user.jazzcashNumber || "—"}{user.jazzcashTitle ? ` (${user.jazzcashTitle})` : ""}</span></p>
+        </div>
+      </div>
+
+      {(msg || err) && <div className={`mb-4 rounded-xl p-3 text-sm font-semibold ${err ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"}`}>{err || msg}</div>}
+
+      {editing !== null && (
+        <ProductForm initial={editing === "new" ? null : editing} busy={busy} onSave={save} onCancel={() => setEditing(null)} />
+      )}
+
+      <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+        {products.length === 0 ? (
+          <div className="p-10 text-center text-sm text-[#6b7280]">You haven't added any products yet. Click <strong>Add Product</strong> to start.</div>
+        ) : products.map(p => (
+          <div key={p.id} className="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0">
+            <img src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-[#111827] truncate">{p.name}</p>
+              <p className="text-xs text-[#6b7280]">{p.category} · {p.subcategory} · {fmt(p.price)}{!p.inStock && <span className="text-red-500 font-semibold"> · Out of stock</span>}</p>
+            </div>
+            <button onClick={() => setEditing(p)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#1E40AF] hover:bg-blue-50">Edit</button>
+            <button onClick={() => remove(p)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 hover:bg-red-50">Delete</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Scroll To Top ────────────────────────────────────────────────────────────
 // Reset scroll position the moment the route changes so navigation feels instant
 // instead of landing the new page at the previous scroll offset.
@@ -2919,6 +3167,7 @@ function AppShell() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/seller" element={<SellerPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<HomePage />} />
         </Routes>

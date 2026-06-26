@@ -63,6 +63,13 @@ export interface Order {
   proofName?: string;
   paymentMethod: string;
   status: OrderStatus;
+  // Marketplace: the seller this order belongs to, and the seller's contact used
+  // for checkout/WhatsApp. Absent = official Ahmad Mart order.
+  sellerId?: number;
+  sellerStore?: string;
+  sellerWhatsapp?: string;
+  sellerJazzcashNumber?: string;
+  sellerJazzcashTitle?: string;
 }
 
 // ─── localStorage persistence ─────────────────────────────────────────────────
@@ -126,14 +133,17 @@ export function buildWhatsAppText(order: Order): string {
     .map(i => `• ${i.name} × ${i.qty} = Rs. ${i.price * i.qty}`)
     .join("\n");
   const cod = isCashOnDelivery(order);
+  const jazzNumber = order.sellerJazzcashNumber || JAZZCASH_NUMBER;
+  const jazzTitle = order.sellerJazzcashTitle || JAZZCASH_TITLE;
   const paymentLine = cod
     ? `Payment: Cash on Delivery (Multan)`
-    : `Payment: JazzCash (Manual) to ${JAZZCASH_NUMBER} (${JAZZCASH_TITLE})`;
+    : `Payment: JazzCash (Manual) to ${jazzNumber} (${jazzTitle})`;
   const closingLine = cod
     ? `Please confirm my order — I'll pay cash on delivery. 🚚`
     : `I have made the payment and I'm attaching my JazzCash payment screenshot here 👇`;
   return [
     `*New Order — Ahmad Mart*`,
+    order.sellerStore ? `Store: ${order.sellerStore}` : ``,
     `Order ID: ${order.id}`,
     `Date: ${new Date(order.createdAt).toLocaleString()}`,
     ``,
@@ -161,9 +171,11 @@ export function buildWhatsAppText(order: Order): string {
     .join("\n");
 }
 
-/** wa.me link that opens a chat to the store owner pre-filled with the order. */
+/** wa.me link pre-filled with the order — to the seller's WhatsApp when present,
+ *  otherwise to the official Ahmad Mart number. */
 export function whatsappOrderUrl(order: Order): string {
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(buildWhatsAppText(order))}`;
+  const number = order.sellerWhatsapp ? toWaNumber(order.sellerWhatsapp) : WHATSAPP_NUMBER;
+  return `https://wa.me/${number}?text=${encodeURIComponent(buildWhatsAppText(order))}`;
 }
 
 // ─── Image handling ───────────────────────────────────────────────────────────
