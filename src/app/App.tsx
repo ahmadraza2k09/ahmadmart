@@ -1769,7 +1769,7 @@ function ProductDetailPage() {
       {/* Tabs */}
       <div className="bg-white rounded-2xl mb-10" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
         <div className="flex border-b border-gray-100">
-          {(["desc", "specs", "reviews"] as const).filter(t => !(product.isService && t === "reviews") && !(t === "specs" && Object.keys(product.specs).length === 0)).map(t => {
+          {(["desc", "specs", "reviews"] as const).filter(t => !(t === "specs" && Object.keys(product.specs).length === 0)).map(t => {
             const labels = { desc: "Description", specs: "Specifications", reviews: `Reviews (${product.reviews + getProductReviews(product.id).length})` };
             return (
               <button key={t} onClick={() => setTab(t)}
