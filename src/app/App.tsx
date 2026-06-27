@@ -1680,25 +1680,6 @@ function ProductDetailPage() {
           <p className="text-[#374151] text-sm leading-relaxed mb-6">{product.description}</p>
 
           {/* Qty + Actions / Service contact */}
-          {product.isService ? (
-            <div className="mb-6">
-              <div className="flex items-stretch gap-3">
-                <a href={serviceWhatsAppUrl(product)} target="_blank" rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-white font-black text-sm transition-transform active:scale-95"
-                  style={{ background: "#25D366", boxShadow: "0 4px 16px rgba(37,211,102,0.35)" }}>
-                  <MessageCircle size={18} /> Contact on WhatsApp
-                </a>
-                <button onClick={() => toggleWishlist(product)}
-                  className={`w-11 rounded-xl flex items-center justify-center border-2 transition-all active:scale-95 ${inWishlist(product.id) ? "border-red-300 bg-red-50" : "border-gray-200 hover:border-red-300"}`}>
-                  <Heart size={18} className={inWishlist(product.id) ? "fill-red-500 text-red-500" : "text-gray-400"} />
-                </button>
-              </div>
-              <div className="mt-3 rounded-xl border border-green-200 bg-green-50 p-4 flex items-start gap-2.5">
-                <MessageCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-green-800">This is a custom digital service. Contact us directly on WhatsApp <strong className="whitespace-nowrap">{WHATSAPP_DISPLAY}</strong> to confirm the final price, make the payment, and discuss all other details.</p>
-              </div>
-            </div>
-          ) : (
           <div className="flex flex-wrap items-center gap-3 mb-6">
             <div className="flex items-center rounded-xl overflow-hidden border border-gray-200"
               style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
@@ -1728,22 +1709,14 @@ function ProductDetailPage() {
               <Heart size={18} className={inWishlist(product.id) ? "fill-red-500 text-red-500" : "text-gray-400"} />
             </button>
           </div>
-          )}
 
           {/* Assurances */}
           <div className="grid grid-cols-3 gap-3">
-            {(product.isService
-              ? [
-                  { icon: MessageCircle, text: "Direct Support" },
-                  { icon: ShieldCheck, text: "Custom Quote" },
-                  { icon: CheckCircle, text: "Pay on WhatsApp" },
-                ]
-              : [
-                  { icon: Truck, text: "Fast Delivery" },
-                  { icon: RotateCcw, text: "7 Day Return" },
-                  { icon: Shield, text: "Secure Pay" },
-                ]
-            ).map(({ icon: Icon, text }) => (
+            {[
+              { icon: Truck, text: "Fast Delivery" },
+              { icon: RotateCcw, text: "7 Day Return" },
+              { icon: Shield, text: "Secure Pay" },
+            ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-2 p-3 bg-[#F8F9FB] rounded-xl">
                 <Icon size={14} className="text-[#1E40AF] flex-shrink-0" />
                 <span className="text-xs font-semibold text-[#374151]">{text}</span>
