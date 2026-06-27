@@ -114,6 +114,82 @@ export function rowToProduct(r) {
   };
 }
 
+// Sales analytics for one seller, computed entirely in Pakistan time
+// (Asia/Karachi) so "today", "this week" and "this month" line up with the
+// seller's real calendar days. Earnings count only approved orders.
+//   joinedAt  — when the seller joined (ms)
+//   daily     — last 30 Pakistan-days, each { day:'YYYY-MM-DD', orders, sales }
+//   week/month — totals over the last 7 / 30 days
+//   totals    — all-time { ordersPlaced (any status), orders (approved), sales }
+//   since     — when fromDate is given: totals on/after that Pakistan date
+export async function sellerAnalytics(sql, sellerId, fromDate = null) {
+  const urows = await sql`select created_at from users where id = ${sellerId}`;
+  const joinedAt = urows.length ? new Date(urows[0].created_at).getTime() : null;
+
+  const daily = await sql`
+    select to_char((created_at at time zone 'Asia/Karachi')::date, 'YYYY-MM-DD') as day,
+           count(*)::int as orders,
+           coalesce(sum(total), 0)::int as sales
+    from orders
+    where seller_id = ${sellerId}
+      and status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+      and (created_at at time zone 'Asia/Karachi')::date >= (now() at time zone 'Asia/Karachi')::date - 29
+    group by 1 order by 1 desc`;
+
+  const [tot] = await sql`
+    select
+      count(*)::int as orders_placed,
+      count(*) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered'))::int as orders,
+      coalesce(sum(total) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')), 0)::int as sales
+    from orders where seller_id = ${sellerId}`;
+
+  const [wk] = await sql`
+    select count(*)::int as orders, coalesce(sum(total), 0)::int as sales
+    from orders where seller_id = ${sellerId}
+      and status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+      and (created_at at time zone 'Asia/Karachi')::date >= (now() at time zone 'Asia/Karachi')::date - 6`;
+
+  const [mo] = await sql`
+    select count(*)::int as orders, coalesce(sum(total), 0)::int as sales
+    from orders where seller_id = ${sellerId}
+      and status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+      and (created_at at time zone 'Asia/Karachi')::date >= (now() at time zone 'Asia/Karachi')::date - 29`;
+
+  let since = null;
+  if (fromDate) {
+    const [s] = await sql`
+      select count(*)::int as orders_placed,
+             count(*) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered'))::int as orders,
+             coalesce(sum(total) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')), 0)::int as sales
+      from orders where seller_id = ${sellerId}
+        and (created_at at time zone 'Asia/Karachi')::date >= ${fromDate}::date`;
+    since = { from: fromDate, ordersPlaced: s.orders_placed, orders: s.orders, sales: s.sales };
+  }
+
+  return {
+    joinedAt,
+    daily: daily.map(d => ({ day: d.day, orders: d.orders, sales: d.sales })),
+    totals: { ordersPlaced: tot.orders_placed, orders: tot.orders, sales: tot.sales },
+    week: { orders: wk.orders, sales: wk.sales },
+    month: { orders: mo.orders, sales: mo.sales },
+    since,
+  };
+}
+
+// Permanently delete a seller and every record tied to them: their orders,
+// products (which cascades messages on those products), any remaining messages,
+// then the user row. Refuses to delete an admin account.
+export async function deleteSellerCascade(sql, sellerId) {
+  const [u] = await sql`select role from users where id = ${sellerId}`;
+  if (!u) return { ok: false, code: 404, error: "Seller not found." };
+  if (u.role === "admin") return { ok: false, code: 403, error: "An admin account cannot be deleted here." };
+  await sql`delete from orders where seller_id = ${sellerId}`;
+  await sql`delete from products where seller_id = ${sellerId}`;
+  await sql`delete from messages where buyer_id = ${sellerId} or seller_id = ${sellerId} or sender_id = ${sellerId}`;
+  await sql`delete from users where id = ${sellerId}`;
+  return { ok: true };
+}
+
 // Vercel parses JSON bodies into req.body automatically, but fall back to
 // reading the stream just in case the content-type is missing.
 export async function readJsonBody(req) {

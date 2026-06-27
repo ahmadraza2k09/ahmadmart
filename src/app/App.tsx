@@ -37,7 +37,8 @@ import {
 } from "./auth";
 import {
   sellerGetProducts, sellerCreateProduct, sellerUpdateProduct, sellerDeleteProduct,
-  adminGetSellers, type SellerSummary,
+  adminGetSellers, sellerGetAnalytics, adminGetSellerDetail, adminDeleteSeller,
+  type SellerSummary, type SalesAnalytics, type SellerDetail,
 } from "./sellerApi";
 import {
   sendMessage, getConversations, getThread, getUnreadCount,
@@ -441,6 +442,38 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) => `Rs. ${n.toLocaleString()}`;
 const discount = (orig: number, curr: number) => Math.round((1 - curr / orig) * 100);
+
+// ─── Pakistan date & time (Asia/Karachi) ──────────────────────────────────────
+// Every date shown in the dashboards is rendered in Pakistan time so sellers and
+// admin always see the same exact local date and time.
+const PK_TZ = "Asia/Karachi";
+const fmtPKDate = (ms: number) =>
+  new Date(ms).toLocaleDateString("en-GB", { timeZone: PK_TZ, day: "2-digit", month: "short", year: "numeric" });
+const fmtPKDateTime = (ms: number) =>
+  new Date(ms).toLocaleString("en-GB", { timeZone: PK_TZ, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
+// A 'YYYY-MM-DD' Pakistan day string → "Mon, 02 Jun" for the daily breakdown.
+const fmtPKDay = (day: string) => {
+  const d = new Date(`${day}T00:00:00`);
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" });
+};
+
+// Live clock that ticks every second, always in Pakistan time.
+function PakistanClock() {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const text = new Date(now).toLocaleString("en-GB", {
+    timeZone: PK_TZ, weekday: "short", day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
+  });
+  return (
+    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#EFF6FF] text-[#1E40AF] text-xs font-bold">
+      <Clock size={14} /> Pakistan time: <span className="font-mono">{text}</span>
+    </div>
+  );
+}
 
 /** wa.me link to enquire about a digital service — pricing/payment is finalised on chat. */
 const serviceWhatsAppUrl = (p: Product) => {
@@ -3192,21 +3225,180 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
 }
 
 // ─── Admin: Sellers ───────────────────────────────────────────────────────────
+// Shared sales-analytics display: week/month/total cards + a daily breakdown
+// table (last 30 Pakistan-days). Used by the seller dashboard and the admin's
+// per-seller view so both show identical numbers.
+function SalesAnalyticsView({ data }: { data: SalesAnalytics }) {
+  const cards = [
+    { label: "This Week", value: fmt(data.week.sales), sub: `${data.week.orders} orders`, color: "#1E40AF" },
+    { label: "This Month", value: fmt(data.month.sales), sub: `${data.month.orders} orders`, color: "#1E40AF" },
+    { label: "Total Earnings", value: fmt(data.totals.sales), sub: `${data.totals.orders} approved`, color: "#059669" },
+    { label: "Orders Placed", value: String(data.totals.ordersPlaced), sub: "all time", color: "#374151" },
+  ];
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {cards.map(c => (
+          <div key={c.label} className="bg-white rounded-2xl p-4 border border-gray-100">
+            <p className="text-xl font-black" style={{ color: c.color }}>{c.value}</p>
+            <p className="text-xs font-semibold text-[#111827] mt-0.5">{c.label}</p>
+            <p className="text-[11px] text-[#6b7280]">{c.sub}</p>
+          </div>
+        ))}
+      </div>
+      <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+          <TrendingUp size={15} className="text-[#1E40AF]" />
+          <p className="text-sm font-bold text-[#111827]">Daily sales — last 30 days (Pakistan time)</p>
+        </div>
+        {data.daily.length === 0 ? (
+          <div className="p-8 text-center text-sm text-[#6b7280]">No sales recorded yet.</div>
+        ) : (
+          <div>
+            <div className="grid grid-cols-3 px-4 py-2 text-[11px] font-bold text-[#6b7280] uppercase tracking-wide bg-gray-50/70">
+              <span>Date</span><span className="text-center">Orders</span><span className="text-right">Sales</span>
+            </div>
+            {data.daily.map(d => (
+              <div key={d.day} className="grid grid-cols-3 px-4 py-2.5 text-sm items-center border-t border-gray-50">
+                <span className="font-semibold text-[#374151]">{fmtPKDay(d.day)}</span>
+                <span className="text-center text-[#6b7280]">{d.orders}</span>
+                <span className="text-right font-bold text-[#059669]">{fmt(d.sales)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Confirmation modal shown before an admin permanently deletes a seller.
+function DeleteSellerModal({ seller, busy, onCancel, onConfirm }: { seller: SellerSummary; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onCancel}>
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-3 text-red-600">
+          <Trash2 size={20} />
+          <h3 className="font-black text-lg">Delete this seller?</h3>
+        </div>
+        <p className="text-sm text-[#374151] mb-3">
+          You are about to permanently delete <span className="font-bold">{seller.storeName || seller.name}</span> ({seller.email}).
+        </p>
+        <p className="text-sm text-[#6b7280] mb-5">
+          This erases the seller and <span className="font-bold">all of their data</span> from the database — their{" "}
+          <span className="font-bold">{seller.productCount} products</span>,{" "}
+          <span className="font-bold">{seller.orderCount} orders</span>, sales/earnings records, and chat messages.
+          This cannot be undone.
+        </p>
+        <div className="flex gap-2">
+          <button onClick={onConfirm} disabled={busy} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 disabled:opacity-60 transition-colors">
+            {busy ? "Deleting…" : "Yes, delete everything"}
+          </button>
+          <button onClick={onCancel} disabled={busy} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[#374151] font-bold text-sm hover:bg-gray-50">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// One seller in the admin list: summary + join date, with an expandable sales
+// analytics panel (with a "since date" filter) and a delete action.
+function AdminSellerRow({ seller, onDeleted }: { seller: SellerSummary; onDeleted: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState<SellerDetail | null>(null);
+  const [from, setFrom] = useState("");
+  const [loadingD, setLoadingD] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [rowErr, setRowErr] = useState("");
+
+  const loadDetail = (fromDate?: string) => {
+    setLoadingD(true); setRowErr("");
+    adminGetSellerDetail(seller.id, fromDate || undefined)
+      .then(setDetail)
+      .catch(e => setRowErr(e instanceof Error ? e.message : "Failed to load analytics"))
+      .finally(() => setLoadingD(false));
+  };
+  const toggle = () => { const next = !open; setOpen(next); if (next && !detail) loadDetail(); };
+  const doDelete = async () => {
+    setDeleting(true); setRowErr("");
+    try { await adminDeleteSeller(seller.id); onDeleted(); }
+    catch (e) { setRowErr(e instanceof Error ? e.message : "Delete failed"); setDeleting(false); setConfirmDel(false); }
+  };
+
+  return (
+    <div className="border-b border-gray-100 last:border-0">
+      <div className="p-4 flex items-start justify-between flex-wrap gap-3">
+        <div className="min-w-0">
+          <p className="font-bold text-[#111827]">{seller.storeName || "(no store name)"}</p>
+          <p className="text-xs text-[#6b7280]">{seller.name} · {seller.email}</p>
+          <p className="text-xs text-[#6b7280] mt-1">WhatsApp: <span className="font-semibold text-[#374151]">{seller.whatsapp || "—"}</span> · JazzCash: <span className="font-semibold text-[#374151]">{seller.jazzcashNumber || "—"}{seller.jazzcashTitle ? ` (${seller.jazzcashTitle})` : ""}</span></p>
+          <p className="text-xs text-[#6b7280] mt-1">Joined Ahmad Mart: <span className="font-semibold text-[#374151]">{fmtPKDate(seller.joinedAt)}</span></p>
+        </div>
+        <div className="flex gap-4 text-center flex-shrink-0">
+          <div><p className="text-lg font-black text-[#111827]">{seller.productCount}</p><p className="text-[11px] text-[#6b7280]">Products</p></div>
+          <div><p className="text-lg font-black text-[#111827]">{seller.orderCount}</p><p className="text-[11px] text-[#6b7280]">Orders</p></div>
+          <div><p className="text-lg font-black text-[#059669]">{fmt(seller.earnings)}</p><p className="text-[11px] text-[#6b7280]">Earnings</p></div>
+        </div>
+      </div>
+      <div className="px-4 pb-3 flex flex-wrap gap-2">
+        <button onClick={toggle} className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#1E40AF] bg-blue-50 hover:bg-blue-100 inline-flex items-center gap-1">
+          <TrendingUp size={13} /> {open ? "Hide analytics" : "View analytics"}
+        </button>
+        <button onClick={() => setConfirmDel(true)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 inline-flex items-center gap-1">
+          <Trash2 size={13} /> Delete seller
+        </button>
+      </div>
+      {open && (
+        <div className="px-4 pb-5">
+          <div className="bg-gray-50 rounded-xl p-3 mb-3 flex flex-wrap items-end gap-3">
+            <label className="text-xs font-semibold text-[#374151]">
+              Earnings since a date
+              <input type="date" value={from} onChange={e => setFrom(e.target.value)}
+                className="block mt-1 px-2 py-1.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-[#1E40AF]" />
+            </label>
+            <button onClick={() => loadDetail(from)} className="px-3 py-2 rounded-lg bg-[#1E40AF] text-white text-xs font-bold">Apply</button>
+            {detail?.analytics.since && (
+              <div className="text-sm">
+                <span className="text-[#6b7280]">Since {fmtPKDate(new Date(`${detail.analytics.since.from}T00:00:00`).getTime())}: </span>
+                <span className="font-black text-[#059669]">{fmt(detail.analytics.since.sales)}</span>
+                <span className="text-[#6b7280]"> · {detail.analytics.since.ordersPlaced} orders placed ({detail.analytics.since.orders} approved)</span>
+              </div>
+            )}
+          </div>
+          {loadingD ? <p className="text-sm text-[#6b7280]">Loading analytics…</p>
+            : detail ? <SalesAnalyticsView data={detail.analytics} />
+            : <p className="text-sm text-[#6b7280]">No data.</p>}
+        </div>
+      )}
+      {rowErr && <p className="px-4 pb-3 text-xs text-red-500 font-semibold">{rowErr}</p>}
+      {confirmDel && <DeleteSellerModal seller={seller} busy={deleting} onCancel={() => setConfirmDel(false)} onConfirm={doDelete} />}
+    </div>
+  );
+}
+
 function AdminSellers() {
   const [sellers, setSellers] = useState<SellerSummary[]>([]);
   const [err, setErr] = useState("");
   const [loaded, setLoaded] = useState(false);
-  useEffect(() => { adminGetSellers().then(setSellers).catch(e => setErr(e instanceof Error ? e.message : "Failed to load sellers")).finally(() => setLoaded(true)); }, []);
+  const reload = () => adminGetSellers().then(setSellers).catch(e => setErr(e instanceof Error ? e.message : "Failed to load sellers")).finally(() => setLoaded(true));
+  useEffect(() => { reload(); }, []);
   if (err) return <div className="bg-white rounded-2xl p-8 text-center text-sm text-red-500" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>{err}</div>;
   if (!loaded) return <div className="bg-white rounded-2xl p-8 text-center text-sm text-[#6b7280]">Loading sellers…</div>;
   const totalEarnings = sellers.reduce((s, x) => s + x.earnings, 0);
   const totalProducts = sellers.reduce((s, x) => s + x.productCount, 0);
   return (
     <div className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <p className="text-sm font-bold text-[#111827]">Sellers &amp; sales tracking</p>
+        <PakistanClock />
+      </div>
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Sellers", value: sellers.length },
-          { label: "Seller Products", value: totalProducts },
+          { label: "Sellers", value: String(sellers.length) },
+          { label: "Seller Products", value: String(totalProducts) },
           { label: "Seller Earnings", value: fmt(totalEarnings) },
         ].map(c => (
           <div key={c.label} className="bg-white rounded-2xl p-4" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
@@ -3218,22 +3410,7 @@ function AdminSellers() {
       <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
         {sellers.length === 0 ? (
           <div className="p-10 text-center text-sm text-[#6b7280]">No sellers have signed up yet.</div>
-        ) : sellers.map(s => (
-          <div key={s.id} className="p-4 border-b border-gray-100 last:border-0">
-            <div className="flex items-start justify-between flex-wrap gap-3">
-              <div className="min-w-0">
-                <p className="font-bold text-[#111827]">{s.storeName || "(no store name)"}</p>
-                <p className="text-xs text-[#6b7280]">{s.name} · {s.email}</p>
-                <p className="text-xs text-[#6b7280] mt-1">WhatsApp: <span className="font-semibold text-[#374151]">{s.whatsapp || "—"}</span> · JazzCash: <span className="font-semibold text-[#374151]">{s.jazzcashNumber || "—"}{s.jazzcashTitle ? ` (${s.jazzcashTitle})` : ""}</span></p>
-              </div>
-              <div className="flex gap-4 text-center flex-shrink-0">
-                <div><p className="text-lg font-black text-[#111827]">{s.productCount}</p><p className="text-[11px] text-[#6b7280]">Products</p></div>
-                <div><p className="text-lg font-black text-[#111827]">{s.orderCount}</p><p className="text-[11px] text-[#6b7280]">Orders</p></div>
-                <div><p className="text-lg font-black text-[#059669]">{fmt(s.earnings)}</p><p className="text-[11px] text-[#6b7280]">Earnings</p></div>
-              </div>
-            </div>
-          </div>
-        ))}
+        ) : sellers.map(s => <AdminSellerRow key={s.id} seller={s} onDeleted={reload} />)}
       </div>
     </div>
   );
@@ -3443,9 +3620,10 @@ function SellerPage() {
     setStoreBusy(false);
   };
 
+  const [analytics, setAnalytics] = useState<SalesAnalytics | null>(null);
   const isSeller = !!user && (user.role === "seller" || user.role === "admin");
   const load = () => { sellerGetProducts().then(setProducts).catch(e => setErr(e instanceof Error ? e.message : "Failed to load products")); };
-  useEffect(() => { if (isSeller) load(); }, [isSeller]);
+  useEffect(() => { if (isSeller) { load(); sellerGetAnalytics().then(setAnalytics).catch(() => {}); } }, [isSeller]);
 
   if (!authReady) return <div className="max-w-sm mx-auto px-4 py-20 text-center text-sm text-[#6b7280]">Loading…</div>;
   if (!user) return (
@@ -3508,6 +3686,20 @@ function SellerPage() {
           <p className="text-[#374151]">WhatsApp: <span className="font-semibold">{user.whatsapp || "—"}</span></p>
           <p className="text-[#374151]">JazzCash: <span className="font-semibold">{user.jazzcashNumber || "—"}{user.jazzcashTitle ? ` (${user.jazzcashTitle})` : ""}</span></p>
         </div>
+      </div>
+
+      {/* Sales analytics — week & month by date, in Pakistan time */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div>
+            <h2 className="font-black text-[#111827] flex items-center gap-2"><TrendingUp size={18} className="text-[#1E40AF]" /> Your sales analytics</h2>
+            {analytics?.joinedAt && <p className="text-xs text-[#6b7280] mt-0.5">You joined Ahmad Mart on <span className="font-semibold text-[#374151]">{fmtPKDate(analytics.joinedAt)}</span></p>}
+          </div>
+          <PakistanClock />
+        </div>
+        {analytics
+          ? <SalesAnalyticsView data={analytics} />
+          : <div className="bg-white rounded-2xl p-6 text-center text-sm text-[#6b7280] border border-gray-100">Loading your sales…</div>}
       </div>
 
       {storeOpen && (

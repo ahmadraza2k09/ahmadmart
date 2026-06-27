@@ -44,8 +44,40 @@ export interface SellerSummary {
   productCount: number;
   orderCount: number;
   earnings: number;
+  joinedAt: number;
 }
 /** Admin: every seller with product/order/earnings analytics. */
 export async function adminGetSellers(): Promise<SellerSummary[]> {
   return (await send("/api/admin/sellers", "GET")).sellers as SellerSummary[];
+}
+
+// ─── Sales analytics ──────────────────────────────────────────────────────────
+export interface DailySales { day: string; orders: number; sales: number }
+export interface SalesAnalytics {
+  joinedAt: number | null;
+  daily: DailySales[];
+  totals: { ordersPlaced: number; orders: number; sales: number };
+  week: { orders: number; sales: number };
+  month: { orders: number; sales: number };
+  since: { from: string; ordersPlaced: number; orders: number; sales: number } | null;
+}
+export interface SellerDetail {
+  seller: SellerSummary & { joinedAt: number };
+  analytics: SalesAnalytics;
+}
+
+/** A seller's own sales analytics (week / month by date, in Pakistan time). */
+export async function sellerGetAnalytics(): Promise<SalesAnalytics> {
+  return (await send("/api/seller/analytics", "GET")) as SalesAnalytics;
+}
+
+/** Admin: one seller's profile + sales analytics, optionally since a date. */
+export async function adminGetSellerDetail(id: number, from?: string): Promise<SellerDetail> {
+  const q = from ? `?id=${id}&from=${encodeURIComponent(from)}` : `?id=${id}`;
+  return (await send(`/api/admin/sellers${q}`, "GET")) as SellerDetail;
+}
+
+/** Admin: permanently delete a seller and all of their data. */
+export async function adminDeleteSeller(id: number): Promise<void> {
+  await send("/api/admin/sellers", "DELETE", { id });
 }

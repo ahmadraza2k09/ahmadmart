@@ -1,7 +1,7 @@
 // Consolidated admin routes (one serverless function for all of /api/admin/*).
 // Vercel dynamic route: req.query.resource is "products" | "analytics" | "seed"
 // | "orders" | "sellers". Paths stay the same: /api/admin/products, etc.
-import { getSql, requireAdmin, rowToProduct, rowToOrder, readJsonBody } from "../_db.js";
+import { getSql, requireAdmin, rowToProduct, rowToOrder, readJsonBody, sellerAnalytics, deleteSellerCascade } from "../_db.js";
 
 export default async function handler(req, res) {
   if (!requireAdmin(req, res)) return;
@@ -142,8 +142,45 @@ async function orders(req, res) {
 }
 
 async function sellers(req, res) {
-  if (req.method !== "GET") { res.status(405).json({ error: "Method not allowed" }); return; }
   const sql = getSql();
+
+  // Permanently delete a seller and all of their data (asked for via the admin UI
+  // only after an explicit confirmation).
+  if (req.method === "DELETE") {
+    const body = await readJsonBody(req);
+    const id = Number(body.id ?? req.query?.id);
+    if (!id) { res.status(400).json({ error: "Missing seller id." }); return; }
+    const result = await deleteSellerCascade(sql, id);
+    if (!result.ok) { res.status(result.code || 400).json({ error: result.error }); return; }
+    res.status(200).json({ ok: true });
+    return;
+  }
+
+  if (req.method !== "GET") { res.status(405).json({ error: "Method not allowed" }); return; }
+
+  // Detailed view of a single seller: profile + full sales analytics. An optional
+  // ?from=YYYY-MM-DD returns earnings/orders placed on or after that date.
+  const detailId = req.query.id;
+  if (detailId) {
+    const id = Number(detailId);
+    const [u] = await sql`
+      select id, name, email, store_name, whatsapp, jazzcash_number, jazzcash_title, created_at
+      from users where id = ${id} and role = 'seller'`;
+    if (!u) { res.status(404).json({ error: "Seller not found." }); return; }
+    const from = req.query.from || null;
+    const analytics = await sellerAnalytics(sql, id, from);
+    res.status(200).json({
+      seller: {
+        id: u.id, name: u.name, email: u.email,
+        storeName: u.store_name ?? "", whatsapp: u.whatsapp ?? "",
+        jazzcashNumber: u.jazzcash_number ?? "", jazzcashTitle: u.jazzcash_title ?? "",
+        joinedAt: new Date(u.created_at).getTime(),
+      },
+      analytics,
+    });
+    return;
+  }
+
   const rows = await sql`
     select
       u.id, u.name, u.email, u.store_name, u.whatsapp, u.jazzcash_number, u.jazzcash_title, u.created_at,
@@ -160,6 +197,7 @@ async function sellers(req, res) {
     storeName: r.store_name ?? "", whatsapp: r.whatsapp ?? "",
     jazzcashNumber: r.jazzcash_number ?? "", jazzcashTitle: r.jazzcash_title ?? "",
     productCount: r.product_count, orderCount: r.order_count, earnings: r.earnings,
+    joinedAt: new Date(r.created_at).getTime(),
   }));
   res.status(200).json({ sellers: list });
 }
