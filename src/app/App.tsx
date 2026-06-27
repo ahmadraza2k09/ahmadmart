@@ -982,7 +982,7 @@ function HomePage() {
     },
     {
       badge: "Best Sound. Ultimate Comfort.",
-      title: "Premium Earbuds Starting at", highlight: "Rs. 1,799",
+      title: "Premium Earbuds Starting at", highlight: "Rs. 800",
       sub: "Crystal clear sound with 30 hours of battery life. ANC technology included.",
       cta: "Explore Earbuds", link: "/shop?sub=Earbuds",
       bg: "from-[#1E40AF] to-[#3730a3]",
