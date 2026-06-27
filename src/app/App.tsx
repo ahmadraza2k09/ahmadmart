@@ -8,7 +8,7 @@ import {
   CheckCircle, ArrowRight, TrendingUp, Award, Gift,
   Instagram, Mail, Send, Smartphone,
   Battery, Plug, Wifi, RotateCcw, ZoomIn,
-  Copy, ShieldCheck, Lock, RefreshCw, MessageCircle, ImageOff
+  Copy, ShieldCheck, Lock, RefreshCw, MessageCircle, ImageOff, Upload
 } from "lucide-react";
 import {
   JAZZCASH_NUMBER, JAZZCASH_TITLE, WHATSAPP_DISPLAY, WHATSAPP_NUMBER,
@@ -833,13 +833,14 @@ function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-2">
               <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-10 w-10 object-contain" />
               <div>
                 <span className="text-xl font-black text-white">Ahmad</span>
                 <span className="text-xl font-black text-[#F97316]">Mart</span>
               </div>
             </div>
+            <p className="text-sm font-semibold text-[#F97316] mb-2">Quality you can trust</p>
             <p className="text-gray-400 text-sm leading-relaxed">Pakistan's trusted online store for premium mobile accessories and beautiful home décor at affordable prices.</p>
             <div className="mt-4">
               <a
@@ -3025,6 +3026,23 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
   const setImg = (i: number, v: string) => setImgs(prev => prev.map((u, idx) => (idx === i ? v : u)));
   const addImg = () => setImgs(prev => (prev.length < MAX_PRODUCT_IMAGES ? [...prev, ""] : prev));
   const removeImg = (i: number) => setImgs(prev => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev));
+  // Upload an image file from the device: compress it to a data URL and store it
+  // in that row. The data URL is saved to the database, so it is visible to all.
+  const [uploadIdx, setUploadIdx] = useState<number | null>(null);
+  const [uploadErr, setUploadErr] = useState("");
+  const handleUpload = async (i: number, file: File | undefined) => {
+    if (!file) return;
+    const verr = validateProofFile(file);
+    if (verr) { setUploadErr(verr); return; }
+    setUploadErr(""); setUploadIdx(i);
+    try {
+      const dataUrl = await fileToCompressedDataURL(file, 1000, 0.72);
+      setImg(i, dataUrl);
+    } catch {
+      setUploadErr("Could not process that image. Please try another file.");
+    }
+    setUploadIdx(null);
+  };
   const set = (k: string, v: string | boolean) => setF(prev => ({ ...prev, [k]: v }));
   const submit = () => {
     const images = imgs.map(s => s.trim()).filter(Boolean);
@@ -3064,26 +3082,37 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
         {allowBadge && <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Badge</span><select className={inp} value={f.badge} onChange={e => set("badge", e.target.value)}><option value="">None</option><option value="new">new</option><option value="sale">sale</option><option value="bestseller">bestseller</option></select></label>}
         <div className="text-sm sm:col-span-2">
           <span className="font-semibold text-[#374151] block mb-1">Product Images</span>
-          <p className="text-xs text-[#6b7280] mb-2">Paste an image URL and it loads instantly in the preview. The first image is the main one shown on the product. You can add up to {MAX_PRODUCT_IMAGES} images.</p>
+          <p className="text-xs text-[#6b7280] mb-2">Paste an image link <span className="font-semibold">or</span> upload a photo from your device — it loads instantly in the preview and is visible to everyone. The first image is the main one shown on the product. You can add up to {MAX_PRODUCT_IMAGES} images.</p>
           <div className="space-y-2">
-            {imgs.map((url, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <ImageThumb url={url} main={i === 0} />
-                <input
-                  className={inp}
-                  value={url}
-                  onChange={e => setImg(i, e.target.value)}
-                  placeholder={i === 0 ? "Main image URL — /earbuds/x.jpg or https://..." : "Image URL — paste link here"}
-                />
-                {imgs.length > 1 && (
-                  <button type="button" onClick={() => removeImg(i)} title="Remove image"
-                    className="shrink-0 w-9 h-9 grid place-items-center rounded-xl border border-gray-200 text-red-500 hover:bg-red-50 transition-colors">
-                    <Trash2 size={16} />
-                  </button>
-                )}
-              </div>
-            ))}
+            {imgs.map((url, i) => {
+              const uploaded = url.startsWith("data:");
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <ImageThumb url={url} main={i === 0} />
+                  <input
+                    className={inp}
+                    value={uploaded ? "Uploaded photo ✓" : url}
+                    readOnly={uploaded}
+                    onChange={e => setImg(i, e.target.value)}
+                    placeholder={i === 0 ? "Main image URL — paste link here" : "Image URL — paste link here"}
+                  />
+                  <label title="Upload from device"
+                    className="shrink-0 w-9 h-9 grid place-items-center rounded-xl border border-gray-200 text-[#1E40AF] hover:bg-[#1E40AF]/5 cursor-pointer transition-colors">
+                    {uploadIdx === i ? <span className="text-[10px] font-bold">…</span> : <Upload size={16} />}
+                    <input type="file" accept="image/png,image/jpeg" className="hidden"
+                      onChange={e => { handleUpload(i, e.target.files?.[0]); e.target.value = ""; }} />
+                  </label>
+                  {imgs.length > 1 && (
+                    <button type="button" onClick={() => removeImg(i)} title="Remove image"
+                      className="shrink-0 w-9 h-9 grid place-items-center rounded-xl border border-gray-200 text-red-500 hover:bg-red-50 transition-colors">
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
+          {uploadErr && <p className="text-xs text-red-500 font-semibold mt-1.5">{uploadErr}</p>}
           {imgs.length < MAX_PRODUCT_IMAGES && (
             <button type="button" onClick={addImg}
               className="mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-[#1E40AF]/40 text-[#1E40AF] text-sm font-bold hover:bg-[#1E40AF]/5 transition-colors">
