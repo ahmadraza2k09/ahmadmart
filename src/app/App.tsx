@@ -443,6 +443,18 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
 const fmt = (n: number) => `Rs. ${n.toLocaleString()}`;
 const discount = (orig: number, curr: number) => Math.round((1 - curr / orig) * 100);
 
+// iOS Safari zooms in when a small-font input gains focus. After a search runs
+// we blur the field and snap the viewport back to 1x, then restore it a moment
+// later so pinch-zoom still works — so the store never stays stuck zoomed-in.
+function resetMobileZoom() {
+  (document.activeElement as HTMLElement | null)?.blur?.();
+  const vp = document.querySelector('meta[name="viewport"]');
+  if (!vp) return;
+  const original = vp.getAttribute("content") || "width=device-width, initial-scale=1.0";
+  vp.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0");
+  window.setTimeout(() => vp.setAttribute("content", original), 350);
+}
+
 // ─── Pakistan date & time (Asia/Karachi) ──────────────────────────────────────
 // Every date shown in the dashboards is rendered in Pakistan time so sellers and
 // admin always see the same exact local date and time.
@@ -625,7 +637,7 @@ function Navbar() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQ.trim()) { navigate(`/shop?q=${encodeURIComponent(searchQ)}`); setSearchOpen(false); setSearchQ(""); }
+    if (searchQ.trim()) { navigate(`/shop?q=${encodeURIComponent(searchQ)}`); setSearchOpen(false); setSearchQ(""); resetMobileZoom(); }
   };
 
   // Category links are built from the live catalog, so any new category a seller
@@ -760,7 +772,7 @@ function Navbar() {
                   {results.length === 0 ? (
                     <p className="px-4 py-3 text-sm text-[#6b7280]">No products match “{searchQ}”.</p>
                   ) : results.map(p => (
-                    <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchOpen(false); setSearchQ(""); }}
+                    <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchOpen(false); setSearchQ(""); resetMobileZoom(); }}
                       className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#F8F9FB] transition-colors border-b border-gray-50 last:border-0">
                       <ProductImage src={p.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -1757,7 +1769,7 @@ function ProductDetailPage() {
       {/* Tabs */}
       <div className="bg-white rounded-2xl mb-10" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
         <div className="flex border-b border-gray-100">
-          {(["desc", "specs", "reviews"] as const).filter(t => !(product.isService && t === "reviews")).map(t => {
+          {(["desc", "specs", "reviews"] as const).filter(t => !(product.isService && t === "reviews") && !(t === "specs" && Object.keys(product.specs).length === 0)).map(t => {
             const labels = { desc: "Description", specs: "Specifications", reviews: `Reviews (${product.reviews + getProductReviews(product.id).length})` };
             return (
               <button key={t} onClick={() => setTab(t)}
@@ -1773,10 +1785,17 @@ function ProductDetailPage() {
           {tab === "specs" && (
             <div className="grid sm:grid-cols-2 gap-3">
               {Object.entries(product.specs).map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between p-3 bg-[#F8F9FB] rounded-xl">
-                  <span className="text-xs font-semibold text-[#6b7280]">{k}</span>
-                  <span className="text-xs font-bold text-[#111827]">{v}</span>
-                </div>
+                v ? (
+                  <div key={k} className="flex items-center justify-between p-3 bg-[#F8F9FB] rounded-xl">
+                    <span className="text-xs font-semibold text-[#6b7280]">{k}</span>
+                    <span className="text-xs font-bold text-[#111827]">{v}</span>
+                  </div>
+                ) : (
+                  <div key={k} className="flex items-center gap-2 p-3 bg-[#F8F9FB] rounded-xl sm:col-span-2">
+                    <CheckCircle size={14} className="text-[#1E40AF] flex-shrink-0" />
+                    <span className="text-xs font-semibold text-[#374151]">{k}</span>
+                  </div>
+                )
               ))}
             </div>
           )}
@@ -3065,8 +3084,14 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
   const submit = () => {
     const images = imgs.map(s => s.trim()).filter(Boolean);
     const image = images[0] || "";
+    // Keep every non-empty line. "Key: Value" becomes a labelled spec; a line
+    // with no colon is kept as a plain feature so nothing the seller types is lost.
     const specs: Record<string, string> = {};
-    f.specs.split("\n").forEach(line => { const i = line.indexOf(":"); if (i > 0) specs[line.slice(0, i).trim()] = line.slice(i + 1).trim(); });
+    f.specs.split("\n").map(l => l.trim()).filter(Boolean).forEach(line => {
+      const i = line.indexOf(":");
+      if (i > 0) specs[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+      else specs[line] = "";
+    });
     onSave({
       ...(initial?.id ? { id: initial.id } : {}),
       name: f.name.trim(),
@@ -3139,7 +3164,7 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
           )}
         </div>
         <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Description</span><textarea className={inp + " resize-none"} rows={3} value={f.description} onChange={e => set("description", e.target.value)} /></label>
-        <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Specs (one "Key: Value" per line)</span><textarea className={inp + " resize-none"} rows={3} value={f.specs} onChange={e => set("specs", e.target.value)} /></label>
+        <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Specifications (one per line — shown on the product page)</span><textarea className={inp + " resize-none"} rows={4} value={f.specs} onChange={e => set("specs", e.target.value)} placeholder={"Battery: 30 hours\nBluetooth: 5.3\nWater resistant\nWarranty: 1 year"} /></label>
         <label className="flex items-center gap-2 text-sm font-semibold text-[#374151]"><input type="checkbox" checked={f.inStock} onChange={e => set("inStock", e.target.checked)} /> In stock</label>
         <label className="flex items-center gap-2 text-sm font-semibold text-[#374151]"><input type="checkbox" checked={f.isService} onChange={e => set("isService", e.target.checked)} /> Digital service (WhatsApp contact)</label>
       </div>
