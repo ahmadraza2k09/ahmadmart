@@ -530,7 +530,7 @@ function ProductCardBase({ product }: { product: Product }) {
         <ProductImage
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute top-3 left-3 flex flex-col gap-1">
           {product.badge && <Badge type={product.badge} />}
@@ -1154,7 +1154,7 @@ function HomePage() {
                   <Link key={p.id} to={`/product/${p.id}`}
                     className="bg-white rounded-xl p-3 hover:-translate-y-0.5 transition-transform"
                     style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                    <ProductImage src={p.image} alt={p.name} className="w-full h-24 object-cover rounded-lg mb-2" />
+                    <ProductImage src={p.image} alt={p.name} className="w-full h-28 object-contain rounded-lg mb-2 bg-white" />
                     <p className="text-xs font-semibold text-[#111827] line-clamp-2 mb-1">{p.name}</p>
                     <p className="text-xs font-bold text-[#1E40AF]">{fmt(p.price)}</p>
                   </Link>
@@ -1179,7 +1179,7 @@ function HomePage() {
                   <Link key={p.id} to={`/product/${p.id}`}
                     className="bg-white rounded-xl p-3 hover:-translate-y-0.5 transition-transform"
                     style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                    <ProductImage src={p.image} alt={p.name} className="w-full h-24 object-cover rounded-lg mb-2" />
+                    <ProductImage src={p.image} alt={p.name} className="w-full h-28 object-contain rounded-lg mb-2 bg-white" />
                     <p className="text-xs font-semibold text-[#111827] line-clamp-2 mb-1">{p.name}</p>
                     <p className="text-xs font-bold text-[#B45309]">{fmt(p.price)}</p>
                   </Link>
@@ -1626,7 +1626,7 @@ function ProductDetailPage() {
           <div className="bg-white rounded-2xl overflow-hidden mb-3 relative group"
             style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.1)", aspectRatio: "1/1" }}>
             <ProductImage src={product.images[activeImg]} alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" />
             {product.badge && (
               <div className="absolute top-4 left-4"><Badge type={product.badge} /></div>
             )}
@@ -1902,6 +1902,10 @@ function CheckoutPage() {
   const [copied, setCopied] = useState("");
   const [placedOrders, setPlacedOrders] = useState<Order[] | null>(null);
   const [orderBaseId] = useState(newOrderId());
+  // Two delivery/payment options: JazzCash (paid via WhatsApp, nationwide) or
+  // Cash on Delivery (Multan only). The promo code applies to COD orders only.
+  const [payment, setPayment] = useState<"jazzcash" | "cod">("jazzcash");
+  const isCOD = payment === "cod";
   const [submitting, setSubmitting] = useState(false);
   const [submitErr, setSubmitErr] = useState("");
   const [promo, setPromo] = useState("");
@@ -1924,14 +1928,20 @@ function CheckoutPage() {
   const groupTotals = (g: { items: CartItem[] }, i: number) => {
     const subtotal = g.items.reduce((s, it) => s + it.price * it.qty, 0);
     const groupShipping = DELIVERY_FEE;
-    const waiver = i === 0 && promoApplied ? Math.min(PROMO_WAIVER, groupShipping) : 0;
+    // Promo only discounts delivery on Cash on Delivery (Multan) orders.
+    const waiver = i === 0 && isCOD && promoApplied ? Math.min(PROMO_WAIVER, groupShipping) : 0;
     return { subtotal, groupShipping, waiver, groupTotal: subtotal + groupShipping - waiver };
   };
   const grandTotal = groups.reduce((sum, g, i) => sum + groupTotals(g, i).groupTotal, 0);
   const totalDelivery = groups.length * DELIVERY_FEE;
-  const totalWaiver = promoApplied ? Math.min(PROMO_WAIVER, DELIVERY_FEE) : 0;
+  const totalWaiver = isCOD && promoApplied ? Math.min(PROMO_WAIVER, DELIVERY_FEE) : 0;
 
   const applyPromo = () => {
+    if (!isCOD) {
+      setPromoApplied(false);
+      setPromoMsg("The promo code applies to Cash on Delivery (Multan) orders only.");
+      return;
+    }
     if (promo.trim().toUpperCase() === PROMO_CODE) {
       setPromoApplied(true);
       setPromoMsg("Rs. 100 off delivery applied!");
@@ -1953,6 +1963,7 @@ function CheckoutPage() {
     if (!form.phone.trim() || !/^0\d{9,10}$/.test(form.phone.trim())) e.phone = "Enter a valid WhatsApp number (e.g. 03001234567)";
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Enter a valid email address";
     if (!form.address.trim()) e.address = "Complete shipping address is required";
+    else if (isCOD && !/multan/i.test(form.address)) e.address = "Cash on Delivery is available in Multan only. Enter a Multan delivery address, or choose JazzCash.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -1982,7 +1993,7 @@ function CheckoutPage() {
           discount: waiver || undefined,
           promoCode: waiver ? PROMO_CODE : undefined,
           total: groupTotal,
-          paymentMethod: "WhatsApp",
+          paymentMethod: isCOD ? "Cash on Delivery" : "JazzCash (via WhatsApp)",
           status: "Pending Approval",
           sellerId: g.sellerId,
           sellerStore: g.sellerStore,
@@ -2108,37 +2119,68 @@ function CheckoutPage() {
             </div>
           </div>
 
-          {/* Payment — via WhatsApp */}
+          {/* Payment method selector */}
+          <div className="bg-white rounded-2xl p-6" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08)" }}>
+            <h3 className="font-bold text-[#111827] mb-4 flex items-center gap-2"><Tag size={18} className="text-[#F97316]" /> Delivery & Payment</h3>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <button type="button" onClick={() => setPayment("jazzcash")}
+                className={`text-left rounded-xl border-2 p-4 transition-all ${!isCOD ? "border-[#1E40AF] bg-blue-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="flex items-center gap-2 font-bold text-[#111827] text-sm"><Smartphone size={16} className="text-[#1E40AF]" /> JazzCash</span>
+                  <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${!isCOD ? "border-[#1E40AF] bg-[#1E40AF]" : "border-gray-300"}`} />
+                </div>
+                <p className="text-xs text-[#6b7280]">Pay via JazzCash through WhatsApp. Available nationwide.</p>
+              </button>
+              <button type="button" onClick={() => { setPayment("cod"); setPromoMsg(""); }}
+                className={`text-left rounded-xl border-2 p-4 transition-all ${isCOD ? "border-[#059669] bg-emerald-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="flex items-center gap-2 font-bold text-[#111827] text-sm"><Truck size={16} className="text-[#059669]" /> Cash on Delivery</span>
+                  <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${isCOD ? "border-[#059669] bg-[#059669]" : "border-gray-300"}`} />
+                </div>
+                <p className="text-xs text-[#6b7280]">Pay cash when it arrives. <strong className="text-[#059669]">Multan only</strong> · promo code eligible.</p>
+              </button>
+            </div>
+          </div>
+
+          {/* Method details */}
           <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08)" }}>
-            <div className="px-6 py-4 flex items-center gap-3" style={{ background: "linear-gradient(135deg, #128C7E, #25D366)" }}>
+            <div className="px-6 py-4 flex items-center gap-3" style={{ background: isCOD ? "linear-gradient(135deg, #059669, #047857)" : "linear-gradient(135deg, #1E40AF, #1e3a8a)" }}>
               <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
-                <MessageCircle size={20} className="text-white" />
+                {isCOD ? <Truck size={20} className="text-white" /> : <Smartphone size={20} className="text-white" />}
               </div>
               <div>
-                <p className="font-black text-white text-base leading-tight">Pay via WhatsApp</p>
-                <p className="text-green-50 text-xs">Complete your payment with the seller on WhatsApp</p>
+                <p className="font-black text-white text-base leading-tight">{isCOD ? "Cash on Delivery" : "Pay via JazzCash on WhatsApp"}</p>
+                <p className="text-white/80 text-xs">{isCOD ? "Pay in cash when your order arrives in Multan" : "Send your JazzCash payment screenshot on WhatsApp"}</p>
               </div>
             </div>
             <div className="p-6">
-              <div className="rounded-xl border border-green-100 bg-green-50/60 p-4 mb-4">
-                <p className="font-bold text-[#065F46] text-sm mb-3">How it works</p>
+              <div className={`rounded-xl border p-4 mb-4 ${isCOD ? "border-emerald-100 bg-emerald-50/60" : "border-blue-100 bg-blue-50/60"}`}>
+                <p className={`font-bold text-sm mb-3 ${isCOD ? "text-[#065F46]" : "text-[#1E40AF]"}`}>How it works</p>
                 <ol className="space-y-2.5">
-                  {[
-                    "Fill in your details on the left.",
-                    "Tap “Pay via WhatsApp” to place your order.",
-                    "Your order opens in WhatsApp with all the details — send it to the seller.",
-                    "Agree the payment with the seller on WhatsApp and pay. Your order is confirmed once approved.",
-                  ].map((text, i) => (
+                  {(isCOD
+                    ? [
+                        "Make sure your delivery address is inside Multan.",
+                        "Fill in your details, then tap “Place COD Order on WhatsApp”.",
+                        "Your order opens in WhatsApp — send it to confirm. We'll dispatch it.",
+                        "Pay the exact amount in cash to the rider on delivery.",
+                      ]
+                    : [
+                        "Fill in your details, then tap “Pay via WhatsApp”.",
+                        "Your order opens in WhatsApp with the JazzCash number and amount.",
+                        "Send the payment, then attach the JazzCash screenshot in that chat.",
+                        "We verify it and confirm your order on WhatsApp.",
+                      ]
+                  ).map((text, i) => (
                     <li key={i} className="flex gap-3 text-sm text-[#374151]">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#25D366] text-white text-xs font-black flex items-center justify-center">{i + 1}</span>
+                      <span className={`flex-shrink-0 w-6 h-6 rounded-full text-white text-xs font-black flex items-center justify-center ${isCOD ? "bg-[#059669]" : "bg-[#1E40AF]"}`}>{i + 1}</span>
                       <span className="pt-0.5">{text}</span>
                     </li>
                   ))}
                 </ol>
               </div>
               <p className="text-[11px] text-[#6b7280] flex items-start gap-1.5">
-                <ShieldCheck size={14} className="text-[#25D366] flex-shrink-0 mt-0.5" />
-                Your order stays <strong>Pending Approval</strong> until it's confirmed on WhatsApp. Nothing is charged automatically.
+                <ShieldCheck size={14} className={`flex-shrink-0 mt-0.5 ${isCOD ? "text-[#059669]" : "text-[#1E40AF]"}`} />
+                Your order stays <strong>Pending Approval</strong> until confirmed on WhatsApp — {isCOD ? "then becomes Confirmed (COD)." : "then Payment Received after approval."} Nothing is charged automatically.
               </p>
             </div>
           </div>
@@ -2176,34 +2218,37 @@ function CheckoutPage() {
                 );
               })}
             </div>
-            {/* Promo code */}
+            {/* Promo code — Cash on Delivery (Multan) only */}
             <div className="border-t border-gray-100 pt-4 mb-4">
               <div className="flex gap-2">
-                <input value={promo} onChange={e => { setPromo(e.target.value); setPromoApplied(false); setPromoMsg(""); }}
-                  placeholder="Promo code (e.g. DELIVERY100)"
-                  className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1E40AF] bg-gray-50" />
-                <button onClick={applyPromo}
-                  className="px-4 py-2 rounded-xl bg-gray-100 text-[#374151] text-sm font-bold hover:bg-gray-200 transition-colors flex items-center gap-1.5">
+                <input value={promo} disabled={!isCOD} onChange={e => { setPromo(e.target.value); setPromoApplied(false); setPromoMsg(""); }}
+                  placeholder={isCOD ? "Promo code (e.g. DELIVERY100)" : "Promo — Cash on Delivery only"}
+                  className={`flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1E40AF] ${isCOD ? "bg-gray-50" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`} />
+                <button onClick={applyPromo} disabled={!isCOD}
+                  className="px-4 py-2 rounded-xl bg-gray-100 text-[#374151] text-sm font-bold hover:bg-gray-200 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                   <Tag size={14} /> Apply
                 </button>
               </div>
               {promoMsg && <p className={`text-xs mt-1.5 font-semibold ${promoApplied ? "text-emerald-600" : "text-red-500"}`}>{promoMsg}</p>}
+              {!isCOD && <p className="text-[11px] text-[#6b7280] mt-1.5">The Rs. 100 delivery discount applies to Cash on Delivery (Multan) orders only.</p>}
             </div>
             <div className="space-y-2 mb-5">
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Subtotal</span><span className="font-semibold">{fmt(cartTotal)}</span></div>
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Delivery {groups.length > 1 ? `(${groups.length} stores)` : ""}</span><span className="font-semibold">{fmt(totalDelivery)}</span></div>
               {totalWaiver > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Promo ({PROMO_CODE})</span><span>-{fmt(totalWaiver)}</span></div>}
-              <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Payment</span><span className="font-semibold">WhatsApp</span></div>
+              <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Payment</span><span className="font-semibold">{isCOD ? "Cash on Delivery" : "JazzCash"}</span></div>
               <div className="flex justify-between font-black text-[#111827] text-base border-t border-gray-100 pt-2"><span>Total</span><span className="text-[#1E40AF]">{fmt(grandTotal)}</span></div>
             </div>
             <button onClick={handleSubmit} disabled={submitting}
               className="w-full py-3.5 rounded-xl text-white font-black text-sm transition-transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
               style={{ background: "#25D366", boxShadow: "0 4px 16px rgba(37,211,102,0.35)" }}>
-              <MessageCircle size={18} /> {submitting ? "Placing order…" : `Pay via WhatsApp — ${fmt(grandTotal)}`}
+              <MessageCircle size={18} /> {submitting ? "Placing order…" : `${isCOD ? "Place COD Order on WhatsApp" : "Pay via WhatsApp"} — ${fmt(grandTotal)}`}
             </button>
             {submitErr && <p className="text-xs text-red-500 font-semibold text-center mt-2">{submitErr}</p>}
             <p className="text-[11px] text-[#6b7280] text-center mt-3">
-              We'll save your order, then it opens in WhatsApp so you can complete the payment with the seller. The order is confirmed once approved.
+              {isCOD
+                ? "We'll save your order and confirm it on WhatsApp. Cash is collected on delivery in Multan."
+                : "We'll save your order, then you send your JazzCash payment on WhatsApp for approval."}
             </p>
           </div>
         </div>

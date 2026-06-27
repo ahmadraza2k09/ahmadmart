@@ -132,8 +132,15 @@ export function buildWhatsAppText(order: Order): string {
   const products = order.items
     .map(i => `• ${i.name} × ${i.qty} = Rs. ${i.price * i.qty}`)
     .join("\n");
-  const paymentLine = `Payment: via WhatsApp`;
-  const closingLine = `Please confirm my order and share your payment details so I can complete the payment. 🛒`;
+  const cod = isCashOnDelivery(order);
+  const jazzNumber = order.sellerJazzcashNumber || JAZZCASH_NUMBER;
+  const jazzTitle = order.sellerJazzcashTitle || JAZZCASH_TITLE;
+  const paymentLine = cod
+    ? `Payment: Cash on Delivery (Multan)`
+    : `Payment: JazzCash to ${jazzNumber} (${jazzTitle})`;
+  const closingLine = cod
+    ? `Please confirm my order — I'll pay cash on delivery. 🚚`
+    : `I'll send the payment to the JazzCash number above and attach the screenshot here. 👇`;
   return [
     `*New Order — Ahmad Mart*`,
     order.sellerStore ? `Store: ${order.sellerStore}` : ``,
