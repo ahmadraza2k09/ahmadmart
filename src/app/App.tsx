@@ -51,6 +51,7 @@ interface WishlistItem extends Product {}
 
 interface StoreCtx {
   products: Product[];
+  productsLoading: boolean;
   refreshProducts: () => Promise<void>;
   cart: CartItem[];
   wishlist: WishlistItem[];
@@ -365,6 +366,21 @@ const CATEGORIES = [
 ];
 
 // ─── Store Provider ───────────────────────────────────────────────────────────
+// Cache the last live catalog so the store opens instantly with REAL products on
+// the next visit — instead of flashing the stale built-in seed and then swapping.
+const PRODUCTS_CACHE_KEY = "ahmadmart_products_v1";
+function loadCachedProducts(): Product[] | null {
+  try {
+    const raw = localStorage.getItem(PRODUCTS_CACHE_KEY);
+    if (!raw) return null;
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) && arr.length ? (arr as Product[]) : null;
+  } catch { return null; }
+}
+function cacheProducts(list: Product[]): void {
+  try { localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(list)); } catch { /* quota exceeded — skip */ }
+}
+
 function StoreProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
@@ -376,16 +392,21 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     apiMe().then(u => setUser(u)).catch(() => {}).finally(() => setAuthReady(true));
   }, []);
-  // Products come from the Neon-backed API. We start from the built-in seed so the
-  // store renders instantly and still works if the API/database is unavailable.
-  const [products, setProducts] = useState<Product[]>(SEED_PRODUCTS);
+  // Products come from the Neon-backed API. Start from the cached last-live
+  // catalog (real products) so the store opens instantly with no flash of dummy
+  // data; with no cache yet we start empty and show skeletons until the fetch
+  // resolves. The seed is only a last resort if the API is unreachable.
+  const [products, setProducts] = useState<Product[]>(() => loadCachedProducts() ?? []);
+  const [productsLoading, setProductsLoading] = useState(true);
 
   const refreshProducts = useCallback(async () => {
     try {
       const live = await apiFetchProducts();
-      if (Array.isArray(live) && live.length) setProducts(live);
+      if (Array.isArray(live) && live.length) { setProducts(live); cacheProducts(live); }
     } catch {
-      /* API/database not available — keep the seed catalog. */
+      setProducts(prev => (prev.length ? prev : SEED_PRODUCTS));
+    } finally {
+      setProductsLoading(false);
     }
   }, []);
   useEffect(() => { refreshProducts(); }, [refreshProducts]);
@@ -431,10 +452,10 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(() => ({
-    products, refreshProducts,
+    products, productsLoading, refreshProducts,
     cart, wishlist, addToCart, removeFromCart, clearCart, updateQty, toggleWishlist, inWishlist,
     cartCount, cartTotal, user, authReady, login, signup, changeRole, updateStore, logout, recentlyViewed, addRecentlyViewed,
-  }), [products, refreshProducts, cart, wishlist, addToCart, removeFromCart, clearCart, updateQty, toggleWishlist, inWishlist,
+  }), [products, productsLoading, refreshProducts, cart, wishlist, addToCart, removeFromCart, clearCart, updateQty, toggleWishlist, inWishlist,
     cartCount, cartTotal, user, authReady, login, signup, changeRole, updateStore, logout, recentlyViewed, addRecentlyViewed]);
 
   return <Store.Provider value={value}>{children}</Store.Provider>;
@@ -630,6 +651,24 @@ function ProductCardBase({ product }: { product: Product }) {
 }
 
 const ProductCard = memo(ProductCardBase);
+
+// Placeholder shown while the live catalog is still loading (first visit, no
+// cache) so the grid never flashes empty or shows stale dummy products.
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08)" }}>
+      <div className="bg-gray-100 animate-pulse" style={{ aspectRatio: "1/1" }} />
+      <div className="p-3 sm:p-4 space-y-2">
+        <div className="h-3 rounded bg-gray-100 animate-pulse w-3/4" />
+        <div className="h-3 rounded bg-gray-100 animate-pulse w-1/2" />
+        <div className="h-5 rounded bg-gray-100 animate-pulse w-1/3 mt-2" />
+      </div>
+    </div>
+  );
+}
+function SkeletonGrid({ count }: { count: number }) {
+  return <>{Array.from({ length: count }).map((_, i) => <SkeletonCard key={i} />)}</>;
+}
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 function Navbar() {
@@ -1156,7 +1195,7 @@ function HomePage() {
             }
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {featured.map(p => <ProductCard key={p.id} product={p} />)}
+            {products.length === 0 ? <SkeletonGrid count={4} /> : featured.map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         </section>
 
@@ -1172,11 +1211,12 @@ function HomePage() {
             }
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {bestsellers.slice(0, 8).map(p => <ProductCard key={p.id} product={p} />)}
+            {products.length === 0 ? <SkeletonGrid count={8} /> : bestsellers.slice(0, 8).map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         </section>
 
         {/* Category Showcases */}
+        {products.length > 0 && (
         <section className="mb-14">
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Mobile Accessories */}
@@ -1230,6 +1270,7 @@ function HomePage() {
             </div>
           </div>
         </section>
+        )}
 
         {/* Why Choose Us */}
         <section className="mb-14">
@@ -1290,7 +1331,7 @@ function HomePage() {
 
 // ─── Shop Page ────────────────────────────────────────────────────────────────
 function ShopPage() {
-  const { products } = useContext(Store);
+  const { products, productsLoading } = useContext(Store);
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [category, setCategory] = useState(searchParams.get("cat") || "All");
@@ -1411,7 +1452,11 @@ function ShopPage() {
               </select>
             </div>
           </div>
-          {filtered.length === 0 ? (
+          {productsLoading && products.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+              <SkeletonGrid count={8} />
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-2xl" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
               <Package size={48} className="mx-auto text-gray-300 mb-4" />
               <p className="font-bold text-[#111827] mb-2">No products found</p>
@@ -1618,7 +1663,7 @@ function AskSeller({ product }: { product: Product }) {
 // ─── Product Detail Page ──────────────────────────────────────────────────────
 function ProductDetailPage() {
   const { id } = useParams();
-  const { products, addToCart, toggleWishlist, inWishlist, addRecentlyViewed } = useContext(Store);
+  const { products, productsLoading, addToCart, toggleWishlist, inWishlist, addRecentlyViewed } = useContext(Store);
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
   const [tab, setTab] = useState<"desc" | "specs" | "reviews">("desc");
@@ -1636,6 +1681,11 @@ function ProductDetailPage() {
     }
   }, [id]);
 
+  // While the catalog is still loading (e.g. a deep link opened before the fetch
+  // resolves) show a quiet loading state instead of flashing "not found".
+  if (!product && productsLoading && products.length === 0) return (
+    <div className="max-w-7xl mx-auto px-4 py-32 text-center text-sm text-[#6b7280]">Loading product…</div>
+  );
   if (!product) return (
     <div className="max-w-7xl mx-auto px-4 py-20 text-center">
       <Package size={64} className="mx-auto text-gray-300 mb-4" />
