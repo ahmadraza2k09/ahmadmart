@@ -54,3 +54,16 @@
   .reveal, .reveal-up { opacity: 1 !important; animation: none !important; }
   .page-in { animation: none !important; }
 }
+
+/* ─── Google Translate (Urdu) — hide its injected banner/tooltips ──────────────
+   We drive translation with our own language toggle, so Google's top banner and
+   hover popups are hidden and the page is never pushed down. */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-gadget-icon,
+#goog-gt-tt,
+.goog-tooltip,
+.goog-tooltip:hover { display: none !important; }
+.skiptranslate iframe { visibility: hidden !important; height: 0 !important; }
+body { top: 0 !important; position: static !important; }
+.goog-text-highlight { background: none !important; box-shadow: none !important; }
+font[style] { background: transparent !important; box-shadow: none !important; }

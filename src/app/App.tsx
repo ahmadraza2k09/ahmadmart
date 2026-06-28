@@ -8,7 +8,7 @@ import {
   CheckCircle, ArrowRight, TrendingUp, Award, Gift,
   Instagram, Mail, Send, Smartphone,
   Battery, Plug, Wifi, RotateCcw, ZoomIn,
-  Copy, ShieldCheck, Lock, RefreshCw, MessageCircle, ImageOff, Upload
+  Copy, ShieldCheck, Lock, RefreshCw, MessageCircle, ImageOff, Upload, Globe
 } from "lucide-react";
 import {
   JAZZCASH_NUMBER, JAZZCASH_TITLE, WHATSAPP_DISPLAY, WHATSAPP_NUMBER,
@@ -672,6 +672,31 @@ function SkeletonGrid({ count }: { count: number }) {
 }
 
 // ─── Navbar ───────────────────────────────────────────────────────────────────
+// Language toggle (English ↔ Urdu). Switching sets the Google Translate cookie
+// and reloads; index.html then loads Google Translate and renders the page in
+// Urdu. Marked notranslate so the button's own label is never translated.
+function LangToggle({ full = false }: { full?: boolean }) {
+  const isUrdu = typeof localStorage !== "undefined" && localStorage.getItem("am_lang") === "ur";
+  const switchTo = (lang: "en" | "ur") => {
+    try {
+      localStorage.setItem("am_lang", lang);
+      if (lang === "ur") document.cookie = "googtrans=/en/ur; path=/";
+      else document.cookie = "googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    } catch { /* storage blocked */ }
+    window.location.reload();
+  };
+  return (
+    <button
+      translate="no"
+      onClick={() => switchTo(isUrdu ? "en" : "ur")}
+      title={isUrdu ? "Switch to English" : "اردو میں دیکھیں"}
+      className={`notranslate inline-flex items-center gap-1.5 rounded-xl border border-gray-200 font-bold text-[#1E40AF] hover:bg-[#EFF6FF] transition-colors ${full ? "w-full justify-center px-4 py-2.5 text-sm" : "px-2.5 h-9 text-xs"}`}
+    >
+      <Globe size={16} /> {isUrdu ? "English" : "اردو"}
+    </button>
+  );
+}
+
 function Navbar() {
   const { cartCount, user, products } = useContext(Store);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -744,7 +769,7 @@ function Navbar() {
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 flex-shrink-0">
               <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-10 w-10 object-contain" />
-              <div className="hidden sm:block">
+              <div className="hidden sm:block notranslate" translate="no">
                 <span className="text-xl font-black text-[#1E40AF] tracking-tight">Ahmad</span>
                 <span className="text-xl font-black text-[#F97316] tracking-tight">Mart</span>
               </div>
@@ -781,6 +806,7 @@ function Navbar() {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
+              <LangToggle />
               <button onClick={() => setSearchOpen(o => !o)}
                 className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
                 <Search size={18} />
