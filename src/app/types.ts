@@ -13,6 +13,7 @@ export interface Product {
   reviews: number;
   badge?: "new" | "sale" | "bestseller";
   featured?: boolean; // admin-curated — featured products are prioritised everywhere
+  deliveryCharge?: number | null; // seller-set delivery charge (per product); null = use default
   inStock: boolean;
   isService?: boolean; // digital service — bought by contacting us on WhatsApp, not via cart
   description: string;

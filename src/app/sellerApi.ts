@@ -33,6 +33,11 @@ export async function sellerDeleteProduct(id: number): Promise<void> {
   await send("/api/seller/products", "DELETE", { id });
 }
 
+/** Seller: apply one delivery charge to ALL of their products at once. */
+export async function sellerSetAllDelivery(deliveryCharge: number | null): Promise<number> {
+  return (await send("/api/seller/products", "PATCH", { deliveryCharge })).updated as number;
+}
+
 export interface SellerSummary {
   id: number;
   name: string;

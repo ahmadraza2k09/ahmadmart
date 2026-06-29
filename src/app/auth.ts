@@ -9,6 +9,7 @@ export interface AuthUser {
   // Seller store details (only present for sellers).
   storeName?: string;
   whatsapp?: string;
+  city?: string;
   jazzcashNumber?: string;
   jazzcashTitle?: string;
 }
@@ -16,6 +17,7 @@ export interface AuthUser {
 export interface SellerSignup {
   storeName: string;
   whatsapp: string;
+  city?: string;
   jazzcashNumber?: string;
   jazzcashTitle?: string;
 }
@@ -51,7 +53,7 @@ export async function apiLogin(email: string, password: string) {
 export async function apiChangeRole(role: Role) {
   return postJson("/api/auth/role", { role }, true) as Promise<{ token: string; user: AuthUser }>;
 }
-export async function apiUpdateStore(fields: { storeName: string; whatsapp: string; jazzcashNumber?: string; jazzcashTitle?: string }) {
+export async function apiUpdateStore(fields: { storeName: string; whatsapp: string; city?: string; jazzcashNumber?: string; jazzcashTitle?: string }) {
   return postJson("/api/auth/store", fields, true) as Promise<{ user: AuthUser }>;
 }
 export async function apiMe(): Promise<AuthUser | null> {

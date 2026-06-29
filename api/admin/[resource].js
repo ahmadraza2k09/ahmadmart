@@ -20,19 +20,20 @@ export default async function handler(req, res) {
 
 async function products(req, res) {
   const sql = getSql();
+  if (req.method !== "GET") await sql`alter table products add column if not exists delivery_charge integer`;
   if (req.method === "POST") {
     const p = await readJsonBody(req);
     if (!p.name || p.price == null) { res.status(400).json({ error: "Name and price are required." }); return; }
     const rows = await sql`
       insert into products
         (name, price, original_price, price_note, category, subcategory, image, images,
-         rating, reviews, badge, in_stock, is_service, description, specs)
+         rating, reviews, badge, in_stock, is_service, description, specs, delivery_charge)
       values
         (${p.name}, ${p.price}, ${p.originalPrice ?? null}, ${p.priceNote ?? null},
          ${p.category ?? ""}, ${p.subcategory ?? ""}, ${p.image ?? ""},
          ${JSON.stringify(p.images ?? [])}::jsonb, ${p.rating ?? 0}, ${p.reviews ?? 0},
          ${p.badge ?? null}, ${p.inStock ?? true}, ${p.isService ?? false},
-         ${p.description ?? ""}, ${JSON.stringify(p.specs ?? {})}::jsonb)
+         ${p.description ?? ""}, ${JSON.stringify(p.specs ?? {})}::jsonb, ${p.deliveryCharge ?? null})
       returning *`;
     res.status(201).json({ product: rowToProduct(rows[0]) });
     return;
@@ -48,7 +49,7 @@ async function products(req, res) {
         rating=${p.rating ?? 0}, reviews=${p.reviews ?? 0}, badge=${p.badge ?? null},
         in_stock=${p.inStock ?? true}, is_service=${p.isService ?? false},
         description=${p.description ?? ""}, specs=${JSON.stringify(p.specs ?? {})}::jsonb,
-        updated_at=now()
+        delivery_charge=${p.deliveryCharge ?? null}, updated_at=now()
       where id=${p.id}
       returning *`;
     if (!rows.length) { res.status(404).json({ error: "Product not found." }); return; }

@@ -72,8 +72,12 @@ create index if not exists orders_status_idx on orders (status);
 -- Seller store details (filled in when a seller signs up).
 alter table users add column if not exists store_name      text;
 alter table users add column if not exists whatsapp        text;
+alter table users add column if not exists city            text;
 alter table users add column if not exists jazzcash_number text;
 alter table users add column if not exists jazzcash_title  text;
+
+-- Per-product delivery charge set by the seller (NULL = use the platform default).
+alter table products add column if not exists delivery_charge integer;
 
 -- Which seller owns a product. NULL = official Ahmad Mart (admin) product.
 alter table products add column if not exists seller_id integer references users(id) on delete set null;

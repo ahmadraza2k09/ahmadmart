@@ -46,6 +46,7 @@ export function userPublic(row) {
     role: row.role,
     storeName: row.store_name ?? undefined,
     whatsapp: row.whatsapp ?? undefined,
+    city: row.city ?? undefined,
     jazzcashNumber: row.jazzcash_number ?? undefined,
     jazzcashTitle: row.jazzcash_title ?? undefined,
   };
@@ -103,6 +104,7 @@ export function rowToProduct(r) {
     reviews: r.reviews ?? 0,
     badge: r.badge ?? undefined,
     featured: r.featured ?? false,
+    deliveryCharge: r.delivery_charge ?? null,
     inStock: r.in_stock,
     isService: r.is_service || undefined,
     description: r.description || "",

@@ -37,7 +37,7 @@ import {
   setToken, clearToken, type AuthUser, type Role, type SellerSignup,
 } from "./auth";
 import {
-  sellerGetProducts, sellerCreateProduct, sellerUpdateProduct, sellerDeleteProduct,
+  sellerGetProducts, sellerCreateProduct, sellerUpdateProduct, sellerDeleteProduct, sellerSetAllDelivery,
   adminGetSellers, sellerGetAnalytics, adminGetSellerDetail, adminDeleteSeller,
   type SellerSummary, type SalesAnalytics, type SellerDetail,
 } from "./sellerApi";
@@ -505,10 +505,24 @@ const serviceWhatsAppUrl = (p: Product) => {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 };
 
-// ─── Delivery & promo ─────────────────────────────────────────────────────────
-const DELIVERY_FEE = 230;           // flat delivery charge per order
-const PROMO_CODE = "DELIVERY100";   // promo code that waives Rs. 100 off delivery
-const PROMO_WAIVER = 100;
+// ─── Delivery ─────────────────────────────────────────────────────────────────
+// Default delivery charge used when a seller has not set one for a product.
+const DELIVERY_FEE = 230;
+// A product's effective delivery charge (a seller may set it per product).
+const productDelivery = (p: { deliveryCharge?: number | null }) =>
+  p.deliveryCharge != null ? p.deliveryCharge : DELIVERY_FEE;
+// Delivery is charged once per seller (one shipment): the highest delivery charge
+// among that seller's items in the cart. The total is the sum across sellers.
+function computeDelivery(items: { sellerId?: number; deliveryCharge?: number | null }[]): number {
+  const perSeller = new Map<string, number>();
+  for (const it of items) {
+    const key = it.sellerId ? `s${it.sellerId}` : "official";
+    perSeller.set(key, Math.max(perSeller.get(key) ?? 0, productDelivery(it)));
+  }
+  let total = 0;
+  perSeller.forEach(v => { total += v; });
+  return total;
+}
 
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   return (
@@ -1200,16 +1214,6 @@ function HomePage() {
               <div className="min-w-0"><p className="font-bold text-[#111827] text-sm">{title}</p><p className="text-xs text-[#6b7280] truncate">{sub}</p></div>
             </div>
           ))}
-        </div>
-
-        {/* Promo strip */}
-        <div className="mb-12 rounded-2xl px-5 py-4 flex items-center justify-center gap-3 text-center flex-wrap"
-          style={{ background: "linear-gradient(135deg, #1E40AF, #1e3a8a)", boxShadow: "0 4px 16px rgba(30,64,175,0.18)" }}>
-          <Truck size={20} className="text-[#F97316] flex-shrink-0" />
-          <p className="text-white text-sm sm:text-base font-bold">
-            Get <span className="text-[#F97316]">Rs. 100 off</span> on delivery by using promo code{" "}
-            <span className="font-black tracking-wide bg-white/15 px-2 py-0.5 rounded-md whitespace-nowrap">{PROMO_CODE}</span> at checkout
-          </p>
         </div>
 
         {/* Featured Products */}
@@ -1930,8 +1934,8 @@ function CartPage() {
   const { cart, removeFromCart, updateQty, cartTotal } = useContext(Store);
   const navigate = useNavigate();
 
-  // Delivery is a flat fee here. The DELIVERY100 promo is applied once, at checkout.
-  const shipping = DELIVERY_FEE;
+  // Delivery is set by each seller (per product), charged once per seller.
+  const shipping = computeDelivery(cart);
   const final = cartTotal + shipping;
 
   if (cart.length === 0) return (
@@ -1998,10 +2002,6 @@ function CartPage() {
               </div>
             </div>
 
-            <p className="text-xs text-[#6b7280] mb-5 bg-gray-50 rounded-xl px-3 py-2.5">
-              Have a promo code? Apply <span className="font-bold text-[#1E40AF]">{PROMO_CODE}</span> at checkout to get Rs. 100 off delivery.
-            </p>
-
             <button onClick={() => navigate("/checkout")}
               className="w-full py-3.5 rounded-xl bg-[#1E40AF] text-white font-black text-sm hover:bg-[#1e3a8a] transition-all active:scale-95 mb-3"
               style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.3)" }}>
@@ -2032,9 +2032,6 @@ function CheckoutPage() {
   const isCOD = payment === "cod";
   const [submitting, setSubmitting] = useState(false);
   const [submitErr, setSubmitErr] = useState("");
-  const [promo, setPromo] = useState("");
-  const [promoApplied, setPromoApplied] = useState(false);
-  const [promoMsg, setPromoMsg] = useState("");
 
   // Split-per-seller: group the cart by seller so each store gets its own order
   // routed to that seller's WhatsApp / JazzCash. Official products group together.
@@ -2049,31 +2046,15 @@ function CheckoutPage() {
     return Array.from(map.values());
   }, [cart]);
 
-  const groupTotals = (g: { items: CartItem[] }, i: number) => {
+  // Delivery is set by each seller (per product). One shipment per seller is
+  // charged at the highest delivery charge among that seller's items.
+  const groupTotals = (g: { items: CartItem[] }) => {
     const subtotal = g.items.reduce((s, it) => s + it.price * it.qty, 0);
-    const groupShipping = DELIVERY_FEE;
-    // Promo only discounts delivery on Cash on Delivery (Multan) orders.
-    const waiver = i === 0 && isCOD && promoApplied ? Math.min(PROMO_WAIVER, groupShipping) : 0;
-    return { subtotal, groupShipping, waiver, groupTotal: subtotal + groupShipping - waiver };
+    const groupShipping = g.items.reduce((mx, it) => Math.max(mx, productDelivery(it)), 0);
+    return { subtotal, groupShipping, groupTotal: subtotal + groupShipping };
   };
-  const grandTotal = groups.reduce((sum, g, i) => sum + groupTotals(g, i).groupTotal, 0);
-  const totalDelivery = groups.length * DELIVERY_FEE;
-  const totalWaiver = isCOD && promoApplied ? Math.min(PROMO_WAIVER, DELIVERY_FEE) : 0;
-
-  const applyPromo = () => {
-    if (!isCOD) {
-      setPromoApplied(false);
-      setPromoMsg("The promo code applies to Cash on Delivery (Multan) orders only.");
-      return;
-    }
-    if (promo.trim().toUpperCase() === PROMO_CODE) {
-      setPromoApplied(true);
-      setPromoMsg("Rs. 100 off delivery applied!");
-    } else {
-      setPromoApplied(false);
-      setPromoMsg("Invalid promo code");
-    }
-  };
+  const grandTotal = groups.reduce((sum, g) => sum + groupTotals(g).groupTotal, 0);
+  const totalDelivery = groups.reduce((sum, g) => sum + groupTotals(g).groupShipping, 0);
 
   const copy = (text: string, key: string) => {
     navigator.clipboard?.writeText(text).catch(() => {});
@@ -2102,7 +2083,7 @@ function CheckoutPage() {
     try {
       for (let i = 0; i < groups.length; i++) {
         const g = groups[i];
-        const { subtotal, groupShipping, waiver, groupTotal } = groupTotals(g, i);
+        const { subtotal, groupShipping, groupTotal } = groupTotals(g);
         const order: Order = {
           id: i === 0 ? orderBaseId : `${orderBaseId}-${i}`,
           createdAt: Date.now(),
@@ -2114,8 +2095,6 @@ function CheckoutPage() {
           items: g.items.map(it => ({ id: it.id, name: it.name, qty: it.qty, price: it.price })),
           subtotal,
           shipping: groupShipping,
-          discount: waiver || undefined,
-          promoCode: waiver ? PROMO_CODE : undefined,
           total: groupTotal,
           paymentMethod: isCOD ? "Cash on Delivery" : "JazzCash (via WhatsApp)",
           status: "Pending Approval",
@@ -2318,7 +2297,7 @@ function CheckoutPage() {
             {groups.length > 1 && <p className="text-xs text-[#6b7280] -mt-2 mb-3">Your cart has items from {groups.length} stores — a separate order is created for each.</p>}
             <div className="space-y-4 mb-4 max-h-60 overflow-y-auto">
               {groups.map((g, gi) => {
-                const { subtotal, waiver, groupTotal } = groupTotals(g, gi);
+                const { subtotal, groupShipping, groupTotal } = groupTotals(g);
                 return (
                   <div key={gi} className="rounded-xl bg-[#F8F9FB] p-3">
                     <p className="text-xs font-bold text-[#111827] mb-2 flex items-center gap-1.5"><User size={12} className="text-[#1E40AF]" /> {g.sellerStore || "Ahmad Mart"}</p>
@@ -2335,31 +2314,16 @@ function CheckoutPage() {
                       ))}
                     </div>
                     <div className="mt-2 pt-2 border-t border-gray-200 text-[11px] text-[#6b7280] flex justify-between">
-                      <span>Items {fmt(subtotal)} + Delivery {fmt(DELIVERY_FEE)}{waiver ? ` − ${fmt(waiver)}` : ""}</span>
+                      <span>Items {fmt(subtotal)} + Delivery {fmt(groupShipping)}</span>
                       <span className="font-bold text-[#111827]">{fmt(groupTotal)}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
-            {/* Promo code — Cash on Delivery (Multan) only */}
-            <div className="border-t border-gray-100 pt-4 mb-4">
-              <div className="flex gap-2">
-                <input value={promo} disabled={!isCOD} onChange={e => { setPromo(e.target.value); setPromoApplied(false); setPromoMsg(""); }}
-                  placeholder={isCOD ? "Promo code (e.g. DELIVERY100)" : "Promo — Cash on Delivery only"}
-                  className={`flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1E40AF] ${isCOD ? "bg-gray-50" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`} />
-                <button onClick={applyPromo} disabled={!isCOD}
-                  className="px-4 py-2 rounded-xl bg-gray-100 text-[#374151] text-sm font-bold hover:bg-gray-200 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <Tag size={14} /> Apply
-                </button>
-              </div>
-              {promoMsg && <p className={`text-xs mt-1.5 font-semibold ${promoApplied ? "text-emerald-600" : "text-red-500"}`}>{promoMsg}</p>}
-              {!isCOD && <p className="text-[11px] text-[#6b7280] mt-1.5">The Rs. 100 delivery discount applies to Cash on Delivery (Multan) orders only.</p>}
-            </div>
-            <div className="space-y-2 mb-5">
+            <div className="space-y-2 mb-5 border-t border-gray-100 pt-4">
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Subtotal</span><span className="font-semibold">{fmt(cartTotal)}</span></div>
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Delivery {groups.length > 1 ? `(${groups.length} stores)` : ""}</span><span className="font-semibold">{fmt(totalDelivery)}</span></div>
-              {totalWaiver > 0 && <div className="flex justify-between text-sm text-emerald-600"><span>Promo ({PROMO_CODE})</span><span>-{fmt(totalWaiver)}</span></div>}
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Payment</span><span className="font-semibold">{isCOD ? "Cash on Delivery" : "JazzCash"}</span></div>
               <div className="flex justify-between font-black text-[#111827] text-base border-t border-gray-100 pt-2"><span>Total</span><span className="text-[#1E40AF]">{fmt(grandTotal)}</span></div>
             </div>
@@ -2479,7 +2443,7 @@ function LoginPage() {
 // ─── Register Page ────────────────────────────────────────────────────────────
 function RegisterPage() {
   const { signup } = useContext(Store);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "", role: "buyer" as Role, storeName: "", whatsapp: "", jazzcashNumber: "", jazzcashTitle: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "", role: "buyer" as Role, storeName: "", whatsapp: "", city: "", jazzcashNumber: "", jazzcashTitle: "" });
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -2493,9 +2457,10 @@ function RegisterPage() {
     if (form.role === "seller") {
       if (!form.storeName.trim()) { setErr("Please enter your store name"); return; }
       if (!/^0\d{9,10}$/.test(form.whatsapp.trim())) { setErr("Enter a valid store WhatsApp number (e.g. 03001234567)"); return; }
+      if (!form.city.trim()) { setErr("Please enter your city"); return; }
     }
     const seller: SellerSignup | undefined = form.role === "seller"
-      ? { storeName: form.storeName.trim(), whatsapp: form.whatsapp.trim(), jazzcashNumber: form.jazzcashNumber.trim() || undefined, jazzcashTitle: form.jazzcashTitle.trim() || undefined }
+      ? { storeName: form.storeName.trim(), whatsapp: form.whatsapp.trim(), city: form.city.trim(), jazzcashNumber: form.jazzcashNumber.trim() || undefined, jazzcashTitle: form.jazzcashTitle.trim() || undefined }
       : undefined;
     setBusy(true); setErr("");
     try {
@@ -2582,6 +2547,13 @@ function RegisterPage() {
                     placeholder="03001234567"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
                   <p className="text-[11px] text-[#6b7280] mt-1">Buyers check out and contact you on this number.</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-[#374151] mb-1.5 block">City *</label>
+                  <input type="text" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+                    placeholder="e.g. Multan"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+                  <p className="text-[11px] text-[#6b7280] mt-1">The city your store ships from.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -3049,6 +3021,7 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
     price: initial?.price != null ? String(initial.price) : "",
     originalPrice: initial?.originalPrice != null ? String(initial.originalPrice) : "",
     priceNote: initial?.priceNote ?? "",
+    deliveryCharge: initial?.deliveryCharge != null ? String(initial.deliveryCharge) : "",
     category: initial?.category ?? "Mobile Accessories",
     subcategory: initial?.subcategory ?? "",
     badge: initial?.badge ?? "",
@@ -3103,6 +3076,7 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
       price: Number(f.price) || 0,
       originalPrice: f.originalPrice ? Number(f.originalPrice) : undefined,
       priceNote: f.priceNote.trim() || undefined,
+      deliveryCharge: f.deliveryCharge.trim() === "" ? null : Math.max(0, Math.round(Number(f.deliveryCharge)) || 0),
       category: f.category.trim(),
       subcategory: f.subcategory.trim(),
       image,
@@ -3127,6 +3101,7 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Price (Rs.)</span><input className={inp} type="number" value={f.price} onChange={e => set("price", e.target.value)} /></label>
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Original Price (optional)</span><input className={inp} type="number" value={f.originalPrice} onChange={e => set("originalPrice", e.target.value)} /></label>
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Price Note (e.g. per month)</span><input className={inp} value={f.priceNote} onChange={e => set("priceNote", e.target.value)} /></label>
+        <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Delivery Charge (Rs.)</span><input className={inp} type="number" value={f.deliveryCharge} onChange={e => set("deliveryCharge", e.target.value)} placeholder={`Default ${DELIVERY_FEE}`} /></label>
         {allowBadge && <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Badge</span><select className={inp} value={f.badge} onChange={e => set("badge", e.target.value)}><option value="">None</option><option value="new">new</option><option value="sale">sale</option><option value="bestseller">bestseller</option></select></label>}
         <div className="text-sm sm:col-span-2">
           <span className="font-semibold text-[#374151] block mb-1">Product Images</span>
@@ -3642,23 +3617,37 @@ function SellerPage() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [storeOpen, setStoreOpen] = useState(false);
-  const [storeForm, setStoreForm] = useState({ storeName: "", whatsapp: "", jazzcashNumber: "", jazzcashTitle: "" });
+  const [storeForm, setStoreForm] = useState({ storeName: "", whatsapp: "", city: "", jazzcashNumber: "", jazzcashTitle: "" });
   const [storeBusy, setStoreBusy] = useState(false);
   const [storeMsg, setStoreMsg] = useState("");
+  const [bulkDelivery, setBulkDelivery] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState("");
 
   const openStoreEdit = () => {
-    setStoreForm({ storeName: user?.storeName || "", whatsapp: user?.whatsapp || "", jazzcashNumber: user?.jazzcashNumber || "", jazzcashTitle: user?.jazzcashTitle || "" });
+    setStoreForm({ storeName: user?.storeName || "", whatsapp: user?.whatsapp || "", city: user?.city || "", jazzcashNumber: user?.jazzcashNumber || "", jazzcashTitle: user?.jazzcashTitle || "" });
     setStoreMsg(""); setStoreOpen(true);
   };
   const saveStore = async () => {
     if (!storeForm.storeName.trim()) { setStoreMsg("Store name is required."); return; }
     if (!/^0\d{9,10}$/.test(storeForm.whatsapp.trim())) { setStoreMsg("Enter a valid WhatsApp number (e.g. 03001234567)."); return; }
+    if (!storeForm.city.trim()) { setStoreMsg("City is required."); return; }
     setStoreBusy(true); setStoreMsg("");
     try {
-      await updateStore({ storeName: storeForm.storeName.trim(), whatsapp: storeForm.whatsapp.trim(), jazzcashNumber: storeForm.jazzcashNumber.trim() || undefined, jazzcashTitle: storeForm.jazzcashTitle.trim() || undefined });
+      await updateStore({ storeName: storeForm.storeName.trim(), whatsapp: storeForm.whatsapp.trim(), city: storeForm.city.trim(), jazzcashNumber: storeForm.jazzcashNumber.trim() || undefined, jazzcashTitle: storeForm.jazzcashTitle.trim() || undefined });
       setStoreOpen(false);
     } catch (e) { setStoreMsg(e instanceof Error ? e.message : "Could not save store details."); }
     setStoreBusy(false);
+  };
+  const applyBulkDelivery = async () => {
+    setBulkBusy(true); setBulkMsg("");
+    try {
+      const dc = bulkDelivery.trim() === "" ? null : Math.max(0, Math.round(Number(bulkDelivery)) || 0);
+      const n = await sellerSetAllDelivery(dc);
+      load(); refreshProducts();
+      setBulkMsg(`Applied${dc == null ? " (default)" : ` Rs. ${dc}`} to ${n} product${n === 1 ? "" : "s"}.`);
+    } catch (e) { setBulkMsg(e instanceof Error ? e.message : "Could not update delivery charges."); }
+    setBulkBusy(false);
   };
 
   const [analytics, setAnalytics] = useState<SalesAnalytics | null>(null);
@@ -3731,6 +3720,7 @@ function SellerPage() {
           </div>
           <p className="text-[#374151]">Store: <span className="font-semibold">{user.storeName || "—"}</span></p>
           <p className="text-[#374151]">WhatsApp: <span className="font-semibold">{user.whatsapp || "—"}</span></p>
+          <p className="text-[#374151]">City: <span className="font-semibold">{user.city || "—"}</span></p>
           <p className="text-[#374151]">JazzCash: <span className="font-semibold">{user.jazzcashNumber || "—"}{user.jazzcashTitle ? ` (${user.jazzcashTitle})` : ""}</span></p>
         </div>
       </div>
@@ -3756,6 +3746,7 @@ function SellerPage() {
           <div className="grid sm:grid-cols-2 gap-3">
             <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Store Name *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.storeName} onChange={e => setStoreForm(f => ({ ...f, storeName: e.target.value }))} /></label>
             <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Store WhatsApp *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.whatsapp} onChange={e => setStoreForm(f => ({ ...f, whatsapp: e.target.value }))} placeholder="03001234567" /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">City *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.city} onChange={e => setStoreForm(f => ({ ...f, city: e.target.value }))} placeholder="e.g. Multan" /></label>
             <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">JazzCash Number</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.jazzcashNumber} onChange={e => setStoreForm(f => ({ ...f, jazzcashNumber: e.target.value }))} placeholder="03001234567" /></label>
             <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">JazzCash Title</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.jazzcashTitle} onChange={e => setStoreForm(f => ({ ...f, jazzcashTitle: e.target.value }))} placeholder="Account holder name" /></label>
           </div>
@@ -3775,6 +3766,22 @@ function SellerPage() {
         </div>
       )}
 
+      {/* Bulk delivery charge — your choice */}
+      <div className="bg-white rounded-2xl p-4 mb-4" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+        <div className="flex items-center gap-2 mb-1">
+          <Truck size={16} className="text-[#1E40AF]" />
+          <p className="font-bold text-[#111827] text-sm">Delivery charges (your choice)</p>
+        </div>
+        <p className="text-xs text-[#6b7280] mb-3">Set one charge for <strong>all</strong> your products at once below, or set a specific charge per product when you add or edit it. Leave blank to use the Ahmad Mart default (Rs. {DELIVERY_FEE}).</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input type="number" value={bulkDelivery} onChange={e => setBulkDelivery(e.target.value)} placeholder={`Rs. (e.g. ${DELIVERY_FEE})`}
+            className="w-44 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
+          <button onClick={applyBulkDelivery} disabled={bulkBusy}
+            className="px-4 py-2 rounded-xl bg-[#1E40AF] text-white text-sm font-bold disabled:opacity-60">{bulkBusy ? "Applying…" : "Apply to all my products"}</button>
+          {bulkMsg && <span className="text-xs font-semibold text-emerald-600">{bulkMsg}</span>}
+        </div>
+      </div>
+
       <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
         {products.length === 0 ? (
           <div className="p-10 text-center text-sm text-[#6b7280]">You haven't added any products yet. Click <strong>Add Product</strong> to start.</div>
@@ -3783,7 +3790,7 @@ function SellerPage() {
             <ProductImage src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-[#111827] truncate">{p.name}</p>
-              <p className="text-xs text-[#6b7280]">{p.category} · {p.subcategory} · {fmt(p.price)}{!p.inStock && <span className="text-red-500 font-semibold"> · Out of stock</span>}</p>
+              <p className="text-xs text-[#6b7280]">{p.category} · {p.subcategory} · {fmt(p.price)} · Delivery {fmt(p.deliveryCharge ?? DELIVERY_FEE)}{!p.inStock && <span className="text-red-500 font-semibold"> · Out of stock</span>}</p>
             </div>
             <button onClick={() => setEditing(p)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#1E40AF] hover:bg-blue-50">Edit</button>
             <button onClick={() => remove(p)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 hover:bg-red-50">Delete</button>

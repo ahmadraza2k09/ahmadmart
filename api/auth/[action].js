@@ -23,22 +23,25 @@ export default async function handler(req, res) {
 
 async function signup(req, res) {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
-  const { name, email, password, role, storeName, whatsapp, jazzcashNumber, jazzcashTitle } = await readJsonBody(req);
+  const { name, email, password, role, storeName, whatsapp, city, jazzcashNumber, jazzcashTitle } = await readJsonBody(req);
   if (!name || !email || !password) { res.status(400).json({ error: "Name, email and password are required." }); return; }
   if (String(password).length < 6) { res.status(400).json({ error: "Password must be at least 6 characters." }); return; }
   const safeRole = role === "seller" ? "seller" : "buyer";
   if (safeRole === "seller") {
     if (!storeName || !String(storeName).trim()) { res.status(400).json({ error: "Store name is required for sellers." }); return; }
     if (!whatsapp || !String(whatsapp).trim()) { res.status(400).json({ error: "WhatsApp number is required for sellers." }); return; }
+    if (!city || !String(city).trim()) { res.status(400).json({ error: "City is required for sellers." }); return; }
   }
   const sql = getSql();
+  await sql`alter table users add column if not exists city text`;
   const existing = await sql`select id from users where lower(email) = lower(${email})`;
   if (existing.length) { res.status(409).json({ error: "An account with this email already exists." }); return; }
   const hash = await bcrypt.hash(String(password), 10);
   const rows = await sql`
-    insert into users (name, email, password_hash, role, store_name, whatsapp, jazzcash_number, jazzcash_title)
+    insert into users (name, email, password_hash, role, store_name, whatsapp, city, jazzcash_number, jazzcash_title)
     values (${name}, ${String(email).toLowerCase()}, ${hash}, ${safeRole},
             ${safeRole === "seller" ? storeName : null}, ${safeRole === "seller" ? whatsapp : null},
+            ${safeRole === "seller" ? city : null},
             ${safeRole === "seller" ? (jazzcashNumber ?? null) : null}, ${safeRole === "seller" ? (jazzcashTitle ?? null) : null})
     returning *`;
   const user = userPublic(rows[0]);
@@ -100,12 +103,13 @@ async function store(req, res) {
   const auth = getAuthUser(req);
   if (!auth) { res.status(401).json({ error: "Not authenticated" }); return; }
   if (auth.role !== "seller" && auth.role !== "admin") { res.status(403).json({ error: "Only sellers have a store." }); return; }
-  const { storeName, whatsapp, jazzcashNumber, jazzcashTitle } = await readJsonBody(req);
+  const { storeName, whatsapp, city, jazzcashNumber, jazzcashTitle } = await readJsonBody(req);
   if (!storeName || !String(storeName).trim()) { res.status(400).json({ error: "Store name is required." }); return; }
   if (!whatsapp || !String(whatsapp).trim()) { res.status(400).json({ error: "WhatsApp number is required." }); return; }
   const sql = getSql();
+  await sql`alter table users add column if not exists city text`;
   const rows = await sql`
-    update users set store_name = ${storeName}, whatsapp = ${whatsapp},
+    update users set store_name = ${storeName}, whatsapp = ${whatsapp}, city = ${city ?? null},
       jazzcash_number = ${jazzcashNumber ?? null}, jazzcash_title = ${jazzcashTitle ?? null}, updated_at = now()
     where id = ${auth.id} returning *`;
   if (!rows.length) { res.status(404).json({ error: "User not found." }); return; }
