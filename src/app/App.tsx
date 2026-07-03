@@ -749,6 +749,11 @@ function Navbar() {
   // adds shows up in the main bar automatically (built-ins always listed first).
   const baseCats = ["Mobile Accessories", "Home Decoration", "Digital Services"];
   const allCats = Array.from(new Set([...baseCats, ...products.map(p => p.category)])).filter(Boolean);
+  // Keep the bar tidy: only a few categories sit on the navbar, the rest go under
+  // a "More" dropdown so the bar never overflows as new categories are added.
+  const NAV_CAT_LIMIT = 4;
+  const visibleCats = allCats.slice(0, NAV_CAT_LIMIT);
+  const moreCats = allCats.slice(NAV_CAT_LIMIT);
   // category -> its sub-categories (for the hover mega-menus)
   const catTree: Record<string, string[]> = {};
   for (const p of products) {
@@ -793,7 +798,7 @@ function Navbar() {
             <div className="hidden lg:flex items-center gap-5">
               <Link to="/" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors">Home</Link>
               <Link to="/shop" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors">Shop</Link>
-              {allCats.map(c => {
+              {visibleCats.map(c => {
                 const subs = catTree[c] || [];
                 return (
                   <div key={c} className="relative group">
@@ -816,6 +821,23 @@ function Navbar() {
                   </div>
                 );
               })}
+              {moreCats.length > 0 && (
+                <div className="relative group">
+                  <button className="flex items-center gap-1 text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors py-2">
+                    More <ChevronDown size={13} className="text-gray-400 group-hover:text-[#1E40AF] group-hover:rotate-180 transition-transform" />
+                  </button>
+                  <div className="absolute right-0 top-full pt-2 hidden group-hover:block z-50">
+                    <div className="bg-white rounded-xl border border-gray-100 py-2 min-w-[220px] max-h-[70vh] overflow-y-auto" style={{ boxShadow: "0 14px 36px rgba(30,64,175,0.16)" }}>
+                      {moreCats.map(c => (
+                        <Link key={c} to={`/shop?cat=${encodeURIComponent(c)}`}
+                          className="block px-4 py-2 text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">
+                          {c}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Actions */}
@@ -3165,13 +3187,27 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
 function AdminProducts({ dbMode }: { dbMode: boolean }) {
   const { products, refreshProducts } = useContext(Store);
   const [filter, setFilter] = useState("All");
+  const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Product | null | "new">(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const formRef = useRef<HTMLDivElement>(null);
+  // Jump to the edit form whenever a product is opened, so the admin never has to
+  // scroll back up to find it.
+  useEffect(() => {
+    if (editing !== null) requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [editing]);
 
   const cats = ["All", ...Array.from(new Set(products.map(p => p.category)))];
-  const list = products.filter(p => filter === "All" || p.category === filter);
+  const q = search.trim().toLowerCase();
+  const list = products.filter(p =>
+    (filter === "All" || p.category === filter) &&
+    (!q
+      || p.name.toLowerCase().includes(q)
+      || (p.sellerStore || "").toLowerCase().includes(q)
+      || (p.sellerCity || "").toLowerCase().includes(q))
+  );
 
   const save = async (p: Partial<Product>) => {
     setBusy(true); setErr(""); setMsg("");
@@ -3207,9 +3243,16 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
       {(msg || err) && <div className={`mb-4 rounded-xl p-3 text-sm font-semibold ${err ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"}`}>{err || msg}</div>}
 
       <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-        <select value={filter} onChange={e => setFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold outline-none focus:border-[#1E40AF]">
-          {cats.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search product, store or city…"
+              className="w-64 max-w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+          </div>
+          <select value={filter} onChange={e => setFilter(e.target.value)} className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold outline-none focus:border-[#1E40AF]">
+            {cats.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
         <div className="flex gap-2">
           {dbMode && <button onClick={seed} disabled={busy} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-[#374151] hover:border-[#1E40AF] disabled:opacity-60">Seed database</button>}
           {dbMode && <button onClick={() => setEditing("new")} className="px-4 py-2 rounded-xl bg-[#1E40AF] text-white text-sm font-bold flex items-center gap-1.5"><Plus size={15} /> Add Product</button>}
@@ -3217,7 +3260,9 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
       </div>
 
       {editing !== null && dbMode && (
-        <ProductForm initial={editing === "new" ? null : editing} busy={busy} onSave={save} onCancel={() => setEditing(null)} />
+        <div ref={formRef}>
+          <ProductForm initial={editing === "new" ? null : editing} busy={busy} onSave={save} onCancel={() => setEditing(null)} />
+        </div>
       )}
 
       <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
@@ -3228,7 +3273,7 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
             <ProductImage src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-[#111827] truncate flex items-center gap-1.5">{p.name}{p.featured && <span className="inline-flex items-center gap-0.5 text-[10px] font-black text-[#F97316] bg-orange-50 px-1.5 py-0.5 rounded-full flex-shrink-0"><Star size={9} className="fill-[#F97316]" /> Featured</span>}</p>
-              <p className="text-xs text-[#6b7280]">{p.category} · {p.subcategory} · {fmt(p.price)}{p.priceNote ? ` ${p.priceNote}` : ""}{!p.inStock && <span className="text-red-500 font-semibold"> · Out of stock</span>}{p.sellerStore ? ` · ${p.sellerStore}` : ""}</p>
+              <p className="text-xs text-[#6b7280]">{p.category} · {p.subcategory} · {fmt(p.price)}{p.priceNote ? ` ${p.priceNote}` : ""}{!p.inStock && <span className="text-red-500 font-semibold"> · Out of stock</span>}{p.sellerStore ? ` · ${p.sellerStore}` : ""}{p.sellerCity ? ` (${p.sellerCity})` : ""}</p>
             </div>
             {dbMode && (
               <button onClick={() => toggleFeatured(p)} title={p.featured ? "Remove from featured" : "Feature this product"}
