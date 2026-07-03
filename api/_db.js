@@ -125,6 +125,10 @@ export function rowToProduct(r) {
 export async function ensureOrderHistoryColumns(sql) {
   await sql`alter table orders add column if not exists archived boolean not null default false`;
   await sql`alter table users add column if not exists earnings_reset_at timestamptz`;
+  // Lets a buyer remove an order from their own "My Orders" history at any time —
+  // independent of the seller's archived flag, so hiding it from the buyer never
+  // hides it from the seller (who still needs to fulfil it) or vice versa.
+  await sql`alter table orders add column if not exists buyer_hidden boolean not null default false`;
 }
 
 // Sales analytics for one seller, computed entirely in Pakistan time

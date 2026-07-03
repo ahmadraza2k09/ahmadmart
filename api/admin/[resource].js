@@ -1,7 +1,10 @@
 // Consolidated admin routes (one serverless function for all of /api/admin/*).
 // Vercel dynamic route: req.query.resource is "products" | "analytics" | "seed"
-// | "orders" | "sellers". Paths stay the same: /api/admin/products, etc.
-import { getSql, requireAdmin, rowToProduct, rowToOrder, readJsonBody, sellerAnalytics, deleteSellerCascade, ensureOrderHistoryColumns } from "../_db.js";
+// | "sellers". Paths stay the same: /api/admin/products, etc.
+// Note: admin has no orders endpoint — orders are managed entirely by the seller
+// (or the buyer, for their own history); admin only sees aggregate counts and
+// earnings per seller via the "sellers" resource below.
+import { getSql, requireAdmin, rowToProduct, readJsonBody, sellerAnalytics, deleteSellerCascade, ensureOrderHistoryColumns } from "../_db.js";
 
 export default async function handler(req, res) {
   if (!requireAdmin(req, res)) return;
@@ -10,7 +13,6 @@ export default async function handler(req, res) {
     if (resource === "products") return await products(req, res);
     if (resource === "analytics") return await analytics(req, res);
     if (resource === "seed") return await seed(req, res);
-    if (resource === "orders") return await orders(req, res);
     if (resource === "sellers") return await sellers(req, res);
     res.status(404).json({ error: "Unknown admin resource." });
   } catch (e) {
@@ -131,38 +133,6 @@ async function seed(req, res) {
   }
   await sql`select setval(pg_get_serial_sequence('products', 'id'), coalesce((select max(id) from products), 1))`;
   res.status(200).json({ seeded });
-}
-
-async function orders(req, res) {
-  const sql = getSql();
-  // Only orders with no seller (placed for official Ahmad Mart products) are
-  // managed here — every seller-owned order is managed entirely by that seller
-  // from their own dashboard.
-  if (req.method === "GET") {
-    const rows = await sql`
-      select * from orders where seller_id is null order by created_at desc`;
-    res.status(200).json({ orders: rows.map(rowToOrder) });
-    return;
-  }
-  if (req.method === "PATCH" || req.method === "PUT") {
-    const { id, status } = await readJsonBody(req);
-    if (!id || !status) { res.status(400).json({ error: "Missing order id or status." }); return; }
-    const existing = await sql`select seller_id from orders where id = ${id}`;
-    if (!existing.length) { res.status(404).json({ error: "Order not found." }); return; }
-    if (existing[0].seller_id) { res.status(403).json({ error: "This order belongs to a seller — only they can update its status." }); return; }
-    const rows = await sql`update orders set status = ${status}, updated_at = now() where id = ${id} returning *`;
-    res.status(200).json({ order: rowToOrder(rows[0]) });
-    return;
-  }
-  if (req.method === "DELETE") {
-    const body = await readJsonBody(req);
-    const id = body.id ?? req.query?.id;
-    if (!id) { res.status(400).json({ error: "Missing order id." }); return; }
-    await sql`delete from orders where id = ${id}`;
-    res.status(200).json({ ok: true });
-    return;
-  }
-  res.status(405).json({ error: "Method not allowed" });
 }
 
 async function sellers(req, res) {

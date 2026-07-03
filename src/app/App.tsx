@@ -21,7 +21,7 @@ import {
   getProductReviews, saveReview, newReviewId, type UserReview,
 } from "./reviewStore";
 import {
-  createOrder, getMyOrders, adminGetOrders, adminUpdateOrderStatus, adminDeleteOrder,
+  createOrder, getMyOrders, deleteMyOrder,
   sellerGetOrders, sellerUpdateOrderStatus, sellerClearHistory,
 } from "./ordersApi";
 import { downloadOrderHistoryPdf } from "./sellerOrdersPdf";
@@ -2657,6 +2657,10 @@ function AccountPage() {
   const [roleErr, setRoleErr] = useState("");
   const [myOrders, setMyOrders] = useState<Order[]>([]);
   useEffect(() => { if (user) getMyOrders().then(setMyOrders).catch(() => {}); }, [user]);
+  const removeOrder = async (o: Order) => {
+    if (!window.confirm(`Remove order #${o.id} from your history? This only removes it from your account — the seller keeps their own record.`)) return;
+    try { await deleteMyOrder(o.id); setMyOrders(prev => prev.filter(x => x.id !== o.id)); } catch { /* ignore */ }
+  };
   const switchRole = async (r: Role) => {
     if (!user || user.role === r) return;
     setRoleBusy(true); setRoleMsg(""); setRoleErr("");
@@ -2811,11 +2815,17 @@ function AccountPage() {
                           <p className="font-bold text-[#1E40AF] text-sm">#{o.id}</p>
                           <p className="text-xs text-[#6b7280] mt-0.5">{new Date(o.createdAt).toLocaleDateString()} • {o.items.reduce((s, it) => s + it.qty, 0)} item(s) • {o.paymentMethod}</p>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="font-black text-[#111827] text-sm">{fmt(o.total)}</p>
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-full inline-block mt-1" style={{ background: STATUS_STYLE[o.status].bg, color: STATUS_STYLE[o.status].text }}>
-                            {o.status}
-                          </span>
+                        <div className="text-right flex-shrink-0 flex items-start gap-2">
+                          <div>
+                            <p className="font-black text-[#111827] text-sm">{fmt(o.total)}</p>
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full inline-block mt-1" style={{ background: STATUS_STYLE[o.status].bg, color: STATUS_STYLE[o.status].text }}>
+                              {o.status}
+                            </span>
+                          </div>
+                          <button onClick={() => removeOrder(o)} title="Remove from my history"
+                            className="w-7 h-7 grid place-items-center rounded-lg text-red-500 hover:bg-red-50 transition-colors flex-shrink-0">
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </div>
                       <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-[#6b7280] truncate">
@@ -2969,18 +2979,14 @@ const STATUS_STYLE: Record<OrderStatus, { bg: string; text: string }> = {
   "Cancelled": { bg: "#FEF2F2", text: "#B91C1C" },
 };
 
-// Order card shared by the admin's and the seller's order-management views —
-// same buyer details, product list and status controls either side uses to
-// approve/ship/deliver/cancel. `onDelete` is admin-only (sellers can't delete
-// orders); passing it in adds a delete button to the card.
-function OrderCard({ order: o, onSetStatus, onDelete }: {
+// Order card used by the seller's order-management views (active orders and
+// delivered history) — buyer details, product list, and the status controls
+// used to approve/ship/deliver/cancel.
+function OrderCard({ order: o, onSetStatus }: {
   order: Order;
-  // Omit onSetStatus to render a read-only card — used by the admin view for
-  // orders that belong to a seller, since only that seller controls the status.
-  onSetStatus?: (id: string, status: OrderStatus) => void;
-  onDelete?: (o: Order) => void;
+  onSetStatus: (id: string, status: OrderStatus) => void;
 }) {
-  const approve = () => onSetStatus?.(o.id, isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received");
+  const approve = () => onSetStatus(o.id, isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received");
   return (
     <div className="bg-white rounded-2xl p-5" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
       <div className="flex flex-col lg:flex-row gap-5">
@@ -2999,15 +3005,7 @@ function OrderCard({ order: o, onSetStatus, onDelete }: {
               <span className="font-black text-[#1E40AF]">#{o.id}</span>
               <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: STATUS_STYLE[o.status].bg, color: STATUS_STYLE[o.status].text }}>{o.status}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[#6b7280]">{new Date(o.createdAt).toLocaleString()}</span>
-              {onDelete && (
-                <button onClick={() => onDelete(o)} title="Delete this order"
-                  className="w-7 h-7 grid place-items-center rounded-lg text-red-500 hover:bg-red-50 transition-colors">
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
+            <span className="text-xs text-[#6b7280]">{new Date(o.createdAt).toLocaleString()}</span>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm mb-3">
@@ -3032,29 +3030,23 @@ function OrderCard({ order: o, onSetStatus, onDelete }: {
             </div>
           </div>
 
-          {onSetStatus ? (
-            <>
-              {o.status === "Pending Approval" && (
-                <button onClick={approve}
-                  className="mb-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#059669] text-white text-xs font-black hover:bg-[#047857] transition-colors">
-                  <CheckCircle size={14} /> Approve order → {isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received"}
-                </button>
-              )}
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-[#6b7280]">Update status:</span>
-                {ORDER_STATUSES.map(s => (
-                  <button key={s} onClick={() => onSetStatus(o.id, s)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${o.status === s ? "" : "bg-gray-100 text-[#374151] hover:bg-gray-200"}`}
-                    style={o.status === s ? { background: STATUS_STYLE[s].bg, color: STATUS_STYLE[s].text, outline: `1.5px solid ${STATUS_STYLE[s].text}` } : undefined}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="text-xs text-[#6b7280] italic">Status is managed by the seller{o.sellerStore ? ` (${o.sellerStore})` : ""} from their own dashboard.</p>
+          {o.status === "Pending Approval" && (
+            <button onClick={approve}
+              className="mb-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#059669] text-white text-xs font-black hover:bg-[#047857] transition-colors">
+              <CheckCircle size={14} /> Approve order → {isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received"}
+            </button>
           )}
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-[#6b7280]">Update status:</span>
+            {ORDER_STATUSES.map(s => (
+              <button key={s} onClick={() => onSetStatus(o.id, s)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${o.status === s ? "" : "bg-gray-100 text-[#374151] hover:bg-gray-200"}`}
+                style={o.status === s ? { background: STATUS_STYLE[s].bg, color: STATUS_STYLE[s].text, outline: `1.5px solid ${STATUS_STYLE[s].text}` } : undefined}>
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -3688,11 +3680,9 @@ function AdminPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [passErr, setPassErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<"products" | "sellers" | "analytics" | "orders">("products");
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [tab, setTab] = useState<"products" | "sellers" | "analytics">("products");
 
-  const loadOrders = () => { adminGetOrders().then(setOrders).catch(() => {}); };
-  useEffect(() => { if (isAdmin) { loadOrders(); refreshProducts(); } }, [isAdmin]);
+  useEffect(() => { if (isAdmin) refreshProducts(); }, [isAdmin]);
 
   const doLogin = async () => {
     if (!form.email || !form.password) { setPassErr("Enter the admin email and password."); return; }
@@ -3700,26 +3690,6 @@ function AdminPage() {
     try { await login(form.email.trim(), form.password); }
     catch (e) { setPassErr(e instanceof Error ? e.message : "Login failed."); }
     setBusy(false);
-  };
-  const setStatus = async (id: string, status: OrderStatus) => {
-    // Marking an order Delivered opens a pre-filled WhatsApp message to the buyer —
-    // opened synchronously (before the await below) so browsers don't treat it as
-    // an unrequested popup.
-    if (status === "Delivered") {
-      const o = orders.find(o => o.id === id);
-      if (o) window.open(whatsappDeliveredUrl(o), "_blank", "noopener,noreferrer");
-    }
-    try {
-      const updated = await adminUpdateOrderStatus(id, status);
-      setOrders(prev => prev.map(o => (o.id === id ? updated : o)));
-    } catch { /* ignore — keep current state */ }
-  };
-  const deleteOrder = async (o: Order) => {
-    if (!window.confirm(`Permanently delete order #${o.id} (${o.name})? This cannot be undone.`)) return;
-    try {
-      await adminDeleteOrder(o.id);
-      setOrders(prev => prev.filter(x => x.id !== o.id));
-    } catch { /* ignore */ }
   };
 
   if (!authReady) return <div className="max-w-sm mx-auto px-4 py-20 text-center text-sm text-[#6b7280]">Loading…</div>;
@@ -3746,8 +3716,7 @@ function AdminPage() {
   );
 
   const dbMode = true;
-  const counts = ORDER_STATUSES.map(s => ({ s, n: orders.filter(o => o.status === s).length }));
-  const tabs = [{ k: "products", label: "Products" }, { k: "sellers", label: "Sellers" }, { k: "analytics", label: "Analytics" }, { k: "orders", label: "Orders" }] as const;
+  const tabs = [{ k: "products", label: "Products" }, { k: "sellers", label: "Sellers" }, { k: "analytics", label: "Analytics" }] as const;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -3774,36 +3743,6 @@ function AdminPage() {
       {tab === "products" && <AdminProducts dbMode={dbMode} />}
       {tab === "sellers" && <AdminSellers />}
       {tab === "analytics" && <AdminAnalytics dbMode={dbMode} />}
-      {tab === "orders" && (
-        <div>
-          <p className="text-sm text-[#6b7280] mb-3">Only orders for official Ahmad Mart products (no seller attached) are managed here. Every seller-owned order is approved, shipped and delivered by that seller from their own dashboard — check the <button onClick={() => setTab("sellers")} className="text-[#1E40AF] font-bold hover:underline">Sellers tab</button> for each seller's order count and earnings.</p>
-          <div className="flex justify-end mb-3">
-            <button onClick={loadOrders} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-bold text-[#374151] hover:border-[#1E40AF] transition-colors">
-              <RefreshCw size={15} /> Refresh
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-            {counts.map(({ s, n }) => (
-              <div key={s} className="rounded-xl px-4 py-3" style={{ background: STATUS_STYLE[s].bg }}>
-                <p className="text-2xl font-black" style={{ color: STATUS_STYLE[s].text }}>{n}</p>
-                <p className="text-xs font-semibold" style={{ color: STATUS_STYLE[s].text }}>{s}</p>
-              </div>
-            ))}
-          </div>
-
-      {orders.length === 0 ? (
-        <div className="bg-white rounded-2xl p-16 text-center" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
-          <Package size={56} className="mx-auto text-gray-300 mb-4" />
-          <p className="font-bold text-[#111827] mb-1">No orders yet</p>
-          <p className="text-sm text-[#6b7280]">Orders placed through checkout will appear here for verification.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {orders.map(o => <OrderCard key={o.id} order={o} onSetStatus={setStatus} onDelete={deleteOrder} />)}
-        </div>
-      )}
-        </div>
-      )}
     </div>
   );
 }
@@ -3993,13 +3932,13 @@ function SellerPage() {
         )}
       </div>
 
-      {/* Past Orders — delivered orders move here automatically. Download the
+      {/* Delivered Orders — delivered orders move here automatically. Download the
           complete history as a PDF, then clear it to keep this list tidy. */}
       {pastOrders.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
             <div>
-              <h2 className="font-black text-[#111827] flex items-center gap-2"><CheckCircle size={18} className="text-[#059669]" /> Past Orders (Delivered)</h2>
+              <h2 className="font-black text-[#111827] flex items-center gap-2"><CheckCircle size={18} className="text-[#059669]" /> Delivered Orders</h2>
               <p className="text-xs text-[#6b7280] mt-0.5">{pastOrders.length} delivered order{pastOrders.length === 1 ? "" : "s"} · download a full record before clearing this list.</p>
             </div>
             <button onClick={clearHistory} disabled={clearBusy}

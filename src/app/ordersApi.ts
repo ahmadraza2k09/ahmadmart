@@ -27,17 +27,10 @@ export async function createOrder(o: Order): Promise<Order> {
 export async function getMyOrders(): Promise<Order[]> {
   return (await send("/api/orders", "GET")).orders as Order[];
 }
-/** Admin: every order. */
-export async function adminGetOrders(): Promise<Order[]> {
-  return (await send("/api/admin/orders", "GET")).orders as Order[];
-}
-/** Admin: change an order's status. */
-export async function adminUpdateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
-  return (await send("/api/admin/orders", "PATCH", { id, status })).order as Order;
-}
-/** Admin: permanently delete an order. */
-export async function adminDeleteOrder(id: string): Promise<void> {
-  await send("/api/admin/orders", "DELETE", { id });
+/** Remove an order from the signed-in buyer's own history (it still exists for
+ *  the seller/admin and in earnings — this only affects the buyer's own view). */
+export async function deleteMyOrder(id: string): Promise<void> {
+  await send("/api/orders", "DELETE", { id });
 }
 /** A seller's own orders, newest first. */
 export async function sellerGetOrders(): Promise<Order[]> {
