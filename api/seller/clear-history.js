@@ -6,7 +6,7 @@
 //   - If resetEarnings is true, also stamps the seller's earnings_reset_at to now,
 //     so every earnings figure (dashboard totals, admin's seller earnings) starts
 //     counting from zero going forward. Lifetime "orders placed" is unaffected.
-import { getSql, getAuthUser, readJsonBody } from "../_db.js";
+import { getSql, getAuthUser, readJsonBody, ensureOrderHistoryColumns } from "../_db.js";
 
 export default async function handler(req, res) {
   const auth = getAuthUser(req);
@@ -17,6 +17,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
   try {
     const sql = getSql();
+    await ensureOrderHistoryColumns(sql);
     const { resetEarnings } = await readJsonBody(req);
 
     const archived = await sql`

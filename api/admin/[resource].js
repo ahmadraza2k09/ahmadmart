@@ -1,7 +1,7 @@
 // Consolidated admin routes (one serverless function for all of /api/admin/*).
 // Vercel dynamic route: req.query.resource is "products" | "analytics" | "seed"
 // | "orders" | "sellers". Paths stay the same: /api/admin/products, etc.
-import { getSql, requireAdmin, rowToProduct, rowToOrder, readJsonBody, sellerAnalytics, deleteSellerCascade } from "../_db.js";
+import { getSql, requireAdmin, rowToProduct, rowToOrder, readJsonBody, sellerAnalytics, deleteSellerCascade, ensureOrderHistoryColumns } from "../_db.js";
 
 export default async function handler(req, res) {
   if (!requireAdmin(req, res)) return;
@@ -167,6 +167,7 @@ async function orders(req, res) {
 
 async function sellers(req, res) {
   const sql = getSql();
+  await ensureOrderHistoryColumns(sql);
 
   // Permanently delete a seller and all of their data (asked for via the admin UI
   // only after an explicit confirmation).

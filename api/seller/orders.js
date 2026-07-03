@@ -1,7 +1,7 @@
 // /api/seller/orders — a seller manages ONLY their own orders.
 // GET (own list), PATCH (update status of an order they own).
 // Requires a Bearer token with role "seller" (admins may also use it).
-import { getSql, getAuthUser, rowToOrder, readJsonBody } from "../_db.js";
+import { getSql, getAuthUser, rowToOrder, readJsonBody, ensureOrderHistoryColumns } from "../_db.js";
 
 export default async function handler(req, res) {
   const auth = getAuthUser(req);
@@ -11,6 +11,7 @@ export default async function handler(req, res) {
   }
   try {
     const sql = getSql();
+    await ensureOrderHistoryColumns(sql);
 
     if (req.method === "GET") {
       // Archived (cleared) delivered orders are excluded — once a seller downloads

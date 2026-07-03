@@ -119,6 +119,14 @@ export function rowToProduct(r) {
   };
 }
 
+// Self-healing schema for the columns the order-history/earnings-reset feature
+// depends on — run before any query that touches them, so no manual migration
+// step is required (mirrors the pattern already used for e.g. delivery_charge).
+export async function ensureOrderHistoryColumns(sql) {
+  await sql`alter table orders add column if not exists archived boolean not null default false`;
+  await sql`alter table users add column if not exists earnings_reset_at timestamptz`;
+}
+
 // Sales analytics for one seller, computed entirely in Pakistan time
 // (Asia/Karachi) so "today", "this week" and "this month" line up with the
 // seller's real calendar days. Earnings count only approved orders.
@@ -128,6 +136,7 @@ export function rowToProduct(r) {
 //   totals    — all-time { ordersPlaced (any status), orders (approved), sales }
 //   since     — when fromDate is given: totals on/after that Pakistan date
 export async function sellerAnalytics(sql, sellerId, fromDate = null) {
+  await ensureOrderHistoryColumns(sql);
   const urows = await sql`select created_at, earnings_reset_at from users where id = ${sellerId}`;
   const joinedAt = urows.length ? new Date(urows[0].created_at).getTime() : null;
   // A seller can reset their earnings when clearing delivered-order history — from
