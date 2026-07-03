@@ -465,6 +465,15 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) => `Rs. ${n.toLocaleString()}`;
 const discount = (orig: number, curr: number) => Math.round((1 - curr / orig) * 100);
+// Fisher-Yates shuffle — used to show the shop's catalog in random order.
+function shuffled<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 // ─── Pakistan date & time (Asia/Karachi) ──────────────────────────────────────
 // Every date shown in the dashboards is rendered in Pakistan time so sellers and
@@ -1185,8 +1194,17 @@ function HomePage() {
     ...products.filter(p => !p.featured && (p.badge === "bestseller" || p.badge === "new")),
   ].slice(0, 4);
   const bestsellers = [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 8);
-  const mobileAcc = products.filter(p => p.category === "Mobile Accessories").slice(0, 4);
-  const clocks = products.filter(p => p.subcategory === "Wall Clocks");
+  // One showcase block per category that actually has products — so a brand new
+  // category (from any seller) automatically gets its own block here, with no
+  // hardcoding needed. Colour themes cycle so the blocks stay visually varied.
+  const showcaseCats = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
+  const showcaseThemes = [
+    { from: "#EFF6FF", to: "#DBEAFE", shadow: "rgba(30,64,175,0.1)", accent: "#1E40AF" },
+    { from: "#FFFBEB", to: "#FEF3C7", shadow: "rgba(180,83,9,0.1)", accent: "#B45309" },
+    { from: "#ECFDF5", to: "#D1FAE5", shadow: "rgba(5,150,105,0.1)", accent: "#059669" },
+    { from: "#FDF4FF", to: "#FAE8FF", shadow: "rgba(124,58,237,0.1)", accent: "#7C3AED" },
+    { from: "#FFF1F2", to: "#FFE4E6", shadow: "rgba(225,29,72,0.1)", accent: "#E11D48" },
+  ];
 
   return (
     <div>
@@ -1292,59 +1310,40 @@ function HomePage() {
           </div>
         </section>
 
-        {/* Category Showcases */}
-        {products.length > 0 && (
+        {/* Category Showcases — one block per category, generated automatically */}
+        {showcaseCats.length > 0 && (
         <section className="mb-14">
           <div className="grid lg:grid-cols-2 gap-6">
-            {/* Mobile Accessories */}
-            <div className="bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] rounded-2xl p-6"
-              style={{ boxShadow: "0 4px 20px rgba(30,64,175,0.1)" }}>
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="text-lg font-black text-[#111827]">Mobile Accessories</h3>
-                  <p className="text-sm text-[#6b7280]">Top picks for your device</p>
+            {showcaseCats.map((cat, i) => {
+              const items = products.filter(p => p.category === cat).slice(0, 4);
+              if (items.length === 0) return null;
+              const theme = showcaseThemes[i % showcaseThemes.length];
+              return (
+                <div key={cat} className="rounded-2xl p-6"
+                  style={{ background: `linear-gradient(to bottom right, ${theme.from}, ${theme.to})`, boxShadow: `0 4px 20px ${theme.shadow}` }}>
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="text-lg font-black text-[#111827]">{cat}</h3>
+                      <p className="text-sm text-[#6b7280]">Top picks in {cat}</p>
+                    </div>
+                    <Link to={`/shop?cat=${encodeURIComponent(cat)}`} className="text-xs font-bold hover:text-[#F97316] flex items-center gap-1" style={{ color: theme.accent }}>
+                      View All <ChevronRight size={13} />
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {items.map(p => (
+                      <Link key={p.id} to={`/product/${p.id}`}
+                        className="bg-white rounded-xl p-3 hover:-translate-y-0.5 transition-transform"
+                        style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                        <ProductImage src={p.image} alt={p.name} className="w-full h-28 object-contain rounded-lg mb-2 bg-white" />
+                        <p className="text-xs font-semibold text-[#111827] line-clamp-2 mb-1">{p.name}</p>
+                        <p className="text-xs font-bold" style={{ color: theme.accent }}>{fmt(p.price)}</p>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-                <Link to="/shop?cat=Mobile Accessories" className="text-xs font-bold text-[#1E40AF] hover:text-[#F97316] flex items-center gap-1">
-                  View All <ChevronRight size={13} />
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {mobileAcc.map(p => (
-                  <Link key={p.id} to={`/product/${p.id}`}
-                    className="bg-white rounded-xl p-3 hover:-translate-y-0.5 transition-transform"
-                    style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                    <ProductImage src={p.image} alt={p.name} className="w-full h-28 object-contain rounded-lg mb-2 bg-white" />
-                    <p className="text-xs font-semibold text-[#111827] line-clamp-2 mb-1">{p.name}</p>
-                    <p className="text-xs font-bold text-[#1E40AF]">{fmt(p.price)}</p>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* Wall Clocks */}
-            <div className="bg-gradient-to-br from-[#FFFBEB] to-[#FEF3C7] rounded-2xl p-6"
-              style={{ boxShadow: "0 4px 20px rgba(180,83,9,0.1)" }}>
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="text-lg font-black text-[#111827]">Wall Clocks</h3>
-                  <p className="text-sm text-[#6b7280]">Elevate your home décor</p>
-                </div>
-                <Link to="/shop?sub=Wall Clocks" className="text-xs font-bold text-[#B45309] hover:text-[#F97316] flex items-center gap-1">
-                  View All <ChevronRight size={13} />
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {clocks.slice(0, 4).map(p => (
-                  <Link key={p.id} to={`/product/${p.id}`}
-                    className="bg-white rounded-xl p-3 hover:-translate-y-0.5 transition-transform"
-                    style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                    <ProductImage src={p.image} alt={p.name} className="w-full h-28 object-contain rounded-lg mb-2 bg-white" />
-                    <p className="text-xs font-semibold text-[#111827] line-clamp-2 mb-1">{p.name}</p>
-                    <p className="text-xs font-bold text-[#B45309]">{fmt(p.price)}</p>
-                  </Link>
-                ))}
-              </div>
-            </div>
+              );
+            })}
           </div>
         </section>
         )}
@@ -1413,7 +1412,10 @@ function ShopPage() {
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [category, setCategory] = useState(searchParams.get("cat") || "All");
   const [subcategory, setSubcategory] = useState(searchParams.get("sub") || "All");
-  const [sort, setSort] = useState("popular");
+  const [sort, setSort] = useState("random");
+  // A stable random order for the catalog — reshuffled only when the product
+  // list itself changes (new fetch), not on every filter/search keystroke.
+  const randomOrder = useMemo(() => shuffled(products), [products]);
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(10000);
   const [showFilters, setShowFilters] = useState(false);
@@ -1430,7 +1432,9 @@ function ShopPage() {
   const cats = ["All", ...Array.from(new Set(["Mobile Accessories", "Home Decoration", "Digital Services", ...products.map(p => p.category)]))];
   const subs = ["All", ...Array.from(new Set([...CATEGORIES.map(c => c.subcategory), ...products.map(p => p.subcategory)]))];
 
-  let filtered = products.filter(p => {
+  // Random by default — the same stable shuffle is filtered, so browsing the
+  // shop shows every product in a random spread rather than a fixed order.
+  let filtered = randomOrder.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.subcategory.toLowerCase().includes(search.toLowerCase());
     const matchCat = category === "All" || p.category === category;
     const matchSub = subcategory === "All" || p.subcategory === subcategory;
@@ -1444,6 +1448,7 @@ function ShopPage() {
   else if (sort === "price-desc") filtered.sort((a, b) => b.price - a.price);
   else if (sort === "rating") filtered.sort((a, b) => b.rating - a.rating);
   else if (sort === "newest") filtered.sort((a, b) => (a.badge === "new" ? -1 : 1));
+  // sort === "random" — leave the pre-shuffled order as-is.
   // Admin-featured products are always prioritised (shown first), keeping the
   // chosen sort order within each group. Array.sort is stable.
   filtered.sort((a, b) => Number(!!b.featured) - Number(!!a.featured));
@@ -1503,7 +1508,7 @@ function ShopPage() {
                 className="w-full accent-[#1E40AF]" />
             </div>
 
-            <button onClick={() => { setSearch(""); setCategory("All"); setSubcategory("All"); setSort("popular"); setMinPrice(0); setMaxPrice(10000); }}
+            <button onClick={() => { setSearch(""); setCategory("All"); setSubcategory("All"); setSort("random"); setMinPrice(0); setMaxPrice(10000); }}
               className="w-full py-2 rounded-xl border border-[#1E40AF]/30 text-[#1E40AF] text-sm font-semibold hover:bg-[#EFF6FF] transition-colors">
               Clear Filters
             </button>
@@ -1521,6 +1526,7 @@ function ShopPage() {
               <label className="text-xs text-[#6b7280] font-semibold">Sort by:</label>
               <select value={sort} onChange={e => setSort(e.target.value)}
                 className="px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1E40AF] bg-white">
+                <option value="random">Random</option>
                 <option value="popular">Most Popular</option>
                 <option value="rating">Highest Rated</option>
                 <option value="price-asc">Price: Low to High</option>
