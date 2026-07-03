@@ -3071,6 +3071,27 @@ function ImageThumb({ url, main }: { url: string; main?: boolean }) {
 const MAX_PRODUCT_IMAGES = 6;
 
 function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { initial: Product | null; onSave: (p: Partial<Product>) => void; onCancel: () => void; busy: boolean; allowBadge?: boolean }) {
+  const { products } = useContext(Store);
+  // Categories offered = the built-in defaults plus every category already in use
+  // in the mart, so sellers/admins always pick from what actually exists instead
+  // of retyping (and accidentally duplicating with different spelling/casing).
+  const allCategories = useMemo(
+    () => Array.from(new Set([...ADMIN_CATEGORIES, ...products.map(p => p.category)])).filter(Boolean).sort(),
+    [products]
+  );
+  // Sub-categories are scoped to the selected category — picking a category first
+  // narrows the list to sub-categories that already exist under it.
+  const subcategoriesForCategory = useCallback(
+    (cat: string) => Array.from(new Set(products.filter(p => p.category === cat).map(p => p.subcategory))).filter(Boolean).sort(),
+    [products]
+  );
+  const [addingCategory, setAddingCategory] = useState(() => !!initial?.category && !allCategories.includes(initial.category));
+  const [addingSubcategory, setAddingSubcategory] = useState(() => {
+    const subs = subcategoriesForCategory(initial?.category ?? "Mobile Accessories");
+    if (subs.length === 0) return true; // nothing to pick from yet — just type it in
+    if (!initial?.subcategory) return false; // fresh product — show the picker
+    return !subs.includes(initial.subcategory); // editing with a value outside the known list
+  });
   const [f, setF] = useState(() => ({
     name: initial?.name ?? "",
     price: initial?.price != null ? String(initial.price) : "",
@@ -3114,6 +3135,25 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
     setUploadIdx(null);
   };
   const set = (k: string, v: string | boolean) => setF(prev => ({ ...prev, [k]: v }));
+  const NEW_OPTION = "__new__";
+  const onCategorySelect = (v: string) => {
+    if (v === NEW_OPTION) {
+      setAddingCategory(true);
+      set("category", "");
+      setAddingSubcategory(true);
+      set("subcategory", "");
+      return;
+    }
+    set("category", v);
+    // The previous sub-category likely belongs to the old category, so clear it
+    // and let the picker offer whatever exists under the newly-chosen one.
+    set("subcategory", "");
+    setAddingSubcategory(subcategoriesForCategory(v).length === 0);
+  };
+  const onSubcategorySelect = (v: string) => {
+    if (v === NEW_OPTION) { setAddingSubcategory(true); set("subcategory", ""); return; }
+    set("subcategory", v);
+  };
   const submit = () => {
     const images = imgs.map(s => s.trim()).filter(Boolean);
     const image = images[0] || "";
@@ -3151,8 +3191,44 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
       <p className="font-bold text-[#111827] mb-4">{initial ? `Edit: ${initial.name}` : "Add New Product"}</p>
       <div className="grid sm:grid-cols-2 gap-3">
         <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Name</span><input className={inp} value={f.name} onChange={e => set("name", e.target.value)} /></label>
-        <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Category</span><input className={inp} list="adm-cats" value={f.category} onChange={e => set("category", e.target.value)} /><datalist id="adm-cats">{ADMIN_CATEGORIES.map(c => <option key={c} value={c} />)}</datalist></label>
-        <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Sub-Category</span><input className={inp} list="adm-subs" value={f.subcategory} onChange={e => set("subcategory", e.target.value)} /><datalist id="adm-subs">{CATEGORIES.map(c => <option key={c.subcategory} value={c.subcategory} />)}</datalist></label>
+        <label className="text-sm">
+          <span className="font-semibold text-[#374151] block mb-1">Category</span>
+          {addingCategory ? (
+            <div className="flex items-center gap-2">
+              <input className={inp} autoFocus value={f.category} onChange={e => set("category", e.target.value)} placeholder="Type new category name" />
+              {allCategories.length > 0 && (
+                <button type="button" title="Pick from existing categories instead" onClick={() => { setAddingCategory(false); set("category", allCategories[0]); setAddingSubcategory(subcategoriesForCategory(allCategories[0]).length === 0); set("subcategory", ""); }}
+                  className="shrink-0 w-9 h-9 grid place-items-center rounded-xl border border-gray-200 text-[#6b7280] hover:bg-gray-50 transition-colors">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <select className={inp} value={f.category} onChange={e => onCategorySelect(e.target.value)}>
+              {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value={NEW_OPTION}>+ Add New Category</option>
+            </select>
+          )}
+        </label>
+        <label className="text-sm">
+          <span className="font-semibold text-[#374151] block mb-1">Sub-Category</span>
+          {addingSubcategory ? (
+            <div className="flex items-center gap-2">
+              <input className={inp} autoFocus value={f.subcategory} onChange={e => set("subcategory", e.target.value)} placeholder="Type new sub-category name" />
+              {subcategoriesForCategory(f.category).length > 0 && (
+                <button type="button" title="Pick from existing sub-categories instead" onClick={() => { const subs = subcategoriesForCategory(f.category); setAddingSubcategory(false); set("subcategory", subs[0]); }}
+                  className="shrink-0 w-9 h-9 grid place-items-center rounded-xl border border-gray-200 text-[#6b7280] hover:bg-gray-50 transition-colors">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <select className={inp} value={f.subcategory} onChange={e => onSubcategorySelect(e.target.value)}>
+              {subcategoriesForCategory(f.category).map(s => <option key={s} value={s}>{s}</option>)}
+              <option value={NEW_OPTION}>+ Add New Sub-Category</option>
+            </select>
+          )}
+        </label>
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Price (Rs.)</span><input className={inp} type="number" value={f.price} onChange={e => set("price", e.target.value)} /></label>
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Original Price (optional)</span><input className={inp} type="number" value={f.originalPrice} onChange={e => set("originalPrice", e.target.value)} /></label>
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Price Note (e.g. per month)</span><input className={inp} value={f.priceNote} onChange={e => set("priceNote", e.target.value)} /></label>
