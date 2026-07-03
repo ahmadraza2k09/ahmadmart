@@ -8,7 +8,7 @@ import {
   CheckCircle, ArrowRight, TrendingUp, Award, Gift,
   Instagram, Mail, Send, Smartphone,
   Battery, Plug, Wifi, RotateCcw, ZoomIn,
-  Copy, ShieldCheck, Lock, RefreshCw, MessageCircle, ImageOff, Upload, Globe
+  Copy, ShieldCheck, Lock, RefreshCw, MessageCircle, ImageOff, Upload, Globe, Download
 } from "lucide-react";
 import {
   JAZZCASH_NUMBER, JAZZCASH_TITLE, WHATSAPP_DISPLAY, WHATSAPP_NUMBER,
@@ -22,8 +22,9 @@ import {
 } from "./reviewStore";
 import {
   createOrder, getMyOrders, adminGetOrders, adminUpdateOrderStatus, adminDeleteOrder,
-  sellerGetOrders, sellerUpdateOrderStatus,
+  sellerGetOrders, sellerUpdateOrderStatus, sellerClearHistory,
 } from "./ordersApi";
+import { downloadOrderHistoryPdf } from "./sellerOrdersPdf";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 import type { Product } from "./types";
@@ -3775,6 +3776,7 @@ function AdminPage() {
       {tab === "analytics" && <AdminAnalytics dbMode={dbMode} />}
       {tab === "orders" && (
         <div>
+          <p className="text-sm text-[#6b7280] mb-3">Only orders for official Ahmad Mart products (no seller attached) are managed here. Every seller-owned order is approved, shipped and delivered by that seller from their own dashboard — check the <button onClick={() => setTab("sellers")} className="text-[#1E40AF] font-bold hover:underline">Sellers tab</button> for each seller's order count and earnings.</p>
           <div className="flex justify-end mb-3">
             <button onClick={loadOrders} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-bold text-[#374151] hover:border-[#1E40AF] transition-colors">
               <RefreshCw size={15} /> Refresh
@@ -3797,7 +3799,7 @@ function AdminPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map(o => <OrderCard key={o.id} order={o} onSetStatus={o.sellerId ? undefined : setStatus} onDelete={deleteOrder} />)}
+          {orders.map(o => <OrderCard key={o.id} order={o} onSetStatus={setStatus} onDelete={deleteOrder} />)}
         </div>
       )}
         </div>
@@ -3837,6 +3839,22 @@ function SellerPage() {
       const updated = await sellerUpdateOrderStatus(id, status);
       setOrders(prev => prev.map(o => (o.id === id ? updated : o)));
     } catch { /* ignore — keep current state */ }
+  };
+  const pastOrders = orders.filter(o => o.status === "Delivered");
+  const activeOrders = orders.filter(o => o.status !== "Delivered");
+  const [clearBusy, setClearBusy] = useState(false);
+  const clearHistory = async () => {
+    if (pastOrders.length === 0) return;
+    if (!window.confirm(`Download your ${pastOrders.length} delivered order${pastOrders.length === 1 ? "" : "s"} as a PDF and clear them from this list? The PDF is your permanent record.`)) return;
+    downloadOrderHistoryPdf(pastOrders, user?.storeName || "");
+    const resetEarnings = window.confirm("Also reset your total earnings back to zero and start fresh?\n\nPress Cancel to clear the list but keep your all-time earnings unchanged.");
+    setClearBusy(true);
+    try {
+      await sellerClearHistory(resetEarnings);
+      loadOrders();
+      if (resetEarnings) sellerGetAnalytics().then(setAnalytics).catch(() => {});
+    } catch { /* ignore */ }
+    setClearBusy(false);
   };
 
   const openStoreEdit = () => {
@@ -3962,18 +3980,38 @@ function SellerPage() {
             <RefreshCw size={15} /> Refresh
           </button>
         </div>
-        {orders.length === 0 ? (
+        {activeOrders.length === 0 ? (
           <div className="bg-white rounded-2xl p-10 text-center" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
             <Package size={44} className="mx-auto text-gray-300 mb-3" />
-            <p className="font-bold text-[#111827] mb-1">No orders yet</p>
+            <p className="font-bold text-[#111827] mb-1">No active orders</p>
             <p className="text-sm text-[#6b7280]">Orders placed for your products will appear here.</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {orders.map(o => <OrderCard key={o.id} order={o} onSetStatus={setOrderStatus} />)}
+            {activeOrders.map(o => <OrderCard key={o.id} order={o} onSetStatus={setOrderStatus} />)}
           </div>
         )}
       </div>
+
+      {/* Past Orders — delivered orders move here automatically. Download the
+          complete history as a PDF, then clear it to keep this list tidy. */}
+      {pastOrders.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <div>
+              <h2 className="font-black text-[#111827] flex items-center gap-2"><CheckCircle size={18} className="text-[#059669]" /> Past Orders (Delivered)</h2>
+              <p className="text-xs text-[#6b7280] mt-0.5">{pastOrders.length} delivered order{pastOrders.length === 1 ? "" : "s"} · download a full record before clearing this list.</p>
+            </div>
+            <button onClick={clearHistory} disabled={clearBusy}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1E40AF] text-white text-sm font-bold disabled:opacity-60">
+              <Download size={15} /> {clearBusy ? "Working…" : "Download PDF & Clear"}
+            </button>
+          </div>
+          <div className="space-y-4">
+            {pastOrders.map(o => <OrderCard key={o.id} order={o} onSetStatus={setOrderStatus} />)}
+          </div>
+        </div>
+      )}
 
       {storeOpen && (
         <div className="bg-white rounded-2xl p-5 mb-6" style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.12)" }}>

@@ -90,6 +90,15 @@ alter table products add column if not exists featured boolean not null default 
 alter table orders add column if not exists seller_id integer references users(id) on delete set null;
 create index if not exists orders_seller_idx on orders (seller_id);
 
+-- A seller "clears" their delivered-order history after downloading it as a PDF —
+-- archived orders drop out of their Past Orders list but the row is kept (never
+-- deleted), so earnings totals stay accurate unless the seller also resets them.
+alter table orders add column if not exists archived boolean not null default false;
+
+-- When a seller resets earnings during a history clear, earnings aggregates only
+-- count orders created on or after this timestamp. NULL = never reset (count all).
+alter table users add column if not exists earnings_reset_at timestamptz;
+
 -- ─── Messages (buyer ↔ seller chat) ───────────────────────────────────────────
 -- A conversation thread = (product_id, buyer_id, seller_id). sender_id is whoever
 -- sent each message. read = whether the OTHER party has seen it.

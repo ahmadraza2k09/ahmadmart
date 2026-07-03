@@ -13,7 +13,9 @@ export default async function handler(req, res) {
     const sql = getSql();
 
     if (req.method === "GET") {
-      const rows = await sql`select * from orders where seller_id = ${auth.id} order by created_at desc`;
+      // Archived (cleared) delivered orders are excluded — once a seller downloads
+      // and clears their history those orders no longer show up anywhere for them.
+      const rows = await sql`select * from orders where seller_id = ${auth.id} and archived = false order by created_at desc`;
       res.status(200).json({ orders: rows.map(rowToOrder) });
       return;
     }

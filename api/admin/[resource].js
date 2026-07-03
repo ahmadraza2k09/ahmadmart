@@ -135,19 +135,22 @@ async function seed(req, res) {
 
 async function orders(req, res) {
   const sql = getSql();
+  // Only orders with no seller (placed for official Ahmad Mart products) are
+  // managed here — every seller-owned order is managed entirely by that seller
+  // from their own dashboard.
   if (req.method === "GET") {
     const rows = await sql`
-      select o.*, su.store_name as seller_store
-      from orders o left join users su on su.id = o.seller_id
-      order by o.created_at desc`;
+      select * from orders where seller_id is null order by created_at desc`;
     res.status(200).json({ orders: rows.map(rowToOrder) });
     return;
   }
   if (req.method === "PATCH" || req.method === "PUT") {
     const { id, status } = await readJsonBody(req);
     if (!id || !status) { res.status(400).json({ error: "Missing order id or status." }); return; }
+    const existing = await sql`select seller_id from orders where id = ${id}`;
+    if (!existing.length) { res.status(404).json({ error: "Order not found." }); return; }
+    if (existing[0].seller_id) { res.status(403).json({ error: "This order belongs to a seller — only they can update its status." }); return; }
     const rows = await sql`update orders set status = ${status}, updated_at = now() where id = ${id} returning *`;
-    if (!rows.length) { res.status(404).json({ error: "Order not found." }); return; }
     res.status(200).json({ order: rowToOrder(rows[0]) });
     return;
   }
@@ -209,7 +212,8 @@ async function sellers(req, res) {
       (select count(*)::int from orders o where o.seller_id = u.id) as order_count,
       (select coalesce(sum(o.total), 0)::int from orders o
          where o.seller_id = u.id
-           and o.status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')) as earnings
+           and o.status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+           and o.created_at >= coalesce(u.earnings_reset_at, '-infinity'::timestamptz)) as earnings
     from users u
     where u.role = 'seller'
     order by u.created_at desc`;

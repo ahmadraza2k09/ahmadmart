@@ -83,6 +83,7 @@ export function rowToOrder(r) {
     status: r.status,
     sellerId: r.seller_id ?? undefined,
     sellerStore: r.seller_store ?? undefined,
+    archived: r.archived ?? false,
   };
 }
 
@@ -127,8 +128,12 @@ export function rowToProduct(r) {
 //   totals    — all-time { ordersPlaced (any status), orders (approved), sales }
 //   since     — when fromDate is given: totals on/after that Pakistan date
 export async function sellerAnalytics(sql, sellerId, fromDate = null) {
-  const urows = await sql`select created_at from users where id = ${sellerId}`;
+  const urows = await sql`select created_at, earnings_reset_at from users where id = ${sellerId}`;
   const joinedAt = urows.length ? new Date(urows[0].created_at).getTime() : null;
+  // A seller can reset their earnings when clearing delivered-order history — from
+  // that point on, all earnings figures (but not the lifetime "orders placed"
+  // count) only count orders placed after the reset.
+  const resetAt = urows.length ? urows[0].earnings_reset_at : null;
 
   const daily = await sql`
     select to_char((created_at at time zone 'Asia/Karachi')::date, 'YYYY-MM-DD') as day,
@@ -137,34 +142,41 @@ export async function sellerAnalytics(sql, sellerId, fromDate = null) {
     from orders
     where seller_id = ${sellerId}
       and status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+      and created_at >= coalesce(${resetAt}, '-infinity'::timestamptz)
       and (created_at at time zone 'Asia/Karachi')::date >= (now() at time zone 'Asia/Karachi')::date - 29
     group by 1 order by 1 desc`;
 
   const [tot] = await sql`
     select
       count(*)::int as orders_placed,
-      count(*) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered'))::int as orders,
-      coalesce(sum(total) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')), 0)::int as sales
+      count(*) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+                          and created_at >= coalesce(${resetAt}, '-infinity'::timestamptz))::int as orders,
+      coalesce(sum(total) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+                                     and created_at >= coalesce(${resetAt}, '-infinity'::timestamptz)), 0)::int as sales
     from orders where seller_id = ${sellerId}`;
 
   const [wk] = await sql`
     select count(*)::int as orders, coalesce(sum(total), 0)::int as sales
     from orders where seller_id = ${sellerId}
       and status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+      and created_at >= coalesce(${resetAt}, '-infinity'::timestamptz)
       and (created_at at time zone 'Asia/Karachi')::date >= (now() at time zone 'Asia/Karachi')::date - 6`;
 
   const [mo] = await sql`
     select count(*)::int as orders, coalesce(sum(total), 0)::int as sales
     from orders where seller_id = ${sellerId}
       and status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+      and created_at >= coalesce(${resetAt}, '-infinity'::timestamptz)
       and (created_at at time zone 'Asia/Karachi')::date >= (now() at time zone 'Asia/Karachi')::date - 29`;
 
   let since = null;
   if (fromDate) {
     const [s] = await sql`
       select count(*)::int as orders_placed,
-             count(*) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered'))::int as orders,
-             coalesce(sum(total) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')), 0)::int as sales
+             count(*) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+                                 and created_at >= coalesce(${resetAt}, '-infinity'::timestamptz))::int as orders,
+             coalesce(sum(total) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+                                            and created_at >= coalesce(${resetAt}, '-infinity'::timestamptz)), 0)::int as sales
       from orders where seller_id = ${sellerId}
         and (created_at at time zone 'Asia/Karachi')::date >= ${fromDate}::date`;
     since = { from: fromDate, ordersPlaced: s.orders_placed, orders: s.orders, sales: s.sales };

@@ -47,3 +47,8 @@ export async function sellerGetOrders(): Promise<Order[]> {
 export async function sellerUpdateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
   return (await send("/api/seller/orders", "PATCH", { id, status })).order as Order;
 }
+/** Seller: archive all currently-visible Delivered orders (call after downloading
+ *  the history PDF). Optionally also reset all-time earnings back to zero. */
+export async function sellerClearHistory(resetEarnings: boolean): Promise<{ archived: number }> {
+  return await send("/api/seller/clear-history", "POST", { resetEarnings }) as { archived: number };
+}

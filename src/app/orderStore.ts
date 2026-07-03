@@ -70,6 +70,9 @@ export interface Order {
   sellerWhatsapp?: string;
   sellerJazzcashNumber?: string;
   sellerJazzcashTitle?: string;
+  // Set once a seller downloads + clears a Delivered order from their Past Orders
+  // history — the row is kept (for earnings accuracy) but no longer shown to them.
+  archived?: boolean;
 }
 
 // ─── localStorage persistence ─────────────────────────────────────────────────
