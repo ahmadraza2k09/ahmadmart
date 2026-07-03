@@ -2974,10 +2974,12 @@ const STATUS_STYLE: Record<OrderStatus, { bg: string; text: string }> = {
 // orders); passing it in adds a delete button to the card.
 function OrderCard({ order: o, onSetStatus, onDelete }: {
   order: Order;
-  onSetStatus: (id: string, status: OrderStatus) => void;
+  // Omit onSetStatus to render a read-only card — used by the admin view for
+  // orders that belong to a seller, since only that seller controls the status.
+  onSetStatus?: (id: string, status: OrderStatus) => void;
   onDelete?: (o: Order) => void;
 }) {
-  const approve = () => onSetStatus(o.id, isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received");
+  const approve = () => onSetStatus?.(o.id, isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received");
   return (
     <div className="bg-white rounded-2xl p-5" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
       <div className="flex flex-col lg:flex-row gap-5">
@@ -3029,23 +3031,29 @@ function OrderCard({ order: o, onSetStatus, onDelete }: {
             </div>
           </div>
 
-          {o.status === "Pending Approval" && (
-            <button onClick={approve}
-              className="mb-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#059669] text-white text-xs font-black hover:bg-[#047857] transition-colors">
-              <CheckCircle size={14} /> Approve order → {isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received"}
-            </button>
-          )}
+          {onSetStatus ? (
+            <>
+              {o.status === "Pending Approval" && (
+                <button onClick={approve}
+                  className="mb-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#059669] text-white text-xs font-black hover:bg-[#047857] transition-colors">
+                  <CheckCircle size={14} /> Approve order → {isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received"}
+                </button>
+              )}
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-[#6b7280]">Update status:</span>
-            {ORDER_STATUSES.map(s => (
-              <button key={s} onClick={() => onSetStatus(o.id, s)}
-                className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${o.status === s ? "" : "bg-gray-100 text-[#374151] hover:bg-gray-200"}`}
-                style={o.status === s ? { background: STATUS_STYLE[s].bg, color: STATUS_STYLE[s].text, outline: `1.5px solid ${STATUS_STYLE[s].text}` } : undefined}>
-                {s}
-              </button>
-            ))}
-          </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-[#6b7280]">Update status:</span>
+                {ORDER_STATUSES.map(s => (
+                  <button key={s} onClick={() => onSetStatus(o.id, s)}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${o.status === s ? "" : "bg-gray-100 text-[#374151] hover:bg-gray-200"}`}
+                    style={o.status === s ? { background: STATUS_STYLE[s].bg, color: STATUS_STYLE[s].text, outline: `1.5px solid ${STATUS_STYLE[s].text}` } : undefined}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-[#6b7280] italic">Status is managed by the seller{o.sellerStore ? ` (${o.sellerStore})` : ""} from their own dashboard.</p>
+          )}
         </div>
       </div>
     </div>
@@ -3789,7 +3797,7 @@ function AdminPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map(o => <OrderCard key={o.id} order={o} onSetStatus={setStatus} onDelete={deleteOrder} />)}
+          {orders.map(o => <OrderCard key={o.id} order={o} onSetStatus={o.sellerId ? undefined : setStatus} onDelete={deleteOrder} />)}
         </div>
       )}
         </div>
