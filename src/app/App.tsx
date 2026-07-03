@@ -751,7 +751,7 @@ function Navbar() {
   const allCats = Array.from(new Set([...baseCats, ...products.map(p => p.category)])).filter(Boolean);
   // Keep the bar tidy: only a few categories sit on the navbar, the rest go under
   // a "More" dropdown so the bar never overflows as new categories are added.
-  const NAV_CAT_LIMIT = 4;
+  const NAV_CAT_LIMIT = 3;
   const visibleCats = allCats.slice(0, NAV_CAT_LIMIT);
   const moreCats = allCats.slice(NAV_CAT_LIMIT);
   // category -> its sub-categories (for the hover mega-menus)
@@ -786,7 +786,7 @@ function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+            <Link to="/" className="flex items-center gap-2 flex-shrink-0 mr-4 xl:mr-8">
               <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-10 w-10 object-contain" />
               <div className="hidden sm:block notranslate" translate="no">
                 <span className="text-xl font-black text-[#1E40AF] tracking-tight">Ahmad</span>
@@ -794,8 +794,9 @@ function Navbar() {
               </div>
             </Link>
 
-            {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-5">
+            {/* Desktop Nav — only from xl up, so it never crowds at laptop widths
+                (it collapses to the hamburger menu below that, same as mobile). */}
+            <div className="hidden xl:flex items-center gap-7 flex-1 min-w-0">
               <Link to="/" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors">Home</Link>
               <Link to="/shop" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors">Shop</Link>
               {visibleCats.map(c => {
@@ -841,8 +842,8 @@ function Navbar() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2">
-              <LangToggle />
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ml-2">
+              <div className="hidden md:block"><LangToggle /></div>
               <button onClick={() => setSearchOpen(o => !o)}
                 className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
                 <Search size={18} />
@@ -866,7 +867,8 @@ function Navbar() {
                 className="w-9 h-9 hidden sm:flex items-center justify-center rounded-xl hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
                 <User size={18} />
               </Link>
-              <Link to="/cart" className="relative flex items-center gap-2 px-3 py-2 rounded-xl font-semibold text-sm transition-all active:scale-95"
+              <span className="hidden sm:block w-px h-6 bg-gray-200 mx-1" />
+              <Link to="/cart" className="relative flex items-center gap-2 px-3.5 py-2 rounded-xl font-semibold text-sm transition-all active:scale-95"
                 style={{ background: "#1E40AF", color: "#fff", boxShadow: "0 4px 12px rgba(30,64,175,0.3)" }}>
                 <ShoppingCart size={16} />
                 <span className="hidden sm:inline">Cart</span>
@@ -876,7 +878,7 @@ function Navbar() {
                   </span>
                 )}
               </Link>
-              <button onClick={() => setMenuOpen(o => !o)} className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors">
+              <button onClick={() => setMenuOpen(o => !o)} className="xl:hidden w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors ml-0.5">
                 {menuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             </div>
@@ -918,7 +920,7 @@ function Navbar() {
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="lg:hidden border-t border-gray-100 bg-white">
+          <div className="xl:hidden border-t border-gray-100 bg-white">
             <div className="px-4 py-3 flex flex-col gap-1">
               <Link to="/" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">Home</Link>
               <Link to="/shop" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">Shop</Link>
@@ -945,6 +947,7 @@ function Navbar() {
                 );
               })}
               <div className="border-t border-gray-100 mt-2 pt-2 flex flex-col gap-1">
+                <div className="md:hidden px-1 pb-1"><LangToggle full /></div>
                 <Link to="/wishlist" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#FFF7ED] hover:text-[#F97316] transition-colors flex items-center gap-2">
                   <Heart size={16} /> Wishlist
                 </Link>
