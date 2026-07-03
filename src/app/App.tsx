@@ -1430,7 +1430,9 @@ function ShopPage() {
 
   // Categories include the built-in ones plus any new ones sellers introduce.
   const cats = ["All", ...Array.from(new Set(["Mobile Accessories", "Home Decoration", "Digital Services", ...products.map(p => p.category)]))];
-  const subs = ["All", ...Array.from(new Set([...CATEGORIES.map(c => c.subcategory), ...products.map(p => p.subcategory)]))];
+  // Derived purely from live products — a sub-category only shows once a product
+  // actually exists in it, so unstocked placeholders never appear as filters.
+  const subs = ["All", ...Array.from(new Set(products.map(p => p.subcategory)))];
 
   // Random by default — the same stable shuffle is filtered, so browsing the
   // shop shows every product in a random spread rather than a fixed order.
