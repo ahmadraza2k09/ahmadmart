@@ -3779,22 +3779,8 @@ function SellerPage() {
       setOrders(prev => prev.map(o => (o.id === id ? updated : o)));
     } catch { /* ignore — keep current state */ }
   };
-  const pastOrders = orders.filter(o => o.status === "Delivered");
   const activeOrders = orders.filter(o => o.status !== "Delivered");
-  const [clearBusy, setClearBusy] = useState(false);
-  const clearHistory = async () => {
-    if (pastOrders.length === 0) return;
-    if (!window.confirm(`Download your ${pastOrders.length} delivered order${pastOrders.length === 1 ? "" : "s"} as a PDF and clear them from this list? The PDF is your permanent record.`)) return;
-    downloadOrderHistoryPdf(pastOrders, user?.storeName || "");
-    const resetEarnings = window.confirm("Also reset your total earnings back to zero and start fresh?\n\nPress Cancel to clear the list but keep your all-time earnings unchanged.");
-    setClearBusy(true);
-    try {
-      await sellerClearHistory(resetEarnings);
-      loadOrders();
-      if (resetEarnings) sellerGetAnalytics().then(setAnalytics).catch(() => {});
-    } catch { /* ignore */ }
-    setClearBusy(false);
-  };
+  const deliveredCount = orders.filter(o => o.status === "Delivered").length;
 
   const openStoreEdit = () => {
     setStoreForm({ storeName: user?.storeName || "", whatsapp: user?.whatsapp || "", city: user?.city || "", jazzcashNumber: user?.jazzcashNumber || "", jazzcashTitle: user?.jazzcashTitle || "" });
@@ -3932,24 +3918,21 @@ function SellerPage() {
         )}
       </div>
 
-      {/* Delivered Orders — delivered orders move here automatically. Download the
-          complete history as a PDF, then clear it to keep this list tidy. */}
-      {pastOrders.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+      {/* Delivered orders move out of the active list automatically and live on
+          their own page, so this dashboard doesn't fill up with completed cards. */}
+      {deliveredCount > 0 && (
+        <Link to="/seller/delivered"
+          className="mb-6 flex items-center justify-between gap-3 bg-white rounded-2xl p-4 hover:-translate-y-0.5 transition-transform"
+          style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] grid place-items-center flex-shrink-0"><CheckCircle size={18} className="text-[#059669]" /></div>
             <div>
-              <h2 className="font-black text-[#111827] flex items-center gap-2"><CheckCircle size={18} className="text-[#059669]" /> Delivered Orders</h2>
-              <p className="text-xs text-[#6b7280] mt-0.5">{pastOrders.length} delivered order{pastOrders.length === 1 ? "" : "s"} · download a full record before clearing this list.</p>
+              <p className="font-bold text-[#111827] text-sm">Delivered Orders</p>
+              <p className="text-xs text-[#6b7280]">{deliveredCount} order{deliveredCount === 1 ? "" : "s"} · view, download as PDF, or clear</p>
             </div>
-            <button onClick={clearHistory} disabled={clearBusy}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1E40AF] text-white text-sm font-bold disabled:opacity-60">
-              <Download size={15} /> {clearBusy ? "Working…" : "Download PDF & Clear"}
-            </button>
           </div>
-          <div className="space-y-4">
-            {pastOrders.map(o => <OrderCard key={o.id} order={o} onSetStatus={setOrderStatus} />)}
-          </div>
-        </div>
+          <ChevronRight size={18} className="text-[#6b7280] flex-shrink-0" />
+        </Link>
       )}
 
       {storeOpen && (
@@ -4014,6 +3997,90 @@ function SellerPage() {
   );
 }
 
+// ─── Seller: Delivered Orders (its own page, so the main dashboard doesn't fill
+// up with stacked cards as delivered history grows) ────────────────────────────
+function SellerDeliveredOrders() {
+  const { user, authReady } = useContext(Store);
+  const navigate = useNavigate();
+  const isSeller = !!user && (user.role === "seller" || user.role === "admin");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [clearBusy, setClearBusy] = useState(false);
+  const load = () => { sellerGetOrders().then(setOrders).catch(() => {}); };
+  useEffect(() => { if (isSeller) load(); }, [isSeller]);
+
+  const delivered = orders.filter(o => o.status === "Delivered");
+  const setOrderStatus = async (id: string, status: OrderStatus) => {
+    try {
+      const updated = await sellerUpdateOrderStatus(id, status);
+      setOrders(prev => prev.map(o => (o.id === id ? updated : o)));
+    } catch { /* ignore — keep current state */ }
+  };
+  const clearHistory = async () => {
+    if (delivered.length === 0) return;
+    if (!window.confirm(`Download your ${delivered.length} delivered order${delivered.length === 1 ? "" : "s"} as a PDF and clear them from this list? The PDF is your permanent record.`)) return;
+    downloadOrderHistoryPdf(delivered, user?.storeName || "");
+    const resetEarnings = window.confirm("Also reset your total earnings back to zero and start fresh?\n\nPress Cancel to clear the list but keep your all-time earnings unchanged.");
+    setClearBusy(true);
+    try { await sellerClearHistory(resetEarnings); load(); } catch { /* ignore */ }
+    setClearBusy(false);
+  };
+
+  if (!authReady) return <div className="max-w-sm mx-auto px-4 py-20 text-center text-sm text-[#6b7280]">Loading…</div>;
+  if (!isSeller) { navigate("/seller"); return null; }
+
+  const total = delivered.reduce((s, o) => s + o.total, 0);
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Link to="/seller" className="inline-flex items-center gap-1.5 text-sm font-bold text-[#1E40AF] hover:underline mb-4">
+        <ChevronLeft size={16} /> Back to Seller Dashboard
+      </Link>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] flex items-center gap-2">
+            <CheckCircle size={26} className="text-[#059669]" /> Delivered Orders
+          </h1>
+          <p className="text-sm text-[#6b7280] mt-0.5">{delivered.length} order{delivered.length === 1 ? "" : "s"} · {fmt(total)} total</p>
+        </div>
+        <button onClick={clearHistory} disabled={clearBusy || delivered.length === 0}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1E40AF] text-white text-sm font-bold disabled:opacity-60">
+          <Download size={15} /> {clearBusy ? "Working…" : "Download PDF & Clear"}
+        </button>
+      </div>
+
+      {delivered.length === 0 ? (
+        <div className="bg-white rounded-2xl p-16 text-center" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+          <Package size={56} className="mx-auto text-gray-300 mb-4" />
+          <p className="font-bold text-[#111827] mb-1">No delivered orders yet</p>
+          <p className="text-sm text-[#6b7280]">Orders you mark Delivered will show up here.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+          {delivered.map(o => (
+            <div key={o.id} className="flex flex-wrap items-center gap-3 p-3 border-b border-gray-100 last:border-0 text-sm">
+              <div className="w-24 flex-shrink-0">
+                <p className="font-bold text-[#1E40AF] truncate">#{o.id}</p>
+                <p className="text-[11px] text-[#6b7280]">{new Date(o.createdAt).toLocaleDateString()}</p>
+              </div>
+              <div className="w-40 flex-shrink-0 min-w-0">
+                <p className="font-semibold text-[#111827] truncate">{o.name}</p>
+                <a href={`https://wa.me/${toWaNumber(o.phone)}`} target="_blank" rel="noopener noreferrer"
+                  className="text-[11px] text-green-600 inline-flex items-center gap-0.5"><MessageCircle size={10} /> {o.phone}</a>
+              </div>
+              <div className="flex-1 min-w-[140px] text-[#6b7280] truncate">{o.items.map(it => `${it.name} ×${it.qty}`).join(", ")}</div>
+              <div className="w-20 flex-shrink-0 text-right font-bold text-[#111827]">{fmt(o.total)}</div>
+              <select value={o.status} onChange={e => setOrderStatus(o.id, e.target.value as OrderStatus)}
+                className="flex-shrink-0 text-xs font-bold px-2 py-1.5 rounded-lg border border-gray-200 bg-gray-50 outline-none focus:border-[#1E40AF]">
+                {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Scroll To Top ────────────────────────────────────────────────────────────
 // Reset scroll position the moment the route changes so navigation feels instant
 // instead of landing the new page at the previous scroll offset.
@@ -4046,6 +4113,7 @@ function AppShell() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/seller" element={<SellerPage />} />
+          <Route path="/seller/delivered" element={<SellerDeliveredOrders />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<HomePage />} />
