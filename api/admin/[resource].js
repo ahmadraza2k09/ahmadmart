@@ -180,7 +180,7 @@ async function sellers(req, res) {
     select
       u.id, u.name, u.email, u.store_name, u.whatsapp, u.jazzcash_number, u.jazzcash_title, u.created_at,
       (select count(*)::int from products p where p.seller_id = u.id) as product_count,
-      (select count(*)::int from orders o where o.seller_id = u.id) as order_count,
+      (select count(*)::int from orders o where o.seller_id = u.id and o.archived = false) as order_count,
       (select coalesce(sum(o.total), 0)::int from orders o
          where o.seller_id = u.id
            and o.status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')

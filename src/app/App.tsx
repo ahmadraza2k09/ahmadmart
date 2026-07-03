@@ -2135,6 +2135,7 @@ function CheckoutPage() {
   // Creates one DB order per seller (tied to the signed-in buyer). Each order is
   // routed to its seller and the customer sends payment proof per store on WhatsApp.
   const handleSubmit = async () => {
+    if (submitting) return; // guards against a double-click firing this twice
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     if (!user) { navigate("/login"); return; }
     setSubmitting(true); setSubmitErr("");

@@ -2,10 +2,13 @@
 // downloading it as a PDF (done client-side, before calling this).
 // POST { resetEarnings: boolean }:
 //   - Always archives every currently-visible Delivered order for this seller, so
-//     they drop out of the Past Orders list (the row itself is kept, never deleted).
+//     they drop out of the Past Orders list (the row itself is kept, never deleted)
+//     AND out of the "orders placed" count everywhere (seller's own dashboard,
+//     admin's seller list/detail) — cleared orders no longer count anywhere the
+//     seller can't see them, so the numbers always match what's actually visible.
 //   - If resetEarnings is true, also stamps the seller's earnings_reset_at to now,
 //     so every earnings figure (dashboard totals, admin's seller earnings) starts
-//     counting from zero going forward. Lifetime "orders placed" is unaffected.
+//     counting from zero going forward.
 import { getSql, getAuthUser, readJsonBody, ensureOrderHistoryColumns } from "../_db.js";
 
 export default async function handler(req, res) {

@@ -137,7 +137,7 @@ export async function ensureOrderHistoryColumns(sql) {
 //   joinedAt  — when the seller joined (ms)
 //   daily     — last 30 Pakistan-days, each { day:'YYYY-MM-DD', orders, sales }
 //   week/month — totals over the last 7 / 30 days
-//   totals    — all-time { ordersPlaced (any status), orders (approved), sales }
+//   totals    — all-time { ordersPlaced (any status, excluding cleared/archived), orders (approved), sales }
 //   since     — when fromDate is given: totals on/after that Pakistan date
 export async function sellerAnalytics(sql, sellerId, fromDate = null) {
   await ensureOrderHistoryColumns(sql);
@@ -161,7 +161,7 @@ export async function sellerAnalytics(sql, sellerId, fromDate = null) {
 
   const [tot] = await sql`
     select
-      count(*)::int as orders_placed,
+      count(*) filter (where archived = false)::int as orders_placed,
       count(*) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
                           and created_at >= coalesce(${resetAt}, '-infinity'::timestamptz))::int as orders,
       coalesce(sum(total) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
@@ -185,7 +185,7 @@ export async function sellerAnalytics(sql, sellerId, fromDate = null) {
   let since = null;
   if (fromDate) {
     const [s] = await sql`
-      select count(*)::int as orders_placed,
+      select count(*) filter (where archived = false)::int as orders_placed,
              count(*) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
                                  and created_at >= coalesce(${resetAt}, '-infinity'::timestamptz))::int as orders,
              coalesce(sum(total) filter (where status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
