@@ -3836,6 +3836,15 @@ function SellerPage() {
   const isSeller = !!user && (user.role === "seller" || user.role === "admin");
   const load = () => { sellerGetProducts().then(setProducts).catch(e => setErr(e instanceof Error ? e.message : "Failed to load products")); };
   useEffect(() => { if (isSeller) { load(); sellerGetAnalytics().then(setAnalytics).catch(() => {}); loadOrders(); } }, [isSeller]);
+  const [resetBusy, setResetBusy] = useState(false);
+  // Independent of the Delivered Orders page's clear flow — a seller can zero out
+  // their earnings at any time, even with no delivered orders currently pending.
+  const resetEarnings = async () => {
+    if (!window.confirm("Permanently reset your all-time earnings to zero and start fresh? Any delivered orders still in your Past Orders list will also be cleared (download their PDF first if you want a record). This cannot be undone.")) return;
+    setResetBusy(true);
+    try { await sellerClearHistory(); sellerGetAnalytics().then(setAnalytics).catch(() => {}); loadOrders(); } catch { /* ignore */ }
+    setResetBusy(false);
+  };
   // When the seller opens the add/edit form, bring it into view — the form sits
   // below the dashboard, so without this the click felt like nothing happened.
   const formRef = useRef<HTMLDivElement>(null);
@@ -3914,7 +3923,13 @@ function SellerPage() {
             <h2 className="font-black text-[#111827] flex items-center gap-2"><TrendingUp size={18} className="text-[#1E40AF]" /> Your sales analytics</h2>
             {analytics?.joinedAt && <p className="text-xs text-[#6b7280] mt-0.5">You joined Ahmad Mart on <span className="font-semibold text-[#374151]">{fmtPKDate(analytics.joinedAt)}</span></p>}
           </div>
-          <PakistanClock />
+          <div className="flex items-center gap-2">
+            <PakistanClock />
+            <button onClick={resetEarnings} disabled={resetBusy} title="Permanently reset your all-time earnings to zero"
+              className="text-xs font-bold px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60">
+              {resetBusy ? "Working…" : "Reset Earnings"}
+            </button>
+          </div>
         </div>
         {analytics
           ? <SalesAnalyticsView data={analytics} />
