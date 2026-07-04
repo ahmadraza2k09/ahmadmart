@@ -40,7 +40,7 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
         heading: "Order Status Stages",
         bullets: [
           "Pending Approval: your order has been placed and is waiting for the seller or admin to confirm it on WhatsApp.",
-          "Payment Received: for JazzCash orders, your payment has been verified and the order is being prepared.",
+          "Payment Received: for mobile wallet orders (JazzCash, SadaPay, NayaPay, or Easypaisa), your payment has been verified and the order is being prepared.",
           "Confirmed (COD): for Cash on Delivery orders in Multan, your order is confirmed and being prepared.",
           "Shipped: your order has been handed to the courier and is on its way.",
           "Delivered: your order has reached you. Enjoy your purchase.",
@@ -90,7 +90,7 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
       {
         heading: "Refunds",
         bullets: [
-          "Approved refunds are processed by JazzCash or by bank transfer after the returned item is received and inspected.",
+          "Approved refunds are processed by mobile wallet transfer (JazzCash, SadaPay, NayaPay, or Easypaisa) or by bank transfer after the returned item is received and inspected.",
           "You may also choose a replacement of the same item where stock allows.",
           "Delivery charges are non refundable unless the return is due to our error, a wrong item, or a faulty product.",
         ],
@@ -120,7 +120,7 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
           "Your name, WhatsApp number, and delivery address, which are needed to process and deliver your order.",
           "Your email address, if you choose to provide it.",
           "Order details such as the items you buy, totals, and order status.",
-          "If you sell on Ahmad Mart, your store name, WhatsApp number, and JazzCash details.",
+          "If you sell on Ahmad Mart, your store name, WhatsApp number, and payment account (JazzCash, SadaPay, NayaPay, or Easypaisa) details.",
         ],
       },
       {
@@ -134,7 +134,7 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
       },
       {
         heading: "Payment Information",
-        paragraphs: ["Payments are made by JazzCash through WhatsApp or by Cash on Delivery in the Multan region. We do not collect or store your card or banking passwords. JazzCash transfers are completed by you directly and verified from your screenshot."],
+        paragraphs: ["Payments are made by mobile wallet transfer (JazzCash, SadaPay, NayaPay, or Easypaisa — whichever the seller accepts) through WhatsApp, or by Cash on Delivery in the Multan region. We do not collect or store your card or banking passwords. Wallet transfers are completed by you directly and verified from your screenshot."],
       },
       {
         heading: "How We Share Information",
@@ -175,8 +175,8 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
       {
         heading: "Payment",
         bullets: [
-          "JazzCash through WhatsApp is available across Pakistan. You send the payment and share your screenshot for verification.",
-          "Cash on Delivery is available in the Multan region only. Orders outside Multan must use JazzCash.",
+          "Mobile wallet transfer (JazzCash, SadaPay, NayaPay, or Easypaisa, depending on the seller) through WhatsApp is available across Pakistan. You send the payment and share your screenshot for verification.",
+          "Cash on Delivery is available in the Multan region only. Orders outside Multan must pay by wallet transfer.",
         ],
       },
       {
@@ -215,14 +215,14 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
     sections: [
       {
         faqs: [
-          { q: "What payment methods do you accept?", a: `We accept JazzCash (paid through WhatsApp) across Pakistan, and Cash on Delivery in the Multan region only. Contact us on WhatsApp at ${WHATSAPP_DISPLAY} if you need help.` },
+          { q: "What payment methods do you accept?", a: `We accept mobile wallet transfer — JazzCash, SadaPay, NayaPay, or Easypaisa depending on the seller (paid through WhatsApp) — across Pakistan, and Cash on Delivery in the Multan region only. Contact us on WhatsApp at ${WHATSAPP_DISPLAY} if you need help.` },
           { q: "What are the delivery charges?", a: "Delivery charges are set by each seller and can vary by product. You always see the exact delivery charge at checkout before placing your order." },
-          { q: "Where is Cash on Delivery available?", a: "Cash on Delivery is available in the Multan region only. For all other areas, please pay with JazzCash through WhatsApp." },
+          { q: "Where is Cash on Delivery available?", a: "Cash on Delivery is available in the Multan region only. For all other areas, please pay by mobile wallet transfer through WhatsApp." },
           { q: "How long does delivery take?", a: "Multan usually takes 1 to 2 working days, and the rest of Pakistan usually takes 3 to 5 working days. Times may vary on holidays and busy periods." },
-          { q: "How do I place an order?", a: "Add items to your cart or tap Buy Now, fill in your details at checkout, choose JazzCash or Cash on Delivery, then place the order. It opens on WhatsApp so you can complete payment and confirm." },
+          { q: "How do I place an order?", a: "Add items to your cart or tap Buy Now, fill in your details at checkout, choose wallet transfer or Cash on Delivery, then place the order. It opens on WhatsApp so you can complete payment and confirm." },
           { q: "How do I track my order?", a: "Sign in and open My Orders to see the live status, or message us on WhatsApp with your Order ID." },
           { q: "Can I return a product?", a: "Yes. You can request a return within 7 days of delivery if the item is unused and in its original condition. See our Return and Refund Policy for full details." },
-          { q: "How do I become a seller?", a: "Register as a seller, add your store name, WhatsApp, and JazzCash details, then list your products. Ahmad Mart charges 0% commission." },
+          { q: "How do I become a seller?", a: "Register as a seller, add your store name, WhatsApp, and payment account (JazzCash, SadaPay, NayaPay, or Easypaisa) details, then list your products. Ahmad Mart charges 0% commission." },
           { q: "How can I contact Ahmad Mart?", a: `Message us on WhatsApp at ${WHATSAPP_DISPLAY} or email ${SUPPORT_EMAIL}. We are happy to help.` },
         ],
       },

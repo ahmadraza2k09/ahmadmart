@@ -11,11 +11,11 @@ import {
   Copy, ShieldCheck, Lock, RefreshCw, MessageCircle, ImageOff, Upload, Globe, Download
 } from "lucide-react";
 import {
-  JAZZCASH_NUMBER, JAZZCASH_TITLE, WHATSAPP_DISPLAY, WHATSAPP_NUMBER,
-  ORDER_STATUSES, newOrderId,
+  WHATSAPP_DISPLAY, WHATSAPP_NUMBER,
+  ORDER_STATUSES, ACCOUNT_TYPES, OFFICIAL_ACCOUNT_TYPE, newOrderId,
   sendOrderEmail, whatsappOrderUrl, whatsappDeliveredUrl, toWaNumber, isCashOnDelivery,
   fileToCompressedDataURL, validateProofFile,
-  type Order, type OrderStatus,
+  type Order, type OrderStatus, type AccountType,
 } from "./orderStore";
 import {
   getProductReviews, saveReview, newReviewId, type UserReview,
@@ -71,7 +71,7 @@ interface StoreCtx {
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string, role: Role, seller?: SellerSignup) => Promise<void>;
   changeRole: (role: Role) => Promise<void>;
-  updateStore: (fields: { storeName: string; whatsapp: string; jazzcashNumber?: string; jazzcashTitle?: string }) => Promise<void>;
+  updateStore: (fields: { storeName: string; whatsapp: string; accountNumber?: string; accountTitle?: string; accountType?: AccountType }) => Promise<void>;
   logout: () => void;
   recentlyViewed: Product[];
   addRecentlyViewed: (p: Product) => void;
@@ -445,7 +445,7 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
     const { token, user } = await apiChangeRole(role);
     setToken(token); setUser(user);
   }, []);
-  const updateStore = useCallback(async (fields: { storeName: string; whatsapp: string; jazzcashNumber?: string; jazzcashTitle?: string }) => {
+  const updateStore = useCallback(async (fields: { storeName: string; whatsapp: string; accountNumber?: string; accountTitle?: string; accountType?: AccountType }) => {
     const { user } = await apiUpdateStore(fields);
     setUser(user);
   }, []);
@@ -1110,7 +1110,7 @@ function Footer() {
           <div className="flex gap-2 items-center">
             <span className="text-gray-500 text-xs">We accept:</span>
             <div className="flex gap-2">
-              {["JazzCash", "COD"].map(m => (
+              {["JazzCash", "SadaPay", "NayaPay", "Easypaisa", "COD"].map(m => (
                 <span key={m} className="px-2 py-1 bg-white/10 rounded text-xs text-gray-300 font-medium">{m}</span>
               ))}
             </div>
@@ -1357,7 +1357,7 @@ function HomePage() {
             {[
               { icon: Award, title: "Premium Quality", desc: "Every product is checked for quality and sourced from verified suppliers.", color: "#1E40AF" },
               { icon: TrendingUp, title: "Best Prices", desc: "We offer the most competitive prices in Pakistan with no hidden charges.", color: "#F97316" },
-              { icon: Truck, title: "Nationwide Delivery", desc: "Fast, reliable delivery to all cities across Pakistan. Cash on Delivery is available in Multan only, and Multan orders can pay by COD or JazzCash.", color: "#059669" },
+              { icon: Truck, title: "Nationwide Delivery", desc: "Fast, reliable delivery to all cities across Pakistan. Cash on Delivery is available in Multan only, and Multan orders can pay by COD or mobile wallet.", color: "#059669" },
               { icon: Shield, title: "Secure Shopping", desc: "Your data and payments are completely safe with strong encryption.", color: "#7C3AED" },
               { icon: RotateCcw, title: "Easy Returns", desc: "Not satisfied? Return within 7 days for an easy, no fuss refund.", color: "#DC2626" },
               { icon: Headphones, title: "24/7 Support", desc: "Our team is always here to help. Reach us anytime on WhatsApp.", color: "#B45309" },
@@ -2076,7 +2076,7 @@ function CartPage() {
   );
 }
 
-// ─── Checkout Page (Manual JazzCash Payment) ──────────────────────────────────
+// ─── Checkout Page (Manual Wallet-Transfer Payment) ───────────────────────────
 function CheckoutPage() {
   const { cart, cartTotal, clearCart, user } = useContext(Store);
   const navigate = useNavigate();
@@ -2085,25 +2085,31 @@ function CheckoutPage() {
   const [copied, setCopied] = useState("");
   const [placedOrders, setPlacedOrders] = useState<Order[] | null>(null);
   const [orderBaseId] = useState(newOrderId());
-  // Two payment options: JazzCash (paid via WhatsApp, nationwide) or Cash on
-  // Delivery (Multan region only).
-  const [payment, setPayment] = useState<"jazzcash" | "cod">("jazzcash");
+  // Two payment options: mobile wallet transfer (paid via WhatsApp, nationwide —
+  // whichever wallet the seller accepts) or Cash on Delivery (Multan region only).
+  const [payment, setPayment] = useState<"wallet" | "cod">("wallet");
   const isCOD = payment === "cod";
   const [submitting, setSubmitting] = useState(false);
   const [submitErr, setSubmitErr] = useState("");
 
   // Split-per-seller: group the cart by seller so each store gets its own order
-  // routed to that seller's WhatsApp / JazzCash. Official products group together.
+  // routed to that seller's WhatsApp / payment account. Official products group together.
   const groups = useMemo(() => {
-    const map = new Map<string, { sellerId?: number; sellerStore?: string; sellerWhatsapp?: string; sellerJazzcashNumber?: string; sellerJazzcashTitle?: string; items: CartItem[] }>();
+    const map = new Map<string, { sellerId?: number; sellerStore?: string; sellerWhatsapp?: string; sellerAccountNumber?: string; sellerAccountTitle?: string; sellerAccountType?: AccountType; items: CartItem[] }>();
     for (const it of cart) {
       const key = it.sellerId ? `s${it.sellerId}` : "official";
       let g = map.get(key);
-      if (!g) { g = { sellerId: it.sellerId, sellerStore: it.sellerStore, sellerWhatsapp: it.sellerWhatsapp, sellerJazzcashNumber: it.sellerJazzcashNumber, sellerJazzcashTitle: it.sellerJazzcashTitle, items: [] }; map.set(key, g); }
+      if (!g) { g = { sellerId: it.sellerId, sellerStore: it.sellerStore, sellerWhatsapp: it.sellerWhatsapp, sellerAccountNumber: it.sellerAccountNumber, sellerAccountTitle: it.sellerAccountTitle, sellerAccountType: it.sellerAccountType, items: [] }; map.set(key, g); }
       g.items.push(it);
     }
     return Array.from(map.values());
   }, [cart]);
+
+  // The wallet name to show the buyer before submission. If every seller in the
+  // cart uses the same wallet, name it directly; otherwise show a generic label
+  // since each order's own WhatsApp message will name that seller's exact wallet.
+  const walletTypes = Array.from(new Set(groups.map(g => g.sellerAccountType || OFFICIAL_ACCOUNT_TYPE)));
+  const walletLabel = walletTypes.length === 1 ? walletTypes[0] : "Mobile Wallet";
 
   // Delivery is set by each seller (per product). One shipment per seller is
   // charged at the highest delivery charge among that seller's items.
@@ -2127,7 +2133,7 @@ function CheckoutPage() {
     if (!form.phone.trim() || !/^0\d{9,10}$/.test(form.phone.trim())) e.phone = "Enter a valid WhatsApp number (e.g. 03001234567)";
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Enter a valid email address";
     if (!form.address.trim()) e.address = "Complete shipping address is required";
-    else if (isCOD && !/multan/i.test(form.address)) e.address = "Cash on Delivery is available in Multan only. Enter a Multan delivery address, or choose JazzCash.";
+    else if (isCOD && !/multan/i.test(form.address)) e.address = "Cash on Delivery is available in Multan only. Enter a Multan delivery address, or choose wallet transfer.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -2156,13 +2162,14 @@ function CheckoutPage() {
           subtotal,
           shipping: groupShipping,
           total: groupTotal,
-          paymentMethod: isCOD ? "Cash on Delivery" : "JazzCash (via WhatsApp)",
+          paymentMethod: isCOD ? "Cash on Delivery" : `${g.sellerAccountType || OFFICIAL_ACCOUNT_TYPE} (via WhatsApp)`,
           status: "Pending Approval",
           sellerId: g.sellerId,
           sellerStore: g.sellerStore,
           sellerWhatsapp: g.sellerWhatsapp,
-          sellerJazzcashNumber: g.sellerJazzcashNumber,
-          sellerJazzcashTitle: g.sellerJazzcashTitle,
+          sellerAccountNumber: g.sellerAccountNumber,
+          sellerAccountTitle: g.sellerAccountTitle,
+          sellerAccountType: g.sellerAccountType,
         };
         await createOrder(order);
         created.push(order);
@@ -2286,13 +2293,13 @@ function CheckoutPage() {
           <div className="bg-white rounded-2xl p-6" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08)" }}>
             <h3 className="font-bold text-[#111827] mb-4 flex items-center gap-2"><Tag size={18} className="text-[#F97316]" /> Delivery & Payment</h3>
             <div className="grid sm:grid-cols-2 gap-3">
-              <button type="button" onClick={() => setPayment("jazzcash")}
+              <button type="button" onClick={() => setPayment("wallet")}
                 className={`text-left rounded-xl border-2 p-4 transition-all ${!isCOD ? "border-[#1E40AF] bg-blue-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="flex items-center gap-2 font-bold text-[#111827] text-sm"><Smartphone size={16} className="text-[#1E40AF]" /> JazzCash</span>
+                  <span className="flex items-center gap-2 font-bold text-[#111827] text-sm"><Smartphone size={16} className="text-[#1E40AF]" /> {walletLabel}</span>
                   <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${!isCOD ? "border-[#1E40AF] bg-[#1E40AF]" : "border-gray-300"}`} />
                 </div>
-                <p className="text-xs text-[#6b7280]">Pay via JazzCash through WhatsApp. Available nationwide.</p>
+                <p className="text-xs text-[#6b7280]">Pay via {walletLabel} through WhatsApp. Available nationwide.</p>
               </button>
               <button type="button" onClick={() => { setPayment("cod"); setPromoMsg(""); }}
                 className={`text-left rounded-xl border-2 p-4 transition-all ${isCOD ? "border-[#059669] bg-emerald-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
@@ -2312,8 +2319,8 @@ function CheckoutPage() {
                 {isCOD ? <Truck size={20} className="text-white" /> : <Smartphone size={20} className="text-white" />}
               </div>
               <div>
-                <p className="font-black text-white text-base leading-tight">{isCOD ? "Cash on Delivery" : "Pay via JazzCash on WhatsApp"}</p>
-                <p className="text-white/80 text-xs">{isCOD ? "Pay in cash when your order arrives in Multan" : "Send your JazzCash payment screenshot on WhatsApp"}</p>
+                <p className="font-black text-white text-base leading-tight">{isCOD ? "Cash on Delivery" : `Pay via ${walletLabel} on WhatsApp`}</p>
+                <p className="text-white/80 text-xs">{isCOD ? "Pay in cash when your order arrives in Multan" : `Send your ${walletLabel} payment screenshot on WhatsApp`}</p>
               </div>
             </div>
             <div className="p-6">
@@ -2329,8 +2336,8 @@ function CheckoutPage() {
                       ]
                     : [
                         "Fill in your details, then tap “Pay via WhatsApp”.",
-                        "Your order opens in WhatsApp with the JazzCash number and amount.",
-                        "Send the payment, then attach the JazzCash screenshot in that chat.",
+                        `Your order opens in WhatsApp with the ${walletLabel} number and amount.`,
+                        `Send the payment, then attach the ${walletLabel} screenshot in that chat.`,
                         "We verify it and confirm your order on WhatsApp.",
                       ]
                   ).map((text, i) => (
@@ -2384,7 +2391,7 @@ function CheckoutPage() {
             <div className="space-y-2 mb-5 border-t border-gray-100 pt-4">
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Subtotal</span><span className="font-semibold">{fmt(cartTotal)}</span></div>
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Delivery {groups.length > 1 ? `(${groups.length} stores)` : ""}</span><span className="font-semibold">{fmt(totalDelivery)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Payment</span><span className="font-semibold">{isCOD ? "Cash on Delivery" : "JazzCash"}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Payment</span><span className="font-semibold">{isCOD ? "Cash on Delivery" : walletLabel}</span></div>
               <div className="flex justify-between font-black text-[#111827] text-base border-t border-gray-100 pt-2"><span>Total</span><span className="text-[#1E40AF]">{fmt(grandTotal)}</span></div>
             </div>
             <button onClick={handleSubmit} disabled={submitting}
@@ -2396,7 +2403,7 @@ function CheckoutPage() {
             <p className="text-[11px] text-[#6b7280] text-center mt-3">
               {isCOD
                 ? "We'll save your order and confirm it on WhatsApp. Cash is collected on delivery in Multan."
-                : "We'll save your order, then you send your JazzCash payment on WhatsApp for approval."}
+                : `We'll save your order, then you send your ${walletLabel} payment on WhatsApp for approval.`}
             </p>
           </div>
         </div>
@@ -2503,7 +2510,7 @@ function LoginPage() {
 // ─── Register Page ────────────────────────────────────────────────────────────
 function RegisterPage() {
   const { signup } = useContext(Store);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "", role: "buyer" as Role, storeName: "", whatsapp: "", city: "", jazzcashNumber: "", jazzcashTitle: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "", role: "buyer" as Role, storeName: "", whatsapp: "", city: "", accountNumber: "", accountTitle: "", accountType: "JazzCash" as AccountType });
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -2520,7 +2527,7 @@ function RegisterPage() {
       if (!form.city.trim()) { setErr("Please enter your city"); return; }
     }
     const seller: SellerSignup | undefined = form.role === "seller"
-      ? { storeName: form.storeName.trim(), whatsapp: form.whatsapp.trim(), city: form.city.trim(), jazzcashNumber: form.jazzcashNumber.trim() || undefined, jazzcashTitle: form.jazzcashTitle.trim() || undefined }
+      ? { storeName: form.storeName.trim(), whatsapp: form.whatsapp.trim(), city: form.city.trim(), accountNumber: form.accountNumber.trim() || undefined, accountTitle: form.accountTitle.trim() || undefined, accountType: form.accountType }
       : undefined;
     setBusy(true); setErr("");
     try {
@@ -2615,16 +2622,24 @@ function RegisterPage() {
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
                   <p className="text-[11px] text-[#6b7280] mt-1">The city your store ships from.</p>
                 </div>
+                <div>
+                  <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Payment Method</label>
+                  <select value={form.accountType} onChange={e => setForm(f => ({ ...f, accountType: e.target.value as AccountType }))}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]">
+                    {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <p className="text-[11px] text-[#6b7280] mt-1">Buyers send your payment to this account on WhatsApp.</p>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-semibold text-[#374151] mb-1.5 block">JazzCash Number</label>
-                    <input type="tel" value={form.jazzcashNumber} onChange={e => setForm(f => ({ ...f, jazzcashNumber: e.target.value }))}
+                    <label className="text-sm font-semibold text-[#374151] mb-1.5 block">{form.accountType} Number</label>
+                    <input type="tel" value={form.accountNumber} onChange={e => setForm(f => ({ ...f, accountNumber: e.target.value }))}
                       placeholder="03001234567"
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-[#374151] mb-1.5 block">JazzCash Title</label>
-                    <input type="text" value={form.jazzcashTitle} onChange={e => setForm(f => ({ ...f, jazzcashTitle: e.target.value }))}
+                    <label className="text-sm font-semibold text-[#374151] mb-1.5 block">{form.accountType} Title</label>
+                    <input type="text" value={form.accountTitle} onChange={e => setForm(f => ({ ...f, accountTitle: e.target.value }))}
                       placeholder="Account holder name"
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
                   </div>
@@ -3593,7 +3608,7 @@ function AdminSellerRow({ seller, onDeleted }: { seller: SellerSummary; onDelete
         <div className="min-w-0">
           <p className="font-bold text-[#111827]">{seller.storeName || "(no store name)"}</p>
           <p className="text-xs text-[#6b7280]">{seller.name} · {seller.email}</p>
-          <p className="text-xs text-[#6b7280] mt-1">WhatsApp: <span className="font-semibold text-[#374151]">{seller.whatsapp || "—"}</span> · JazzCash: <span className="font-semibold text-[#374151]">{seller.jazzcashNumber || "—"}{seller.jazzcashTitle ? ` (${seller.jazzcashTitle})` : ""}</span></p>
+          <p className="text-xs text-[#6b7280] mt-1">WhatsApp: <span className="font-semibold text-[#374151]">{seller.whatsapp || "—"}</span> · {seller.accountType || "JazzCash"}: <span className="font-semibold text-[#374151]">{seller.accountNumber || "—"}{seller.accountTitle ? ` (${seller.accountTitle})` : ""}</span></p>
           <p className="text-xs text-[#6b7280] mt-1">Joined Ahmad Mart: <span className="font-semibold text-[#374151]">{fmtPKDate(seller.joinedAt)}</span></p>
         </div>
         <div className="flex gap-4 text-center flex-shrink-0">
@@ -3758,7 +3773,7 @@ function SellerPage() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [storeOpen, setStoreOpen] = useState(false);
-  const [storeForm, setStoreForm] = useState({ storeName: "", whatsapp: "", city: "", jazzcashNumber: "", jazzcashTitle: "" });
+  const [storeForm, setStoreForm] = useState({ storeName: "", whatsapp: "", city: "", accountNumber: "", accountTitle: "", accountType: "JazzCash" as AccountType });
   const [storeBusy, setStoreBusy] = useState(false);
   const [storeMsg, setStoreMsg] = useState("");
   const [bulkDelivery, setBulkDelivery] = useState("");
@@ -3784,7 +3799,7 @@ function SellerPage() {
   const deliveredCount = orders.filter(o => o.status === "Delivered").length;
 
   const openStoreEdit = () => {
-    setStoreForm({ storeName: user?.storeName || "", whatsapp: user?.whatsapp || "", city: user?.city || "", jazzcashNumber: user?.jazzcashNumber || "", jazzcashTitle: user?.jazzcashTitle || "" });
+    setStoreForm({ storeName: user?.storeName || "", whatsapp: user?.whatsapp || "", city: user?.city || "", accountNumber: user?.accountNumber || "", accountTitle: user?.accountTitle || "", accountType: user?.accountType || "JazzCash" });
     setStoreMsg(""); setStoreOpen(true);
   };
   const saveStore = async () => {
@@ -3793,7 +3808,7 @@ function SellerPage() {
     if (!storeForm.city.trim()) { setStoreMsg("City is required."); return; }
     setStoreBusy(true); setStoreMsg("");
     try {
-      await updateStore({ storeName: storeForm.storeName.trim(), whatsapp: storeForm.whatsapp.trim(), city: storeForm.city.trim(), jazzcashNumber: storeForm.jazzcashNumber.trim() || undefined, jazzcashTitle: storeForm.jazzcashTitle.trim() || undefined });
+      await updateStore({ storeName: storeForm.storeName.trim(), whatsapp: storeForm.whatsapp.trim(), city: storeForm.city.trim(), accountNumber: storeForm.accountNumber.trim() || undefined, accountTitle: storeForm.accountTitle.trim() || undefined, accountType: storeForm.accountType });
       setStoreOpen(false);
     } catch (e) { setStoreMsg(e instanceof Error ? e.message : "Could not save store details."); }
     setStoreBusy(false);
@@ -3880,7 +3895,7 @@ function SellerPage() {
           <p className="text-[#374151]">Store: <span className="font-semibold">{user.storeName || "—"}</span></p>
           <p className="text-[#374151]">WhatsApp: <span className="font-semibold">{user.whatsapp || "—"}</span></p>
           <p className="text-[#374151]">City: <span className="font-semibold">{user.city || "—"}</span></p>
-          <p className="text-[#374151]">JazzCash: <span className="font-semibold">{user.jazzcashNumber || "—"}{user.jazzcashTitle ? ` (${user.jazzcashTitle})` : ""}</span></p>
+          <p className="text-[#374151]">{user.accountType || "JazzCash"}: <span className="font-semibold">{user.accountNumber || "—"}{user.accountTitle ? ` (${user.accountTitle})` : ""}</span></p>
         </div>
       </div>
 
@@ -3939,13 +3954,18 @@ function SellerPage() {
       {storeOpen && (
         <div className="bg-white rounded-2xl p-5 mb-6" style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.12)" }}>
           <p className="font-bold text-[#111827] mb-1">Edit store details</p>
-          <p className="text-xs text-[#6b7280] mb-4">Buyers check out and contact you on this WhatsApp; payments go to this JazzCash.</p>
+          <p className="text-xs text-[#6b7280] mb-4">Buyers check out and contact you on this WhatsApp; payments go to this account.</p>
           <div className="grid sm:grid-cols-2 gap-3">
             <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Store Name *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.storeName} onChange={e => setStoreForm(f => ({ ...f, storeName: e.target.value }))} /></label>
             <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Store WhatsApp *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.whatsapp} onChange={e => setStoreForm(f => ({ ...f, whatsapp: e.target.value }))} placeholder="03001234567" /></label>
             <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">City *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.city} onChange={e => setStoreForm(f => ({ ...f, city: e.target.value }))} placeholder="e.g. Multan" /></label>
-            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">JazzCash Number</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.jazzcashNumber} onChange={e => setStoreForm(f => ({ ...f, jazzcashNumber: e.target.value }))} placeholder="03001234567" /></label>
-            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">JazzCash Title</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.jazzcashTitle} onChange={e => setStoreForm(f => ({ ...f, jazzcashTitle: e.target.value }))} placeholder="Account holder name" /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Payment Method</span>
+              <select className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountType} onChange={e => setStoreForm(f => ({ ...f, accountType: e.target.value as AccountType }))}>
+                {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">{storeForm.accountType} Number</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountNumber} onChange={e => setStoreForm(f => ({ ...f, accountNumber: e.target.value }))} placeholder="03001234567" /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">{storeForm.accountType} Title</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountTitle} onChange={e => setStoreForm(f => ({ ...f, accountTitle: e.target.value }))} placeholder="Account holder name" /></label>
           </div>
           {storeMsg && <p className="text-xs text-red-500 font-semibold mt-2">{storeMsg}</p>}
           <div className="flex gap-2 mt-4">

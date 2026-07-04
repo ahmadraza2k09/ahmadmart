@@ -4,7 +4,7 @@
 // Note: admin has no orders endpoint — orders are managed entirely by the seller
 // (or the buyer, for their own history); admin only sees aggregate counts and
 // earnings per seller via the "sellers" resource below.
-import { getSql, requireAdmin, rowToProduct, readJsonBody, sellerAnalytics, deleteSellerCascade, ensureOrderHistoryColumns } from "../_db.js";
+import { getSql, requireAdmin, rowToProduct, readJsonBody, sellerAnalytics, deleteSellerCascade, ensureOrderHistoryColumns, ensureAccountTypeColumn } from "../_db.js";
 
 export default async function handler(req, res) {
   if (!requireAdmin(req, res)) return;
@@ -138,6 +138,7 @@ async function seed(req, res) {
 async function sellers(req, res) {
   const sql = getSql();
   await ensureOrderHistoryColumns(sql);
+  await ensureAccountTypeColumn(sql);
 
   // Permanently delete a seller and all of their data (asked for via the admin UI
   // only after an explicit confirmation).
@@ -159,7 +160,7 @@ async function sellers(req, res) {
   if (detailId) {
     const id = Number(detailId);
     const [u] = await sql`
-      select id, name, email, store_name, whatsapp, jazzcash_number, jazzcash_title, created_at
+      select id, name, email, store_name, whatsapp, jazzcash_number, jazzcash_title, account_type, created_at
       from users where id = ${id} and role = 'seller'`;
     if (!u) { res.status(404).json({ error: "Seller not found." }); return; }
     const from = req.query.from || null;
@@ -168,7 +169,7 @@ async function sellers(req, res) {
       seller: {
         id: u.id, name: u.name, email: u.email,
         storeName: u.store_name ?? "", whatsapp: u.whatsapp ?? "",
-        jazzcashNumber: u.jazzcash_number ?? "", jazzcashTitle: u.jazzcash_title ?? "",
+        accountNumber: u.jazzcash_number ?? "", accountTitle: u.jazzcash_title ?? "", accountType: u.account_type || "JazzCash",
         joinedAt: new Date(u.created_at).getTime(),
       },
       analytics,
@@ -178,7 +179,7 @@ async function sellers(req, res) {
 
   const rows = await sql`
     select
-      u.id, u.name, u.email, u.store_name, u.whatsapp, u.jazzcash_number, u.jazzcash_title, u.created_at,
+      u.id, u.name, u.email, u.store_name, u.whatsapp, u.jazzcash_number, u.jazzcash_title, u.account_type, u.created_at,
       (select count(*)::int from products p where p.seller_id = u.id) as product_count,
       (select count(*)::int from orders o where o.seller_id = u.id and o.archived = false) as order_count,
       (select coalesce(sum(o.total), 0)::int from orders o
@@ -191,7 +192,7 @@ async function sellers(req, res) {
   const list = rows.map(r => ({
     id: r.id, name: r.name, email: r.email,
     storeName: r.store_name ?? "", whatsapp: r.whatsapp ?? "",
-    jazzcashNumber: r.jazzcash_number ?? "", jazzcashTitle: r.jazzcash_title ?? "",
+    accountNumber: r.jazzcash_number ?? "", accountTitle: r.jazzcash_title ?? "", accountType: r.account_type || "JazzCash",
     productCount: r.product_count, orderCount: r.order_count, earnings: r.earnings,
     joinedAt: new Date(r.created_at).getTime(),
   }));

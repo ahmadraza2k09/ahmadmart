@@ -1,5 +1,5 @@
 // GET /api/products — public list of all products for the storefront.
-import { getSql, rowToProduct } from "./_db.js";
+import { getSql, rowToProduct, ensureAccountTypeColumn } from "./_db.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -14,7 +14,8 @@ export default async function handler(req, res) {
              u.whatsapp        as seller_whatsapp,
              u.city            as seller_city,
              u.jazzcash_number as seller_jazzcash_number,
-             u.jazzcash_title  as seller_jazzcash_title
+             u.jazzcash_title  as seller_jazzcash_title,
+             u.account_type    as seller_account_type
       from products p
       left join users u on u.id = p.seller_id
       order by p.id`;
@@ -22,10 +23,11 @@ export default async function handler(req, res) {
     try {
       rows = await query();
     } catch {
-      // The seller "city" column may not exist yet (created lazily on first seller
-      // signup / store edit). Ensure it once, then retry — so the storefront never
-      // breaks just because no seller has set a city yet.
+      // The seller "city"/"account_type" columns may not exist yet (created lazily
+      // on first seller signup / store edit). Ensure them once, then retry — so the
+      // storefront never breaks just because no seller has set them yet.
       await sql`alter table users add column if not exists city text`;
+      await ensureAccountTypeColumn(sql);
       rows = await query();
     }
     res.setHeader("Cache-Control", "no-store");

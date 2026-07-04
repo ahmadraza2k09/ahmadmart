@@ -47,8 +47,9 @@ export function userPublic(row) {
     storeName: row.store_name ?? undefined,
     whatsapp: row.whatsapp ?? undefined,
     city: row.city ?? undefined,
-    jazzcashNumber: row.jazzcash_number ?? undefined,
-    jazzcashTitle: row.jazzcash_title ?? undefined,
+    accountNumber: row.jazzcash_number ?? undefined,
+    accountTitle: row.jazzcash_title ?? undefined,
+    accountType: row.account_type || "JazzCash",
   };
 }
 
@@ -114,8 +115,9 @@ export function rowToProduct(r) {
     sellerStore: r.seller_store ?? undefined,
     sellerCity: r.seller_city ?? undefined,
     sellerWhatsapp: r.seller_whatsapp ?? undefined,
-    sellerJazzcashNumber: r.seller_jazzcash_number ?? undefined,
-    sellerJazzcashTitle: r.seller_jazzcash_title ?? undefined,
+    sellerAccountNumber: r.seller_jazzcash_number ?? undefined,
+    sellerAccountTitle: r.seller_jazzcash_title ?? undefined,
+    sellerAccountType: r.seller_account_type || "JazzCash",
   };
 }
 
@@ -129,6 +131,14 @@ export async function ensureOrderHistoryColumns(sql) {
   // independent of the seller's archived flag, so hiding it from the buyer never
   // hides it from the seller (who still needs to fulfil it) or vice versa.
   await sql`alter table orders add column if not exists buyer_hidden boolean not null default false`;
+}
+
+// A seller (or the official store) can accept JazzCash, SadaPay, NayaPay, or
+// Easypaisa — this column records which one the jazzcash_number/jazzcash_title
+// columns (kept as-is to avoid a data migration) actually belong to. Existing
+// sellers default to 'JazzCash', which matches what those columns already held.
+export async function ensureAccountTypeColumn(sql) {
+  await sql`alter table users add column if not exists account_type text not null default 'JazzCash'`;
 }
 
 // Sales analytics for one seller, computed entirely in Pakistan time

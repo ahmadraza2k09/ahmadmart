@@ -1,4 +1,6 @@
 // Shared product type used by the storefront, the admin panel, and the API client.
+import type { AccountType } from "./orderStore";
+
 export interface Product {
   id: number;
   name: string;
@@ -23,6 +25,7 @@ export interface Product {
   sellerStore?: string;
   sellerCity?: string;
   sellerWhatsapp?: string;
-  sellerJazzcashNumber?: string;
-  sellerJazzcashTitle?: string;
+  sellerAccountNumber?: string;
+  sellerAccountTitle?: string;
+  sellerAccountType?: AccountType;
 }

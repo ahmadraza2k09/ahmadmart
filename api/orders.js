@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         values
           (${o.id}, ${auth.id}, ${o.sellerId ?? null}, ${o.name}, ${o.phone}, ${o.email ?? null}, ${o.address}, ${o.notes ?? null},
            ${JSON.stringify(o.items)}::jsonb, ${o.subtotal ?? 0}, ${o.shipping ?? 0}, ${o.discount ?? 0},
-           ${o.promoCode ?? null}, ${o.total ?? 0}, ${o.paymentMethod ?? "JazzCash (Manual)"}, 'Pending Approval')
+           ${o.promoCode ?? null}, ${o.total ?? 0}, ${o.paymentMethod ?? "Wallet Transfer (Manual)"}, 'Pending Approval')
         on conflict (id) do nothing
         returning *`;
       if (!rows.length) { res.status(409).json({ error: "Order id already exists. Please try again." }); return; }

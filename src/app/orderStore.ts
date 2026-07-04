@@ -1,12 +1,21 @@
-// ─── Manual JazzCash Order Store ──────────────────────────────────────────────
-// Client-side order persistence + email delivery for the manual JazzCash payment
-// flow. This is a MANUAL verification system: orders are always created with the
-// status "Pending Verification" and are NEVER auto-marked as paid. An admin must
-// review the uploaded payment screenshot and approve each order manually.
+// ─── Manual Wallet-Transfer Order Store ───────────────────────────────────────
+// Client-side order persistence + email delivery for the manual wallet-transfer
+// payment flow (JazzCash, SadaPay, NayaPay, or Easypaisa — each seller picks the
+// one they accept). This is a MANUAL verification system: orders are always
+// created with the status "Pending Verification" and are NEVER auto-marked as
+// paid. A seller (or admin, for official orders) must review the uploaded
+// payment screenshot and approve each order manually.
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-export const JAZZCASH_NUMBER = "03085560981";
-export const JAZZCASH_TITLE = "M. Faizan Ali";
+// The mobile-wallet types a seller (or the official Ahmad Mart store) can accept.
+export const ACCOUNT_TYPES = ["JazzCash", "SadaPay", "NayaPay", "Easypaisa"] as const;
+export type AccountType = (typeof ACCOUNT_TYPES)[number];
+
+// Official Ahmad Mart's own account — used as the fallback for orders with no
+// seller (or no seller-configured account yet).
+export const OFFICIAL_ACCOUNT_TYPE: AccountType = "JazzCash";
+export const OFFICIAL_ACCOUNT_NUMBER = "03085560981";
+export const OFFICIAL_ACCOUNT_TITLE = "M. Faizan Ali";
 export const ORDER_EMAIL = "tryahmadmart.store@gmail.com";
 
 // Store owner's WhatsApp. WHATSAPP_NUMBER must be international format with no "+",
@@ -68,8 +77,9 @@ export interface Order {
   sellerId?: number;
   sellerStore?: string;
   sellerWhatsapp?: string;
-  sellerJazzcashNumber?: string;
-  sellerJazzcashTitle?: string;
+  sellerAccountNumber?: string;
+  sellerAccountTitle?: string;
+  sellerAccountType?: AccountType;
   // Set once a seller downloads + clears a Delivered order from their Past Orders
   // history — the row is kept (for earnings accuracy) but no longer shown to them.
   archived?: boolean;
@@ -125,7 +135,7 @@ export function toWaNumber(local: string): string {
   return digits;
 }
 
-/** True when the order is a Cash-on-Delivery order (vs. manual JazzCash). */
+/** True when the order is a Cash-on-Delivery order (vs. a manual wallet transfer). */
 export function isCashOnDelivery(order: Pick<Order, "paymentMethod">): boolean {
   return /cash on delivery|\bcod\b/i.test(order.paymentMethod);
 }
@@ -136,14 +146,15 @@ export function buildWhatsAppText(order: Order): string {
     .map(i => `• ${i.name} × ${i.qty} = Rs. ${i.price * i.qty}`)
     .join("\n");
   const cod = isCashOnDelivery(order);
-  const jazzNumber = order.sellerJazzcashNumber || JAZZCASH_NUMBER;
-  const jazzTitle = order.sellerJazzcashTitle || JAZZCASH_TITLE;
+  const accountType = order.sellerAccountType || OFFICIAL_ACCOUNT_TYPE;
+  const accountNumber = order.sellerAccountNumber || OFFICIAL_ACCOUNT_NUMBER;
+  const accountTitle = order.sellerAccountTitle || OFFICIAL_ACCOUNT_TITLE;
   const paymentLine = cod
     ? `Payment: Cash on Delivery (Multan)`
-    : `Payment: JazzCash to ${jazzNumber} (${jazzTitle})`;
+    : `Payment: ${accountType} to ${accountNumber} (${accountTitle})`;
   const closingLine = cod
     ? `Please confirm my order — I'll pay cash on delivery. 🚚`
-    : `I'll send the payment to the JazzCash number above and attach the screenshot here. 👇`;
+    : `I'll send the payment to the ${accountType} number above and attach the screenshot here. 👇`;
   return [
     `*New Order — Ahmad Mart*`,
     order.sellerStore ? `Store: ${order.sellerStore}` : ``,
@@ -281,8 +292,12 @@ export async function sendOrderEmail(order: Order, file: File | null): Promise<E
       `  TOTAL AMOUNT: Rs. ${order.total}`,
       ``,
       `PAYMENT`,
-      `  Method: JazzCash (Manual)`,
-      `  Pay-to Number: ${JAZZCASH_NUMBER} (${JAZZCASH_TITLE})`,
+      isCashOnDelivery(order)
+        ? `  Method: Cash on Delivery`
+        : `  Method: ${order.sellerAccountType || OFFICIAL_ACCOUNT_TYPE} (Manual)`,
+      isCashOnDelivery(order)
+        ? ``
+        : `  Pay-to Number: ${order.sellerAccountNumber || OFFICIAL_ACCOUNT_NUMBER} (${order.sellerAccountTitle || OFFICIAL_ACCOUNT_TITLE})`,
       `  Status: ${order.status}`,
       ``,
       `>> Verify the attached payment screenshot before approving this order.`,

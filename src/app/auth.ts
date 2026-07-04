@@ -1,5 +1,7 @@
 // Frontend auth client. The JWT is kept in localStorage and sent as a Bearer
 // token on authenticated requests.
+import type { AccountType } from "./orderStore";
+
 export type Role = "buyer" | "seller" | "admin";
 export interface AuthUser {
   id: number;
@@ -10,16 +12,18 @@ export interface AuthUser {
   storeName?: string;
   whatsapp?: string;
   city?: string;
-  jazzcashNumber?: string;
-  jazzcashTitle?: string;
+  accountNumber?: string;
+  accountTitle?: string;
+  accountType?: AccountType;
 }
 
 export interface SellerSignup {
   storeName: string;
   whatsapp: string;
   city?: string;
-  jazzcashNumber?: string;
-  jazzcashTitle?: string;
+  accountNumber?: string;
+  accountTitle?: string;
+  accountType?: AccountType;
 }
 
 const TOKEN_KEY = "ahmadmart_token";
@@ -53,7 +57,7 @@ export async function apiLogin(email: string, password: string) {
 export async function apiChangeRole(role: Role) {
   return postJson("/api/auth/role", { role }, true) as Promise<{ token: string; user: AuthUser }>;
 }
-export async function apiUpdateStore(fields: { storeName: string; whatsapp: string; city?: string; jazzcashNumber?: string; jazzcashTitle?: string }) {
+export async function apiUpdateStore(fields: { storeName: string; whatsapp: string; city?: string; accountNumber?: string; accountTitle?: string; accountType?: AccountType }) {
   return postJson("/api/auth/store", fields, true) as Promise<{ user: AuthUser }>;
 }
 export async function apiMe(): Promise<AuthUser | null> {

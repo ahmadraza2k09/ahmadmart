@@ -1,5 +1,6 @@
 // Frontend client for seller product management and the admin sellers view.
 import type { Product } from "./types";
+import type { AccountType } from "./orderStore";
 import { getToken } from "./auth";
 
 async function send(url: string, method: string, body?: unknown) {
@@ -44,8 +45,9 @@ export interface SellerSummary {
   email: string;
   storeName: string;
   whatsapp: string;
-  jazzcashNumber: string;
-  jazzcashTitle: string;
+  accountNumber: string;
+  accountTitle: string;
+  accountType: AccountType;
   productCount: number;
   orderCount: number;
   earnings: number;

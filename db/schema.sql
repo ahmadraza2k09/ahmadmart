@@ -73,8 +73,12 @@ create index if not exists orders_status_idx on orders (status);
 alter table users add column if not exists store_name      text;
 alter table users add column if not exists whatsapp        text;
 alter table users add column if not exists city            text;
+-- Payment account for manual wallet-transfer orders. Columns are still named
+-- jazzcash_* (kept as-is to avoid a data migration on existing sellers) but hold
+-- whichever wallet the seller actually picked, recorded in account_type.
 alter table users add column if not exists jazzcash_number text;
 alter table users add column if not exists jazzcash_title  text;
+alter table users add column if not exists account_type    text not null default 'JazzCash'; -- 'JazzCash' | 'SadaPay' | 'NayaPay' | 'Easypaisa'
 
 -- Per-product delivery charge set by the seller (NULL = use the platform default).
 alter table products add column if not exists delivery_charge integer;
