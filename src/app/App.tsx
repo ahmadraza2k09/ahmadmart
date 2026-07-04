@@ -40,7 +40,7 @@ import {
 } from "./auth";
 import {
   sellerGetProducts, sellerCreateProduct, sellerUpdateProduct, sellerDeleteProduct, sellerSetAllDelivery,
-  adminGetSellers, sellerGetAnalytics, adminGetSellerDetail, adminDeleteSeller,
+  adminGetSellers, sellerGetAnalytics, adminGetSellerDetail, adminDeleteSeller, adminResetSellerEarnings,
   type SellerSummary, type SalesAnalytics, type SellerDetail,
 } from "./sellerApi";
 import {
@@ -3587,13 +3587,14 @@ function DeleteSellerModal({ seller, busy, onCancel, onConfirm }: { seller: Sell
 
 // One seller in the admin list: summary + join date, with an expandable sales
 // analytics panel (with a "since date" filter) and a delete action.
-function AdminSellerRow({ seller, onDeleted }: { seller: SellerSummary; onDeleted: () => void }) {
+function AdminSellerRow({ seller, onChanged }: { seller: SellerSummary; onChanged: () => void }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<SellerDetail | null>(null);
   const [from, setFrom] = useState("");
   const [loadingD, setLoadingD] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [rowErr, setRowErr] = useState("");
 
   const loadDetail = (fromDate?: string) => {
@@ -3606,8 +3607,15 @@ function AdminSellerRow({ seller, onDeleted }: { seller: SellerSummary; onDelete
   const toggle = () => { const next = !open; setOpen(next); if (next && !detail) loadDetail(); };
   const doDelete = async () => {
     setDeleting(true); setRowErr("");
-    try { await adminDeleteSeller(seller.id); onDeleted(); }
+    try { await adminDeleteSeller(seller.id); onChanged(); }
     catch (e) { setRowErr(e instanceof Error ? e.message : "Delete failed"); setDeleting(false); setConfirmDel(false); }
+  };
+  const doResetEarnings = async () => {
+    if (!window.confirm(`Permanently reset ${seller.storeName || seller.name}'s all-time earnings to zero? This cannot be undone.`)) return;
+    setResetting(true); setRowErr("");
+    try { await adminResetSellerEarnings(seller.id); onChanged(); }
+    catch (e) { setRowErr(e instanceof Error ? e.message : "Reset failed"); }
+    setResetting(false);
   };
 
   return (
@@ -3628,6 +3636,9 @@ function AdminSellerRow({ seller, onDeleted }: { seller: SellerSummary; onDelete
       <div className="px-4 pb-3 flex flex-wrap gap-2">
         <button onClick={toggle} className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#1E40AF] bg-blue-50 hover:bg-blue-100 inline-flex items-center gap-1">
           <TrendingUp size={13} /> {open ? "Hide analytics" : "View analytics"}
+        </button>
+        <button onClick={doResetEarnings} disabled={resetting} className="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 inline-flex items-center gap-1 disabled:opacity-60">
+          <RefreshCw size={13} /> {resetting ? "Resetting…" : "Reset earnings"}
         </button>
         <button onClick={() => setConfirmDel(true)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 inline-flex items-center gap-1">
           <Trash2 size={13} /> Delete seller
@@ -3692,7 +3703,7 @@ function AdminSellers() {
       <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
         {sellers.length === 0 ? (
           <div className="p-10 text-center text-sm text-[#6b7280]">No sellers have signed up yet.</div>
-        ) : sellers.map(s => <AdminSellerRow key={s.id} seller={s} onDeleted={reload} />)}
+        ) : sellers.map(s => <AdminSellerRow key={s.id} seller={s} onChanged={reload} />)}
       </div>
     </div>
   );

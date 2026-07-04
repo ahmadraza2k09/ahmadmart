@@ -152,6 +152,21 @@ async function sellers(req, res) {
     return;
   }
 
+  // Admin can reset a seller's all-time earnings back to zero directly — the same
+  // permanent reset the seller can trigger themselves from their own dashboard,
+  // available here too so admin never has to wait on the seller to do it.
+  if (req.method === "PATCH" || req.method === "PUT") {
+    const body = await readJsonBody(req);
+    const id = Number(body.id ?? req.query?.id);
+    if (!id) { res.status(400).json({ error: "Missing seller id." }); return; }
+    const existing = await sql`select id from users where id = ${id} and role = 'seller'`;
+    if (!existing.length) { res.status(404).json({ error: "Seller not found." }); return; }
+    await sql`update orders set archived = true, updated_at = now() where seller_id = ${id} and status = 'Delivered' and archived = false`;
+    await sql`update users set earnings_reset_at = now(), updated_at = now() where id = ${id}`;
+    res.status(200).json({ ok: true });
+    return;
+  }
+
   if (req.method !== "GET") { res.status(405).json({ error: "Method not allowed" }); return; }
 
   // Detailed view of a single seller: profile + full sales analytics. An optional

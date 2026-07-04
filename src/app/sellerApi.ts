@@ -88,3 +88,9 @@ export async function adminGetSellerDetail(id: number, from?: string): Promise<S
 export async function adminDeleteSeller(id: number): Promise<void> {
   await send("/api/admin/sellers", "DELETE", { id });
 }
+
+/** Admin: permanently reset a seller's all-time earnings back to zero (same
+ *  reset the seller can trigger themselves from their own dashboard). */
+export async function adminResetSellerEarnings(id: number): Promise<void> {
+  await send("/api/admin/sellers", "PATCH", { id });
+}
