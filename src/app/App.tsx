@@ -1800,15 +1800,16 @@ function ProductDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs text-[#6b7280] mb-6">
+      {/* Breadcrumb — wraps onto a new line for a long product name instead of
+          forcing this row wider than the viewport. */}
+      <div className="flex items-center flex-wrap gap-2 text-xs text-[#6b7280] mb-6">
         <Link to="/" className="hover:text-[#1E40AF]">Home</Link>
         <ChevronRight size={12} />
         <Link to="/shop" className="hover:text-[#1E40AF]">Shop</Link>
         <ChevronRight size={12} />
         <Link to={`/shop?sub=${product.subcategory}`} className="hover:text-[#1E40AF]">{product.subcategory}</Link>
         <ChevronRight size={12} />
-        <span className="text-[#111827] font-semibold">{product.name}</span>
+        <span className="text-[#111827] font-semibold break-words">{product.name}</span>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8 mb-12">
