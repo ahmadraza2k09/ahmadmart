@@ -395,11 +395,12 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     apiMe().then(u => setUser(u)).catch(() => {}).finally(() => setAuthReady(true));
   }, []);
-  // Products come from the Neon-backed API. Start from the cached last-live
-  // catalog (real products) so the store opens instantly with no flash of dummy
-  // data; with no cache yet we start empty and show skeletons until the fetch
-  // resolves. The seed is only a last resort if the API is unreachable.
-  const [products, setProducts] = useState<Product[]>(() => loadCachedProducts() ?? []);
+  // Products always come fresh from the Neon-backed API on every visit — start
+  // empty and show skeletons until the fetch resolves, so categories/products
+  // never flash a stale cached catalog (from a previous visit, before a seller
+  // added/changed something) before swapping to the real, current one. The
+  // cache is only ever used as a fallback if the live fetch itself fails.
+  const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
 
   const refreshProducts = useCallback(async () => {
@@ -407,7 +408,7 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
       const live = await apiFetchProducts();
       if (Array.isArray(live) && live.length) { setProducts(live); cacheProducts(live); }
     } catch {
-      setProducts(prev => (prev.length ? prev : SEED_PRODUCTS));
+      setProducts(prev => (prev.length ? prev : (loadCachedProducts() ?? SEED_PRODUCTS)));
     } finally {
       setProductsLoading(false);
     }
