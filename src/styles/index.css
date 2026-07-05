@@ -50,6 +50,17 @@
 /* Whole-page fade-in on every route change. */
 .page-in { animation: amFadeIn 0.35s ease both; }
 
+/* Grid items default to min-width:auto, which refuses to shrink below a child's
+   own content width — a long unbroken product title (or address, or any long
+   string) inside a grid cell can then force the whole grid, and the page,
+   wider than the viewport (a classic CSS Grid gotcha). Tailwind's grid-cols-N
+   utilities already guard against this via minmax(0, 1fr), but a grid that only
+   gets a `grid-cols-N` class at a larger breakpoint (e.g. `lg:grid-cols-2`) has
+   no such guard below that breakpoint, since it's just a plain single-column
+   grid there. This is a blanket fix for every grid on the site, not just the
+   ones we've already found and patched individually. */
+.grid > * { min-width: 0; }
+
 @media (prefers-reduced-motion: reduce) {
   .reveal, .reveal-up { opacity: 1 !important; animation: none !important; }
   .page-in { animation: none !important; }
