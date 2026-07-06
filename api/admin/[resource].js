@@ -4,7 +4,7 @@
 // Note: admin has no orders endpoint — orders are managed entirely by the seller
 // (or the buyer, for their own history); admin only sees aggregate counts and
 // earnings per seller via the "sellers" resource below.
-import { getSql, requireAdmin, rowToProduct, readJsonBody, sellerAnalytics, deleteSellerCascade, ensureOrderHistoryColumns, ensureAccountTypeColumn } from "../_db.js";
+import { getSql, requireAdmin, rowToProduct, readJsonBody, sellerAnalytics, deleteSellerCascade, ensureOrderHistoryColumns, ensureAccountTypeColumn, resolveInternalImages } from "../_db.js";
 
 // See the identical check in api/seller/products.js — a product with no
 // name/category/subcategory or a non-positive price would otherwise save
@@ -59,11 +59,14 @@ async function products(req, res) {
     if (!p.id) { res.status(400).json({ error: "Missing product id." }); return; }
     const perr = validateProduct(p);
     if (perr) { res.status(400).json({ error: perr }); return; }
+    // The edit form round-trips /api/product-image URLs — swap them back to
+    // the stored originals so photos are never overwritten with references.
+    const { image: img, images: imgs } = await resolveInternalImages(sql, p.id, p.image ?? "", p.images ?? []);
     const rows = await sql`
       update products set
         name=${p.name}, price=${p.price}, original_price=${p.originalPrice ?? null},
         price_note=${p.priceNote ?? null}, category=${p.category ?? ""}, subcategory=${p.subcategory ?? ""},
-        image=${p.image ?? ""}, images=${JSON.stringify(p.images ?? [])}::jsonb,
+        image=${img}, images=${JSON.stringify(imgs)}::jsonb,
         rating=${p.rating ?? 0}, reviews=${p.reviews ?? 0}, badge=${p.badge ?? null},
         in_stock=${p.inStock ?? true}, is_service=${p.isService ?? false},
         description=${p.description ?? ""}, specs=${JSON.stringify(p.specs ?? {})}::jsonb,

@@ -91,7 +91,16 @@ export function rowToOrder(r) {
 // Map a DB row (snake_case) to the Product shape the frontend uses (camelCase).
 // When the query joins the seller (users), the seller_* aliases are included so
 // the storefront can show "Sold by …" and route checkout to that seller.
+// Seller-uploaded photos live in the DB as base64 data URLs; sending those
+// inline made the catalog JSON megabytes big, so they're rewritten here to
+// tiny /api/product-image URLs that load lazily and cache hard at the CDN
+// (v= is the row's updated_at, so an edited photo gets a fresh URL).
 export function rowToProduct(r) {
+  const ver = r.updated_at ? new Date(r.updated_at).getTime() : 0;
+  const lazy = (u, i) =>
+    typeof u === "string" && u.startsWith("data:")
+      ? `/api/product-image?id=${r.id}&i=${i}&v=${ver}`
+      : u;
   return {
     id: r.id,
     name: r.name,
@@ -100,8 +109,8 @@ export function rowToProduct(r) {
     priceNote: r.price_note ?? undefined,
     category: r.category,
     subcategory: r.subcategory,
-    image: r.image,
-    images: r.images || [],
+    image: lazy(r.image, -1),
+    images: (r.images || []).map(lazy),
     rating: r.rating ?? 0,
     reviews: r.reviews ?? 0,
     sold: r.sold ?? 0,
@@ -120,6 +129,28 @@ export function rowToProduct(r) {
     sellerAccountTitle: r.seller_jazzcash_title ?? undefined,
     sellerAccountType: r.seller_account_type || "JazzCash",
   };
+}
+
+// When a product is edited, the form round-trips the /api/product-image URLs
+// that rowToProduct generated (the seller sees those instead of the raw base64
+// originals). Saving them as-is would overwrite the stored photos with
+// self-referential URLs and break them — so before any update, swap each
+// internal URL back to the original stored value it points at.
+export async function resolveInternalImages(sql, productId, image, images) {
+  const isInternal = (s) => typeof s === "string" && s.startsWith("/api/product-image");
+  const list = images ?? [];
+  if (!isInternal(image) && !list.some(isInternal)) return { image, images: list };
+  const [row] = await sql`select image, images from products where id = ${productId}`;
+  const stored = row?.images || [];
+  const fix = (s) => {
+    if (!isInternal(s)) return s;
+    const m = /[?&]i=(-?\d+)/.exec(s);
+    const i = m ? parseInt(m[1], 10) : -1;
+    const orig = i >= 0 ? (stored[i] ?? row?.image) : row?.image;
+    // Never resolve to another internal URL (would self-reference at serve time).
+    return orig && !isInternal(orig) ? orig : "";
+  };
+  return { image: fix(image), images: list.map(fix).filter(Boolean) };
 }
 
 // Self-healing schema for the columns the order-history/earnings-reset feature

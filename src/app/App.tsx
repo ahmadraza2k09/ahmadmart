@@ -3384,7 +3384,9 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
           <p className="text-xs text-[#6b7280] mb-2">Paste an image link <span className="font-semibold">or</span> upload a photo from your device — it loads instantly in the preview and is visible to everyone. The first image is the main one shown on the product. You can add up to {MAX_PRODUCT_IMAGES} images.</p>
           <div className="space-y-2">
             {imgs.map((url, i) => {
-              const uploaded = url.startsWith("data:");
+              // data: = freshly uploaded this session; /api/product-image = an
+              // already-saved upload round-tripping through the edit form.
+              const uploaded = url.startsWith("data:") || url.startsWith("/api/product-image");
               return (
                 <div key={i} className="flex items-center gap-2">
                   <ImageThumb url={url} main={i === 0} />

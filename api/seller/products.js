@@ -1,7 +1,7 @@
 // /api/seller/products — a seller manages ONLY their own products.
 // GET (own list), POST (create), PUT (update own), DELETE (delete own).
 // Requires a Bearer token with role "seller" (admins may also use it).
-import { getSql, getAuthUser, rowToProduct, readJsonBody } from "../_db.js";
+import { getSql, getAuthUser, rowToProduct, readJsonBody, resolveInternalImages } from "../_db.js";
 
 // A product with no name/category/subcategory or a non-positive price saves
 // without a DB error (those columns are `not null`, not "non-empty") but is
@@ -78,13 +78,16 @@ export default async function handler(req, res) {
       const p = body;
       const perr = validateProduct(p);
       if (perr) { res.status(400).json({ error: perr }); return; }
+      // The edit form round-trips /api/product-image URLs — swap them back to
+      // the stored originals so photos are never overwritten with references.
+      const { image: img, images: imgs } = await resolveInternalImages(sql, id, p.image ?? "", p.images ?? []);
       // Note: badge is intentionally NOT updated here — only the admin controls badges,
       // so a seller's edit preserves whatever badge the admin set.
       const rows = await sql`
         update products set
           name=${p.name}, price=${p.price}, original_price=${p.originalPrice ?? null}, price_note=${p.priceNote ?? null},
-          category=${p.category ?? ""}, subcategory=${p.subcategory ?? ""}, image=${p.image ?? ""},
-          images=${JSON.stringify(p.images ?? [])}::jsonb, rating=${p.rating ?? 0}, reviews=${p.reviews ?? 0},
+          category=${p.category ?? ""}, subcategory=${p.subcategory ?? ""}, image=${img},
+          images=${JSON.stringify(imgs)}::jsonb, rating=${p.rating ?? 0}, reviews=${p.reviews ?? 0},
           in_stock=${p.inStock ?? true}, is_service=${p.isService ?? false},
           description=${p.description ?? ""}, specs=${JSON.stringify(p.specs ?? {})}::jsonb,
           delivery_charge=${p.deliveryCharge ?? null}, updated_at=now()
