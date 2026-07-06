@@ -32,6 +32,7 @@ import {
   fetchProducts as apiFetchProducts, createProduct as apiCreateProduct,
   updateProduct as apiUpdateProduct, deleteProduct as apiDeleteProduct,
   setProductFeatured as apiSetProductFeatured, renameCategory as apiRenameCategory,
+  deleteCategory as apiDeleteCategory,
   fetchAnalytics, seedProducts, type Analytics,
 } from "./adminApi";
 import {
@@ -3460,6 +3461,22 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
       setMsg(`Renamed "${from}" to "${to.trim()}" on ${n} product${n === 1 ? "" : "s"}.`);
     } catch (e) { setErr(e instanceof Error ? e.message : "Rename failed"); }
   };
+  // Admin-only: delete a category/sub-category — PERMANENTLY deletes every
+  // product in it (sellers' included), so the confirm states the exact count.
+  const removeCategory = async (type: "category" | "subcategory", name: string) => {
+    const count = products.filter(p => (type === "category" ? p.category : p.subcategory) === name).length;
+    if (!window.confirm(
+      `Delete ${type === "category" ? "category" : "sub-category"} "${name}"?\n\n` +
+      `This PERMANENTLY deletes all ${count} product${count === 1 ? "" : "s"} in it — including sellers' products. This cannot be undone.`
+    )) return;
+    setErr(""); setMsg("");
+    try {
+      const n = await apiDeleteCategory(type, name);
+      await refreshProducts(true);
+      if (filter === name) setFilter("All");
+      setMsg(`Deleted "${name}" and its ${n} product${n === 1 ? "" : "s"}.`);
+    } catch (e) { setErr(e instanceof Error ? e.message : "Delete failed"); }
+  };
   const formRef = useRef<HTMLDivElement>(null);
   // Jump to the edit form whenever a product is opened, so the admin never has to
   // scroll back up to find it.
@@ -3532,24 +3549,28 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
           category a seller introduced, across every product at once. */}
       {renameOpen && dbMode && (
         <div className="bg-white rounded-2xl p-5 mb-4" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
-          <p className="font-bold text-[#111827] text-sm mb-1">Rename categories &amp; sub-categories</p>
-          <p className="text-xs text-[#6b7280] mb-4">Renaming changes it on <strong>every product</strong> that uses it — including sellers' products — so everything stays in the right place.</p>
+          <p className="font-bold text-[#111827] text-sm mb-1">Rename or delete categories &amp; sub-categories</p>
+          <p className="text-xs text-[#6b7280] mb-4">Renaming changes it on <strong>every product</strong> that uses it — including sellers' products. Deleting removes the category <strong>and permanently deletes all of its products</strong>, so it always asks for confirmation first.</p>
           <div className="space-y-3">
             {Array.from(new Set(products.map(p => p.category))).filter(Boolean).map(cat => {
               const subs = Array.from(new Set(products.filter(p => p.category === cat).map(p => p.subcategory))).filter(Boolean);
               return (
                 <div key={cat} className="rounded-xl bg-[#F8F9FB] p-3">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <span className="text-sm font-bold text-[#111827]">{cat}</span>
                     <button onClick={() => rename("category", cat)} title={`Rename "${cat}"`}
                       className="px-2 py-1 rounded-lg text-[11px] font-bold text-[#1E40AF] bg-blue-50 hover:bg-blue-100 transition-colors">Rename</button>
+                    <button onClick={() => removeCategory("category", cat)} title={`Delete "${cat}" and all its products`}
+                      className="px-2 py-1 rounded-lg text-[11px] font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors">Delete</button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {subs.map(s => (
-                      <span key={s} className="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-[#374151]">
+                      <span key={s} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-[#374151]">
                         {s}
                         <button onClick={() => rename("subcategory", s)} title={`Rename "${s}"`}
                           className="px-1.5 py-0.5 rounded text-[10px] font-bold text-[#1E40AF] hover:bg-blue-50 transition-colors">Rename</button>
+                        <button onClick={() => removeCategory("subcategory", s)} title={`Delete "${s}" and all its products`}
+                          className="px-1.5 py-0.5 rounded text-[10px] font-bold text-red-600 hover:bg-red-50 transition-colors">Delete</button>
                       </span>
                     ))}
                   </div>

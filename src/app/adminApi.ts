@@ -49,6 +49,12 @@ export async function renameCategory(type: "category" | "subcategory", from: str
   return (await send("/api/admin/categories", "PATCH", { type, from, to })).updated as number;
 }
 
+/** Admin: delete a category or sub-category entirely — PERMANENTLY deletes every
+ *  product in it, sellers' products included. Returns how many were deleted. */
+export async function deleteCategory(type: "category" | "subcategory", name: string): Promise<number> {
+  return (await send("/api/admin/categories", "DELETE", { type, name })).deleted as number;
+}
+
 export interface Analytics {
   totals: {
     total: number; in_stock: number; out_of_stock: number; services: number;

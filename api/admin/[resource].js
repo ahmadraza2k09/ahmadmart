@@ -100,21 +100,40 @@ async function products(req, res) {
   res.status(405).json({ error: "Method not allowed" });
 }
 
-// Admin-only: rename a category or sub-category across EVERY product that uses
-// it (sellers' products included) — how admin fixes a badly named category a
-// seller introduced, e.g. "Fashion&ladies clothing" → "Ladies Clothing".
+// Admin-only category management:
+//   PATCH/PUT — rename a category or sub-category across EVERY product that
+//     uses it (sellers' products included) — how admin fixes a badly named
+//     category a seller introduced, e.g. "Fashion&ladies clothing" → "Ladies Clothing".
+//   DELETE — remove a category or sub-category entirely, permanently deleting
+//     every product in it (sellers' included). The admin UI double-confirms
+//     with the exact product count before calling this.
 async function categories(req, res) {
-  if (req.method !== "PATCH" && req.method !== "PUT") { res.status(405).json({ error: "Method not allowed" }); return; }
   const sql = getSql();
-  const { type, from, to } = await readJsonBody(req);
-  const fromName = String(from ?? "").trim();
-  const toName = String(to ?? "").trim();
-  if (!fromName || !toName) { res.status(400).json({ error: "Both the current and the new name are required." }); return; }
-  if (type !== "category" && type !== "subcategory") { res.status(400).json({ error: "Type must be category or subcategory." }); return; }
-  const updated = type === "category"
-    ? await sql`update products set category = ${toName}, updated_at = now() where category = ${fromName} returning id`
-    : await sql`update products set subcategory = ${toName}, updated_at = now() where subcategory = ${fromName} returning id`;
-  res.status(200).json({ ok: true, updated: updated.length });
+  if (req.method === "PATCH" || req.method === "PUT") {
+    const { type, from, to } = await readJsonBody(req);
+    const fromName = String(from ?? "").trim();
+    const toName = String(to ?? "").trim();
+    if (!fromName || !toName) { res.status(400).json({ error: "Both the current and the new name are required." }); return; }
+    if (type !== "category" && type !== "subcategory") { res.status(400).json({ error: "Type must be category or subcategory." }); return; }
+    const updated = type === "category"
+      ? await sql`update products set category = ${toName}, updated_at = now() where category = ${fromName} returning id`
+      : await sql`update products set subcategory = ${toName}, updated_at = now() where subcategory = ${fromName} returning id`;
+    res.status(200).json({ ok: true, updated: updated.length });
+    return;
+  }
+  if (req.method === "DELETE") {
+    const body = await readJsonBody(req);
+    const type = body.type;
+    const name = String(body.name ?? "").trim();
+    if (!name) { res.status(400).json({ error: "Category name is required." }); return; }
+    if (type !== "category" && type !== "subcategory") { res.status(400).json({ error: "Type must be category or subcategory." }); return; }
+    const deleted = type === "category"
+      ? await sql`delete from products where category = ${name} returning id`
+      : await sql`delete from products where subcategory = ${name} returning id`;
+    res.status(200).json({ ok: true, deleted: deleted.length });
+    return;
+  }
+  res.status(405).json({ error: "Method not allowed" });
 }
 
 async function analytics(req, res) {
