@@ -3325,7 +3325,12 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
   const inp = "w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]";
   return (
     <div className="bg-white rounded-2xl p-5 mb-5" style={{ boxShadow: "0 8px 32px rgba(30,64,175,0.12)" }}>
-      <p className="font-bold text-[#111827] mb-4">{initial ? `Edit: ${initial.name}` : "Add New Product"}</p>
+      <p className="font-bold text-[#111827] mb-1">{initial ? `Edit: ${initial.name}` : "Add New Product"}</p>
+      {/* When the admin opens a seller's product, say whose it is — most often the
+          admin is here to correct the category/sub-category the seller picked. */}
+      {initial?.sellerStore
+        ? <p className="text-xs text-[#6b7280] mb-4">Listed by <span className="font-semibold text-[#374151]">{initial.sellerStore}</span> — your changes (e.g. correcting the category) apply directly to their product.</p>
+        : <div className="mb-4" />}
       <div className="grid sm:grid-cols-2 gap-3">
         <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Name</span><input className={inp} value={f.name} onChange={e => set("name", e.target.value)} /></label>
         <label className="text-sm">
