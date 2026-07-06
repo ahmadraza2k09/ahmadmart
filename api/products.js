@@ -41,7 +41,13 @@ export default async function handler(req, res) {
       await ensureAccountTypeColumn(sql);
       rows = await query();
     }
-    res.setHeader("Cache-Control", "no-store");
+    // Cached at Vercel's edge for 30s (serving stale for up to 5 min while
+    // revalidating in the background), so most visitors get the catalog from
+    // the CDN in ~50ms instead of waiting on a serverless cold start + DB
+    // query. Writers (seller/admin saves) bypass this with a ?fresh=<ts>
+    // query param, which is its own cache key, so they always see their
+    // change immediately.
+    res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=300");
     res.status(200).json({ products: rows.map(rowToProduct) });
   } catch (e) {
     res.status(500).json({ error: e.message || "Database error" });

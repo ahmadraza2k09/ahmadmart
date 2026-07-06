@@ -26,6 +26,7 @@ export default async function handler(req, res) {
     if (resource === "analytics") return await analytics(req, res);
     if (resource === "seed") return await seed(req, res);
     if (resource === "sellers") return await sellers(req, res);
+    if (resource === "categories") return await categories(req, res);
     res.status(404).json({ error: "Unknown admin resource." });
   } catch (e) {
     res.status(500).json({ error: e.message || "Database error" });
@@ -94,6 +95,23 @@ async function products(req, res) {
     return;
   }
   res.status(405).json({ error: "Method not allowed" });
+}
+
+// Admin-only: rename a category or sub-category across EVERY product that uses
+// it (sellers' products included) — how admin fixes a badly named category a
+// seller introduced, e.g. "Fashion&ladies clothing" → "Ladies Clothing".
+async function categories(req, res) {
+  if (req.method !== "PATCH" && req.method !== "PUT") { res.status(405).json({ error: "Method not allowed" }); return; }
+  const sql = getSql();
+  const { type, from, to } = await readJsonBody(req);
+  const fromName = String(from ?? "").trim();
+  const toName = String(to ?? "").trim();
+  if (!fromName || !toName) { res.status(400).json({ error: "Both the current and the new name are required." }); return; }
+  if (type !== "category" && type !== "subcategory") { res.status(400).json({ error: "Type must be category or subcategory." }); return; }
+  const updated = type === "category"
+    ? await sql`update products set category = ${toName}, updated_at = now() where category = ${fromName} returning id`
+    : await sql`update products set subcategory = ${toName}, updated_at = now() where subcategory = ${fromName} returning id`;
+  res.status(200).json({ ok: true, updated: updated.length });
 }
 
 async function analytics(req, res) {

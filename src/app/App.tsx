@@ -31,7 +31,7 @@ import type { Product } from "./types";
 import {
   fetchProducts as apiFetchProducts, createProduct as apiCreateProduct,
   updateProduct as apiUpdateProduct, deleteProduct as apiDeleteProduct,
-  setProductFeatured as apiSetProductFeatured,
+  setProductFeatured as apiSetProductFeatured, renameCategory as apiRenameCategory,
   fetchAnalytics, seedProducts, type Analytics,
 } from "./adminApi";
 import {
@@ -55,7 +55,7 @@ interface WishlistItem extends Product {}
 interface StoreCtx {
   products: Product[];
   productsLoading: boolean;
-  refreshProducts: () => Promise<void>;
+  refreshProducts: (fresh?: boolean) => Promise<void>;
   cart: CartItem[];
   wishlist: WishlistItem[];
   addToCart: (p: Product, qty?: number) => void;
@@ -403,9 +403,12 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
 
-  const refreshProducts = useCallback(async () => {
+  // fresh=true bypasses the CDN edge cache — used right after a product write so
+  // the writer always sees their change immediately; plain loads take the fast
+  // cached path.
+  const refreshProducts = useCallback(async (fresh = false) => {
     try {
-      const live = await apiFetchProducts();
+      const live = await apiFetchProducts(fresh);
       if (Array.isArray(live) && live.length) { setProducts(live); cacheProducts(live); }
     } catch {
       setProducts(prev => (prev.length ? prev : (loadCachedProducts() ?? SEED_PRODUCTS)));
@@ -3439,6 +3442,22 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [renameOpen, setRenameOpen] = useState(false);
+
+  // Admin-only: rename a category/sub-category across every product using it —
+  // fixes a badly named one a seller introduced, for all listings at once.
+  const rename = async (type: "category" | "subcategory", from: string) => {
+    const to = window.prompt(`Rename ${type === "category" ? "category" : "sub-category"} "${from}" to:`, from);
+    if (to == null) return;
+    if (!to.trim() || to.trim() === from) return;
+    setErr(""); setMsg("");
+    try {
+      const n = await apiRenameCategory(type, from, to.trim());
+      await refreshProducts(true);
+      if (filter === from) setFilter(to.trim());
+      setMsg(`Renamed "${from}" to "${to.trim()}" on ${n} product${n === 1 ? "" : "s"}.`);
+    } catch (e) { setErr(e instanceof Error ? e.message : "Rename failed"); }
+  };
   const formRef = useRef<HTMLDivElement>(null);
   // Jump to the edit form whenever a product is opened, so the admin never has to
   // scroll back up to find it.
@@ -3460,7 +3479,7 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
     setBusy(true); setErr(""); setMsg("");
     try {
       if (p.id) await apiUpdateProduct(p); else await apiCreateProduct(p);
-      await refreshProducts();
+      await refreshProducts(true);
       setEditing(null);
       setMsg("Saved.");
     } catch (e) { setErr(e instanceof Error ? e.message : "Save failed"); }
@@ -3469,17 +3488,17 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
   const remove = async (p: Product) => {
     if (!window.confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
     setErr(""); setMsg("");
-    try { await apiDeleteProduct(p.id); await refreshProducts(); setMsg("Deleted."); }
+    try { await apiDeleteProduct(p.id); await refreshProducts(true); setMsg("Deleted."); }
     catch (e) { setErr(e instanceof Error ? e.message : "Delete failed"); }
   };
   const toggleFeatured = async (p: Product) => {
     setErr(""); setMsg("");
-    try { await apiSetProductFeatured(p.id, !p.featured); await refreshProducts(); setMsg(!p.featured ? `Featured "${p.name}".` : `Removed "${p.name}" from featured.`); }
+    try { await apiSetProductFeatured(p.id, !p.featured); await refreshProducts(true); setMsg(!p.featured ? `Featured "${p.name}".` : `Removed "${p.name}" from featured.`); }
     catch (e) { setErr(e instanceof Error ? e.message : "Could not update featured"); }
   };
   const seed = async () => {
     setBusy(true); setErr(""); setMsg("");
-    try { const r = await seedProducts(SEED_PRODUCTS); await refreshProducts(); setMsg(r.skipped ? (r.message || "Already seeded.") : `Seeded ${r.seeded} products.`); }
+    try { const r = await seedProducts(SEED_PRODUCTS); await refreshProducts(true); setMsg(r.skipped ? (r.message || "Already seeded.") : `Seeded ${r.seeded} products.`); }
     catch (e) { setErr(e instanceof Error ? e.message : "Seed failed"); }
     setBusy(false);
   };
@@ -3501,10 +3520,43 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
           </select>
         </div>
         <div className="flex gap-2">
+          {dbMode && <button onClick={() => setRenameOpen(o => !o)} className={`px-4 py-2 rounded-xl border text-sm font-bold transition-colors ${renameOpen ? "border-[#1E40AF] text-[#1E40AF] bg-blue-50" : "border-gray-200 text-[#374151] hover:border-[#1E40AF]"}`}>Edit categories</button>}
           {dbMode && <button onClick={seed} disabled={busy} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-[#374151] hover:border-[#1E40AF] disabled:opacity-60">Seed database</button>}
           {dbMode && <button onClick={() => setEditing("new")} className="px-4 py-2 rounded-xl bg-[#1E40AF] text-white text-sm font-bold flex items-center gap-1.5"><Plus size={15} /> Add Product</button>}
         </div>
       </div>
+
+      {/* Category / sub-category rename panel — admin fixes a badly named
+          category a seller introduced, across every product at once. */}
+      {renameOpen && dbMode && (
+        <div className="bg-white rounded-2xl p-5 mb-4" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.07)" }}>
+          <p className="font-bold text-[#111827] text-sm mb-1">Rename categories &amp; sub-categories</p>
+          <p className="text-xs text-[#6b7280] mb-4">Renaming changes it on <strong>every product</strong> that uses it — including sellers' products — so everything stays in the right place.</p>
+          <div className="space-y-3">
+            {Array.from(new Set(products.map(p => p.category))).filter(Boolean).map(cat => {
+              const subs = Array.from(new Set(products.filter(p => p.category === cat).map(p => p.subcategory))).filter(Boolean);
+              return (
+                <div key={cat} className="rounded-xl bg-[#F8F9FB] p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-bold text-[#111827]">{cat}</span>
+                    <button onClick={() => rename("category", cat)} title={`Rename "${cat}"`}
+                      className="px-2 py-1 rounded-lg text-[11px] font-bold text-[#1E40AF] bg-blue-50 hover:bg-blue-100 transition-colors">Rename</button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {subs.map(s => (
+                      <span key={s} className="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-[#374151]">
+                        {s}
+                        <button onClick={() => rename("subcategory", s)} title={`Rename "${s}"`}
+                          className="px-1.5 py-0.5 rounded text-[10px] font-bold text-[#1E40AF] hover:bg-blue-50 transition-colors">Rename</button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {editing !== null && dbMode && (
         <div ref={formRef}>
@@ -3868,7 +3920,7 @@ function SellerPage() {
     try {
       const dc = bulkDelivery.trim() === "" ? null : Math.max(0, Math.round(Number(bulkDelivery)) || 0);
       const n = await sellerSetAllDelivery(dc);
-      load(); refreshProducts();
+      load(); refreshProducts(true);
       setBulkMsg(`Applied${dc == null ? " (default)" : ` Rs. ${dc}`} to ${n} product${n === 1 ? "" : "s"}.`);
     } catch (e) { setBulkMsg(e instanceof Error ? e.message : "Could not update delivery charges."); }
     setBulkBusy(false);
@@ -3916,7 +3968,7 @@ function SellerPage() {
     setBusy(true); setErr(""); setMsg("");
     try {
       if (p.id) await sellerUpdateProduct(p); else await sellerCreateProduct(p);
-      await Promise.all([load(), refreshProducts()]);
+      await Promise.all([load(), refreshProducts(true)]);
       setEditing(null); setMsg("Saved.");
     } catch (e) { setErr(e instanceof Error ? e.message : "Save failed"); }
     setBusy(false);
@@ -3924,7 +3976,7 @@ function SellerPage() {
   const remove = async (p: Product) => {
     if (!window.confirm(`Delete "${p.name}"? This cannot be undone.`)) return;
     setErr(""); setMsg("");
-    try { await sellerDeleteProduct(p.id); load(); refreshProducts(); setMsg("Deleted."); }
+    try { await sellerDeleteProduct(p.id); load(); refreshProducts(true); setMsg("Deleted."); }
     catch (e) { setErr(e instanceof Error ? e.message : "Delete failed"); }
   };
 

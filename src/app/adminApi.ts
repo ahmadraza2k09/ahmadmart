@@ -16,9 +16,13 @@ async function send(url: string, method: string, body?: unknown) {
   return data;
 }
 
-/** Load the live catalog from the database. Throws if the API is unavailable. */
-export async function fetchProducts(): Promise<Product[]> {
-  const res = await fetch("/api/products", { cache: "no-store" });
+/** Load the live catalog from the database. Throws if the API is unavailable.
+ *  Normal loads come from the CDN edge cache (fast); pass fresh=true after a
+ *  write so the unique query param bypasses the cache and the change shows
+ *  immediately. */
+export async function fetchProducts(fresh = false): Promise<Product[]> {
+  const url = fresh ? `/api/products?fresh=${Date.now()}` : "/api/products";
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
   const data = (await res.json()) as { products: Product[] };
   return data.products;
@@ -37,6 +41,12 @@ export async function deleteProduct(id: number): Promise<void> {
 /** Admin: feature / un-feature a product so it is prioritised across the store. */
 export async function setProductFeatured(id: number, featured: boolean): Promise<Product> {
   return (await send("/api/admin/products", "PATCH", { id, featured })).product;
+}
+
+/** Admin: rename a category or sub-category across EVERY product using it —
+ *  e.g. "Fashion&ladies clothing" → "Ladies Clothing" fixes all listings at once. */
+export async function renameCategory(type: "category" | "subcategory", from: string, to: string): Promise<number> {
+  return (await send("/api/admin/categories", "PATCH", { type, from, to })).updated as number;
 }
 
 export interface Analytics {
