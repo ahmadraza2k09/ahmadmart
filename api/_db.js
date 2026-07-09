@@ -50,6 +50,7 @@ export function userPublic(row) {
     accountNumber: row.jazzcash_number ?? undefined,
     accountTitle: row.jazzcash_title ?? undefined,
     accountType: row.account_type || "JazzCash",
+    paymentMethods: row.payment_methods || "both",
   };
 }
 
@@ -128,6 +129,7 @@ export function rowToProduct(r) {
     sellerAccountNumber: r.seller_jazzcash_number ?? undefined,
     sellerAccountTitle: r.seller_jazzcash_title ?? undefined,
     sellerAccountType: r.seller_account_type || "JazzCash",
+    sellerPaymentMethods: r.seller_payment_methods || "both",
   };
 }
 
@@ -169,8 +171,11 @@ export async function ensureOrderHistoryColumns(sql) {
 // Easypaisa — this column records which one the jazzcash_number/jazzcash_title
 // columns (kept as-is to avoid a data migration) actually belong to. Existing
 // sellers default to 'JazzCash', which matches what those columns already held.
+// payment_methods records WHICH checkout options the seller offers:
+// 'both' (default) | 'online' (wallet transfer only) | 'cod' (cash on delivery only).
 export async function ensureAccountTypeColumn(sql) {
   await sql`alter table users add column if not exists account_type text not null default 'JazzCash'`;
+  await sql`alter table users add column if not exists payment_methods text not null default 'both'`;
 }
 
 // Sales analytics for one seller, computed entirely in Pakistan time

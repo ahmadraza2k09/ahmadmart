@@ -8,6 +8,9 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "ahmadmart@mail.com").toLowerCas
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ahmadmart@123";
 const ACCOUNT_TYPES = ["JazzCash", "SadaPay", "NayaPay", "Easypaisa"];
 const safeAccountType = t => (ACCOUNT_TYPES.includes(t) ? t : "JazzCash");
+// Which checkout options the seller offers buyers: wallet transfer, COD, or both.
+const PAYMENT_METHODS = ["both", "online", "cod"];
+const safePaymentMethods = m => (PAYMENT_METHODS.includes(m) ? m : "both");
 
 export default async function handler(req, res) {
   const action = req.query.action;
@@ -25,7 +28,7 @@ export default async function handler(req, res) {
 
 async function signup(req, res) {
   if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
-  const { name, email, password, role, storeName, whatsapp, city, accountNumber, accountTitle, accountType } = await readJsonBody(req);
+  const { name, email, password, role, storeName, whatsapp, city, accountNumber, accountTitle, accountType, paymentMethods } = await readJsonBody(req);
   if (!name || !email || !password) { res.status(400).json({ error: "Name, email and password are required." }); return; }
   if (String(password).length < 6) { res.status(400).json({ error: "Password must be at least 6 characters." }); return; }
   const safeRole = role === "seller" ? "seller" : "buyer";
@@ -41,12 +44,12 @@ async function signup(req, res) {
   if (existing.length) { res.status(409).json({ error: "An account with this email already exists." }); return; }
   const hash = await bcrypt.hash(String(password), 10);
   const rows = await sql`
-    insert into users (name, email, password_hash, role, store_name, whatsapp, city, jazzcash_number, jazzcash_title, account_type)
+    insert into users (name, email, password_hash, role, store_name, whatsapp, city, jazzcash_number, jazzcash_title, account_type, payment_methods)
     values (${name}, ${String(email).toLowerCase()}, ${hash}, ${safeRole},
             ${safeRole === "seller" ? storeName : null}, ${safeRole === "seller" ? whatsapp : null},
             ${safeRole === "seller" ? city : null},
             ${safeRole === "seller" ? (accountNumber ?? null) : null}, ${safeRole === "seller" ? (accountTitle ?? null) : null},
-            ${safeAccountType(accountType)})
+            ${safeAccountType(accountType)}, ${safePaymentMethods(paymentMethods)})
     returning *`;
   const user = userPublic(rows[0]);
   res.status(201).json({ token: signToken(user), user });
@@ -107,7 +110,7 @@ async function store(req, res) {
   const auth = getAuthUser(req);
   if (!auth) { res.status(401).json({ error: "Not authenticated" }); return; }
   if (auth.role !== "seller" && auth.role !== "admin") { res.status(403).json({ error: "Only sellers have a store." }); return; }
-  const { storeName, whatsapp, city, accountNumber, accountTitle, accountType } = await readJsonBody(req);
+  const { storeName, whatsapp, city, accountNumber, accountTitle, accountType, paymentMethods } = await readJsonBody(req);
   if (!storeName || !String(storeName).trim()) { res.status(400).json({ error: "Store name is required." }); return; }
   if (!whatsapp || !String(whatsapp).trim()) { res.status(400).json({ error: "WhatsApp number is required." }); return; }
   const sql = getSql();
@@ -116,7 +119,7 @@ async function store(req, res) {
   const rows = await sql`
     update users set store_name = ${storeName}, whatsapp = ${whatsapp}, city = ${city ?? null},
       jazzcash_number = ${accountNumber ?? null}, jazzcash_title = ${accountTitle ?? null},
-      account_type = ${safeAccountType(accountType)}, updated_at = now()
+      account_type = ${safeAccountType(accountType)}, payment_methods = ${safePaymentMethods(paymentMethods)}, updated_at = now()
     where id = ${auth.id} returning *`;
   if (!rows.length) { res.status(404).json({ error: "User not found." }); return; }
   res.status(200).json({ user: userPublic(rows[0]) });

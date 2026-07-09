@@ -79,6 +79,9 @@ alter table users add column if not exists city            text;
 alter table users add column if not exists jazzcash_number text;
 alter table users add column if not exists jazzcash_title  text;
 alter table users add column if not exists account_type    text not null default 'JazzCash'; -- 'JazzCash' | 'SadaPay' | 'NayaPay' | 'Easypaisa'
+-- Which checkout options this seller offers buyers:
+-- 'both' (default) | 'online' (wallet transfer only) | 'cod' (cash on delivery only)
+alter table users add column if not exists payment_methods text not null default 'both';
 
 -- Per-product delivery charge set by the seller (NULL = use the platform default).
 alter table products add column if not exists delivery_charge integer;

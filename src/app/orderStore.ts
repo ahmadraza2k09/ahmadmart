@@ -11,6 +11,9 @@
 export const ACCOUNT_TYPES = ["JazzCash", "SadaPay", "NayaPay", "Easypaisa"] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
+// Which checkout options a seller offers buyers.
+export type PaymentMethods = "both" | "online" | "cod";
+
 // Official Ahmad Mart's own account — used as the fallback for orders with no
 // seller (or no seller-configured account yet).
 export const OFFICIAL_ACCOUNT_TYPE: AccountType = "JazzCash";
@@ -150,7 +153,7 @@ export function buildWhatsAppText(order: Order): string {
   const accountNumber = order.sellerAccountNumber || OFFICIAL_ACCOUNT_NUMBER;
   const accountTitle = order.sellerAccountTitle || OFFICIAL_ACCOUNT_TITLE;
   const paymentLine = cod
-    ? `Payment: Cash on Delivery (Multan)`
+    ? `Payment: Cash on Delivery`
     : `Payment: ${accountType} to ${accountNumber} (${accountTitle})`;
   const closingLine = cod
     ? `Please confirm my order — I'll pay cash on delivery. 🚚`

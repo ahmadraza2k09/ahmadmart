@@ -20,6 +20,7 @@ export default async function handler(req, res) {
              u.jazzcash_number as seller_jazzcash_number,
              u.jazzcash_title  as seller_jazzcash_title,
              u.account_type    as seller_account_type,
+             u.payment_methods as seller_payment_methods,
              coalesce(sold.qty, 0)::int as sold
       from products p
       left join users u on u.id = p.seller_id

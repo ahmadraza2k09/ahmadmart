@@ -15,7 +15,7 @@ import {
   ORDER_STATUSES, ACCOUNT_TYPES, OFFICIAL_ACCOUNT_TYPE, newOrderId,
   sendOrderEmail, whatsappOrderUrl, whatsappDeliveredUrl, toWaNumber, isCashOnDelivery,
   fileToCompressedDataURL, validateProofFile,
-  type Order, type OrderStatus, type AccountType,
+  type Order, type OrderStatus, type AccountType, type PaymentMethods,
 } from "./orderStore";
 import {
   getProductReviews, saveReview, newReviewId, type UserReview,
@@ -72,7 +72,7 @@ interface StoreCtx {
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string, role: Role, seller?: SellerSignup) => Promise<void>;
   changeRole: (role: Role) => Promise<void>;
-  updateStore: (fields: { storeName: string; whatsapp: string; accountNumber?: string; accountTitle?: string; accountType?: AccountType }) => Promise<void>;
+  updateStore: (fields: { storeName: string; whatsapp: string; accountNumber?: string; accountTitle?: string; accountType?: AccountType; paymentMethods?: PaymentMethods }) => Promise<void>;
   logout: () => void;
   recentlyViewed: Product[];
   addRecentlyViewed: (p: Product) => void;
@@ -450,7 +450,7 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
     const { token, user } = await apiChangeRole(role);
     setToken(token); setUser(user);
   }, []);
-  const updateStore = useCallback(async (fields: { storeName: string; whatsapp: string; accountNumber?: string; accountTitle?: string; accountType?: AccountType }) => {
+  const updateStore = useCallback(async (fields: { storeName: string; whatsapp: string; accountNumber?: string; accountTitle?: string; accountType?: AccountType; paymentMethods?: PaymentMethods }) => {
     const { user } = await apiUpdateStore(fields);
     setUser(user);
   }, []);
@@ -1371,7 +1371,7 @@ function HomePage() {
             {[
               { icon: Award, title: "Premium Quality", desc: "Every product is checked for quality and sourced from verified suppliers.", color: "#1E40AF" },
               { icon: TrendingUp, title: "Best Prices", desc: "We offer the most competitive prices in Pakistan with no hidden charges.", color: "#F97316" },
-              { icon: Truck, title: "Nationwide Delivery", desc: "Fast, reliable delivery to all cities across Pakistan. Cash on Delivery is available in Multan only, and Multan orders can pay by COD or mobile wallet.", color: "#059669" },
+              { icon: Truck, title: "Nationwide Delivery", desc: "Fast, reliable delivery to all cities across Pakistan. Pay by mobile wallet or Cash on Delivery — available nationwide.", color: "#059669" },
               { icon: Shield, title: "Secure Shopping", desc: "Your data and payments are completely safe with strong encryption.", color: "#7C3AED" },
               { icon: RotateCcw, title: "Easy Returns", desc: "Not satisfied? Return within 7 days for an easy, no fuss refund.", color: "#DC2626" },
               { icon: Headphones, title: "24/7 Support", desc: "Our team is always here to help. Reach us anytime on WhatsApp.", color: "#B45309" },
@@ -2113,8 +2113,9 @@ function CheckoutPage() {
   const [copied, setCopied] = useState("");
   const [placedOrders, setPlacedOrders] = useState<Order[] | null>(null);
   const [orderBaseId] = useState(newOrderId());
-  // Two payment options: mobile wallet transfer (paid via WhatsApp, nationwide —
-  // whichever wallet the seller accepts) or Cash on Delivery (Multan region only).
+  // Two payment options: mobile wallet transfer (paid via WhatsApp) or Cash on
+  // Delivery — both available nationwide. Each seller chooses which of the two
+  // (or both) they offer, so what's shown is the intersection across the cart.
   const [payment, setPayment] = useState<"wallet" | "cod">("wallet");
   const isCOD = payment === "cod";
   const [submitting, setSubmitting] = useState(false);
@@ -2123,15 +2124,25 @@ function CheckoutPage() {
   // Split-per-seller: group the cart by seller so each store gets its own order
   // routed to that seller's WhatsApp / payment account. Official products group together.
   const groups = useMemo(() => {
-    const map = new Map<string, { sellerId?: number; sellerStore?: string; sellerWhatsapp?: string; sellerAccountNumber?: string; sellerAccountTitle?: string; sellerAccountType?: AccountType; items: CartItem[] }>();
+    const map = new Map<string, { sellerId?: number; sellerStore?: string; sellerWhatsapp?: string; sellerAccountNumber?: string; sellerAccountTitle?: string; sellerAccountType?: AccountType; sellerPaymentMethods?: PaymentMethods; items: CartItem[] }>();
     for (const it of cart) {
       const key = it.sellerId ? `s${it.sellerId}` : "official";
       let g = map.get(key);
-      if (!g) { g = { sellerId: it.sellerId, sellerStore: it.sellerStore, sellerWhatsapp: it.sellerWhatsapp, sellerAccountNumber: it.sellerAccountNumber, sellerAccountTitle: it.sellerAccountTitle, sellerAccountType: it.sellerAccountType, items: [] }; map.set(key, g); }
+      if (!g) { g = { sellerId: it.sellerId, sellerStore: it.sellerStore, sellerWhatsapp: it.sellerWhatsapp, sellerAccountNumber: it.sellerAccountNumber, sellerAccountTitle: it.sellerAccountTitle, sellerAccountType: it.sellerAccountType, sellerPaymentMethods: it.sellerPaymentMethods, items: [] }; map.set(key, g); }
       g.items.push(it);
     }
     return Array.from(map.values());
   }, [cart]);
+
+  // Which options every store in the cart offers — a method is available only
+  // if no store in the cart has excluded it.
+  const walletAllowed = groups.every(g => (g.sellerPaymentMethods ?? "both") !== "cod");
+  const codAllowed = groups.every(g => (g.sellerPaymentMethods ?? "both") !== "online");
+  // If the currently selected method isn't offered, switch to the one that is.
+  useEffect(() => {
+    if (payment === "wallet" && !walletAllowed && codAllowed) setPayment("cod");
+    if (payment === "cod" && !codAllowed && walletAllowed) setPayment("wallet");
+  }, [payment, walletAllowed, codAllowed]);
 
   // The wallet name to show the buyer before submission. If every seller in the
   // cart uses the same wallet, name it directly; otherwise show a generic label
@@ -2161,7 +2172,6 @@ function CheckoutPage() {
     if (!form.phone.trim() || !/^0\d{9,10}$/.test(form.phone.trim())) e.phone = "Enter a valid WhatsApp number (e.g. 03001234567)";
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Enter a valid email address";
     if (!form.address.trim()) e.address = "Complete shipping address is required";
-    else if (isCOD && !/multan/i.test(form.address)) e.address = "Cash on Delivery is available in Multan only. Enter a Multan delivery address, or choose wallet transfer.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -2321,23 +2331,33 @@ function CheckoutPage() {
           <div className="bg-white rounded-2xl p-6" style={{ boxShadow: "0 4px 16px rgba(30,64,175,0.08)" }}>
             <h3 className="font-bold text-[#111827] mb-4 flex items-center gap-2"><Tag size={18} className="text-[#F97316]" /> Delivery & Payment</h3>
             <div className="grid sm:grid-cols-2 gap-3">
-              <button type="button" onClick={() => setPayment("wallet")}
-                className={`text-left rounded-xl border-2 p-4 transition-all ${!isCOD ? "border-[#1E40AF] bg-blue-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="flex items-center gap-2 font-bold text-[#111827] text-sm"><Smartphone size={16} className="text-[#1E40AF]" /> {walletLabel}</span>
-                  <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${!isCOD ? "border-[#1E40AF] bg-[#1E40AF]" : "border-gray-300"}`} />
-                </div>
-                <p className="text-xs text-[#6b7280]">Pay via {walletLabel} through WhatsApp. Available nationwide.</p>
-              </button>
-              <button type="button" onClick={() => { setPayment("cod"); setPromoMsg(""); }}
-                className={`text-left rounded-xl border-2 p-4 transition-all ${isCOD ? "border-[#059669] bg-emerald-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="flex items-center gap-2 font-bold text-[#111827] text-sm"><Truck size={16} className="text-[#059669]" /> Cash on Delivery</span>
-                  <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${isCOD ? "border-[#059669] bg-[#059669]" : "border-gray-300"}`} />
-                </div>
-                <p className="text-xs text-[#6b7280]">Pay cash when it arrives. <strong className="text-[#059669]">Multan region only</strong>.</p>
-              </button>
+              {walletAllowed && (
+                <button type="button" onClick={() => setPayment("wallet")}
+                  className={`text-left rounded-xl border-2 p-4 transition-all ${!isCOD ? "border-[#1E40AF] bg-blue-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="flex items-center gap-2 font-bold text-[#111827] text-sm"><Smartphone size={16} className="text-[#1E40AF]" /> {walletLabel}</span>
+                    <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${!isCOD ? "border-[#1E40AF] bg-[#1E40AF]" : "border-gray-300"}`} />
+                  </div>
+                  <p className="text-xs text-[#6b7280]">Pay via {walletLabel} through WhatsApp. Available nationwide.</p>
+                </button>
+              )}
+              {codAllowed && (
+                <button type="button" onClick={() => { setPayment("cod"); setPromoMsg(""); }}
+                  className={`text-left rounded-xl border-2 p-4 transition-all ${isCOD ? "border-[#059669] bg-emerald-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="flex items-center gap-2 font-bold text-[#111827] text-sm"><Truck size={16} className="text-[#059669]" /> Cash on Delivery</span>
+                    <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${isCOD ? "border-[#059669] bg-[#059669]" : "border-gray-300"}`} />
+                  </div>
+                  <p className="text-xs text-[#6b7280]">Pay cash when your order arrives. Available nationwide.</p>
+                </button>
+              )}
             </div>
+            {!(walletAllowed && codAllowed) && (walletAllowed || codAllowed) && (
+              <p className="text-xs text-[#6b7280] mt-3">This store accepts <strong className="text-[#374151]">{walletAllowed ? "online payment" : "Cash on Delivery"} only</strong>.</p>
+            )}
+            {!walletAllowed && !codAllowed && (
+              <p className="text-xs text-red-500 font-semibold mt-3">The stores in your cart don't share a common payment option — please order from them separately.</p>
+            )}
           </div>
 
           {/* Method details */}
@@ -2348,7 +2368,7 @@ function CheckoutPage() {
               </div>
               <div>
                 <p className="font-black text-white text-base leading-tight">{isCOD ? "Cash on Delivery" : `Pay via ${walletLabel} on WhatsApp`}</p>
-                <p className="text-white/80 text-xs">{isCOD ? "Pay in cash when your order arrives in Multan" : `Send your ${walletLabel} payment screenshot on WhatsApp`}</p>
+                <p className="text-white/80 text-xs">{isCOD ? "Pay in cash when your order arrives" : `Send your ${walletLabel} payment screenshot on WhatsApp`}</p>
               </div>
             </div>
             <div className="p-6">
@@ -2357,7 +2377,6 @@ function CheckoutPage() {
                 <ol className="space-y-2.5">
                   {(isCOD
                     ? [
-                        "Make sure your delivery address is inside Multan.",
                         "Fill in your details, then tap “Place COD Order on WhatsApp”.",
                         "Your order opens in WhatsApp — send it to confirm. We'll dispatch it.",
                         "Pay the exact amount in cash to the rider on delivery.",
@@ -2422,7 +2441,7 @@ function CheckoutPage() {
               <div className="flex justify-between text-sm"><span className="text-[#6b7280]">Payment</span><span className="font-semibold">{isCOD ? "Cash on Delivery" : walletLabel}</span></div>
               <div className="flex justify-between font-black text-[#111827] text-base border-t border-gray-100 pt-2"><span>Total</span><span className="text-[#1E40AF]">{fmt(grandTotal)}</span></div>
             </div>
-            <button onClick={handleSubmit} disabled={submitting}
+            <button onClick={handleSubmit} disabled={submitting || (!walletAllowed && !codAllowed)}
               className="w-full py-3.5 rounded-xl text-white font-black text-sm transition-transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
               style={{ background: "#25D366", boxShadow: "0 4px 16px rgba(37,211,102,0.35)" }}>
               <MessageCircle size={18} /> {submitting ? "Placing order…" : `${isCOD ? "Place COD Order on WhatsApp" : "Pay via WhatsApp"} — ${fmt(grandTotal)}`}
@@ -2430,7 +2449,7 @@ function CheckoutPage() {
             {submitErr && <p className="text-xs text-red-500 font-semibold text-center mt-2">{submitErr}</p>}
             <p className="text-[11px] text-[#6b7280] text-center mt-3">
               {isCOD
-                ? "We'll save your order and confirm it on WhatsApp. Cash is collected on delivery in Multan."
+                ? "We'll save your order and confirm it on WhatsApp. Cash is collected on delivery."
                 : `We'll save your order, then you send your ${walletLabel} payment on WhatsApp for approval.`}
             </p>
           </div>
@@ -2538,7 +2557,7 @@ function LoginPage() {
 // ─── Register Page ────────────────────────────────────────────────────────────
 function RegisterPage() {
   const { signup } = useContext(Store);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "", role: "buyer" as Role, storeName: "", whatsapp: "", city: "", accountNumber: "", accountTitle: "", accountType: "JazzCash" as AccountType });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "", role: "buyer" as Role, storeName: "", whatsapp: "", city: "", accountNumber: "", accountTitle: "", accountType: "JazzCash" as AccountType, paymentMethods: "both" as PaymentMethods });
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -2555,7 +2574,7 @@ function RegisterPage() {
       if (!form.city.trim()) { setErr("Please enter your city"); return; }
     }
     const seller: SellerSignup | undefined = form.role === "seller"
-      ? { storeName: form.storeName.trim(), whatsapp: form.whatsapp.trim(), city: form.city.trim(), accountNumber: form.accountNumber.trim() || undefined, accountTitle: form.accountTitle.trim() || undefined, accountType: form.accountType }
+      ? { storeName: form.storeName.trim(), whatsapp: form.whatsapp.trim(), city: form.city.trim(), accountNumber: form.accountNumber.trim() || undefined, accountTitle: form.accountTitle.trim() || undefined, accountType: form.accountType, paymentMethods: form.paymentMethods }
       : undefined;
     setBusy(true); setErr("");
     try {
@@ -2671,6 +2690,16 @@ function RegisterPage() {
                       placeholder="Account holder name"
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
                   </div>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Checkout options for buyers</label>
+                  <select value={form.paymentMethods} onChange={e => setForm(f => ({ ...f, paymentMethods: e.target.value as PaymentMethods }))}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]">
+                    <option value="both">Online payment + Cash on Delivery (both)</option>
+                    <option value="online">Online payment only</option>
+                    <option value="cod">Cash on Delivery only</option>
+                  </select>
+                  <p className="text-[11px] text-[#6b7280] mt-1">You can change this anytime from your seller dashboard.</p>
                 </div>
               </div>
             )}
@@ -3898,7 +3927,7 @@ function SellerPage() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [storeOpen, setStoreOpen] = useState(false);
-  const [storeForm, setStoreForm] = useState({ storeName: "", whatsapp: "", city: "", accountNumber: "", accountTitle: "", accountType: "JazzCash" as AccountType });
+  const [storeForm, setStoreForm] = useState({ storeName: "", whatsapp: "", city: "", accountNumber: "", accountTitle: "", accountType: "JazzCash" as AccountType, paymentMethods: "both" as PaymentMethods });
   const [storeBusy, setStoreBusy] = useState(false);
   const [storeMsg, setStoreMsg] = useState("");
   const [bulkDelivery, setBulkDelivery] = useState("");
@@ -3924,7 +3953,7 @@ function SellerPage() {
   const deliveredCount = orders.filter(o => o.status === "Delivered").length;
 
   const openStoreEdit = () => {
-    setStoreForm({ storeName: user?.storeName || "", whatsapp: user?.whatsapp || "", city: user?.city || "", accountNumber: user?.accountNumber || "", accountTitle: user?.accountTitle || "", accountType: user?.accountType || "JazzCash" });
+    setStoreForm({ storeName: user?.storeName || "", whatsapp: user?.whatsapp || "", city: user?.city || "", accountNumber: user?.accountNumber || "", accountTitle: user?.accountTitle || "", accountType: user?.accountType || "JazzCash", paymentMethods: user?.paymentMethods || "both" });
     setStoreMsg(""); setStoreOpen(true);
   };
   const saveStore = async () => {
@@ -3933,7 +3962,7 @@ function SellerPage() {
     if (!storeForm.city.trim()) { setStoreMsg("City is required."); return; }
     setStoreBusy(true); setStoreMsg("");
     try {
-      await updateStore({ storeName: storeForm.storeName.trim(), whatsapp: storeForm.whatsapp.trim(), city: storeForm.city.trim(), accountNumber: storeForm.accountNumber.trim() || undefined, accountTitle: storeForm.accountTitle.trim() || undefined, accountType: storeForm.accountType });
+      await updateStore({ storeName: storeForm.storeName.trim(), whatsapp: storeForm.whatsapp.trim(), city: storeForm.city.trim(), accountNumber: storeForm.accountNumber.trim() || undefined, accountTitle: storeForm.accountTitle.trim() || undefined, accountType: storeForm.accountType, paymentMethods: storeForm.paymentMethods });
       setStoreOpen(false);
     } catch (e) { setStoreMsg(e instanceof Error ? e.message : "Could not save store details."); }
     setStoreBusy(false);
@@ -4031,6 +4060,7 @@ function SellerPage() {
           <p className="text-[#374151]">WhatsApp: <span className="font-semibold">{user.whatsapp || "—"}</span></p>
           <p className="text-[#374151]">City: <span className="font-semibold">{user.city || "—"}</span></p>
           <p className="text-[#374151]">{user.accountType || "JazzCash"}: <span className="font-semibold">{user.accountNumber || "—"}{user.accountTitle ? ` (${user.accountTitle})` : ""}</span></p>
+          <p className="text-[#374151]">Checkout: <span className="font-semibold">{user.paymentMethods === "online" ? "Online payment only" : user.paymentMethods === "cod" ? "Cash on Delivery only" : "Online + Cash on Delivery"}</span></p>
         </div>
       </div>
 
@@ -4107,6 +4137,14 @@ function SellerPage() {
             </label>
             <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">{storeForm.accountType} Number</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountNumber} onChange={e => setStoreForm(f => ({ ...f, accountNumber: e.target.value }))} placeholder="03001234567" /></label>
             <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">{storeForm.accountType} Title</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountTitle} onChange={e => setStoreForm(f => ({ ...f, accountTitle: e.target.value }))} placeholder="Account holder name" /></label>
+            <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Checkout options for buyers</span>
+              <select className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.paymentMethods} onChange={e => setStoreForm(f => ({ ...f, paymentMethods: e.target.value as PaymentMethods }))}>
+                <option value="both">Online payment + Cash on Delivery (both)</option>
+                <option value="online">Online payment only</option>
+                <option value="cod">Cash on Delivery only</option>
+              </select>
+              <span className="text-[11px] text-[#6b7280] block mt-1">Only the option(s) you choose here are shown to buyers at checkout for your products.</span>
+            </label>
           </div>
           {storeMsg && <p className="text-xs text-red-500 font-semibold mt-2">{storeMsg}</p>}
           <div className="flex gap-2 mt-4">

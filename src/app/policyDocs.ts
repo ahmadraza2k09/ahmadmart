@@ -41,7 +41,7 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
         bullets: [
           "Pending Approval: your order has been placed and is waiting for the seller or admin to confirm it on WhatsApp.",
           "Payment Received: for mobile wallet orders (JazzCash, SadaPay, NayaPay, or Easypaisa), your payment has been verified and the order is being prepared.",
-          "Confirmed (COD): for Cash on Delivery orders in Multan, your order is confirmed and being prepared.",
+          "Confirmed (COD): for Cash on Delivery orders, your order is confirmed and being prepared.",
           "Shipped: your order has been handed to the courier and is on its way.",
           "Delivered: your order has reached you. Enjoy your purchase.",
         ],
@@ -134,7 +134,7 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
       },
       {
         heading: "Payment Information",
-        paragraphs: ["Payments are made by mobile wallet transfer (JazzCash, SadaPay, NayaPay, or Easypaisa — whichever the seller accepts) through WhatsApp, or by Cash on Delivery in the Multan region. We do not collect or store your card or banking passwords. Wallet transfers are completed by you directly and verified from your screenshot."],
+        paragraphs: ["Payments are made by mobile wallet transfer (JazzCash, SadaPay, NayaPay, or Easypaisa — whichever the seller accepts) through WhatsApp, or by Cash on Delivery, available nationwide. Each seller chooses which of these options they offer. We do not collect or store your card or banking passwords. Wallet transfers are completed by you directly and verified from your screenshot."],
       },
       {
         heading: "How We Share Information",
@@ -176,7 +176,7 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
         heading: "Payment",
         bullets: [
           "Mobile wallet transfer (JazzCash, SadaPay, NayaPay, or Easypaisa, depending on the seller) through WhatsApp is available across Pakistan. You send the payment and share your screenshot for verification.",
-          "Cash on Delivery is available in the Multan region only. Orders outside Multan must pay by wallet transfer.",
+          "Cash on Delivery is available nationwide. Each seller chooses which payment options (wallet transfer, COD, or both) they offer at checkout.",
         ],
       },
       {
@@ -215,9 +215,9 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
     sections: [
       {
         faqs: [
-          { q: "What payment methods do you accept?", a: `We accept mobile wallet transfer — JazzCash, SadaPay, NayaPay, or Easypaisa depending on the seller (paid through WhatsApp) — across Pakistan, and Cash on Delivery in the Multan region only. Contact us on WhatsApp at ${WHATSAPP_DISPLAY} if you need help.` },
+          { q: "What payment methods do you accept?", a: `We accept mobile wallet transfer — JazzCash, SadaPay, NayaPay, or Easypaisa depending on the seller (paid through WhatsApp) — and Cash on Delivery, both available across Pakistan. Each seller chooses which options they offer at checkout. Contact us on WhatsApp at ${WHATSAPP_DISPLAY} if you need help.` },
           { q: "What are the delivery charges?", a: "Delivery charges are set by each seller and can vary by product. You always see the exact delivery charge at checkout before placing your order." },
-          { q: "Where is Cash on Delivery available?", a: "Cash on Delivery is available in the Multan region only. For all other areas, please pay by mobile wallet transfer through WhatsApp." },
+          { q: "Where is Cash on Delivery available?", a: "Cash on Delivery is available nationwide, across all of Pakistan — as long as the seller offers COD as one of their checkout options." },
           { q: "How long does delivery take?", a: "Multan usually takes 1 to 2 working days, and the rest of Pakistan usually takes 3 to 5 working days. Times may vary on holidays and busy periods." },
           { q: "How do I place an order?", a: "Add items to your cart or tap Buy Now, fill in your details at checkout, choose wallet transfer or Cash on Delivery, then place the order. It opens on WhatsApp so you can complete payment and confirm." },
           { q: "How do I track my order?", a: "Sign in and open My Orders to see the live status, or message us on WhatsApp with your Order ID." },

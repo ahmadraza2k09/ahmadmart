@@ -1,5 +1,5 @@
 // Shared product type used by the storefront, the admin panel, and the API client.
-import type { AccountType } from "./orderStore";
+import type { AccountType, PaymentMethods } from "./orderStore";
 
 export interface Product {
   id: number;
@@ -29,4 +29,5 @@ export interface Product {
   sellerAccountNumber?: string;
   sellerAccountTitle?: string;
   sellerAccountType?: AccountType;
+  sellerPaymentMethods?: PaymentMethods; // which checkout options this seller offers
 }
