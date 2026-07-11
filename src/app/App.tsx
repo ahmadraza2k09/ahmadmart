@@ -742,8 +742,25 @@ function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [unread, setUnread] = useState(0);
   const [openCat, setOpenCat] = useState<string | null>(null);
+  // Which category's full-width mega menu is open (desktop category bar).
+  const [megaCat, setMegaCat] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // The nav is fixed, so the page needs a spacer exactly its height. The height
+  // is dynamic now (category bar can wrap to more rows as sellers add
+  // categories, search panel opens/closes), so measure it live.
+  const navRef = useRef<HTMLElement | null>(null);
+  const [navH, setNavH] = useState(104);
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const update = () => setNavH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Keep the unread-message badge fresh while signed in.
   useEffect(() => {
@@ -761,7 +778,7 @@ function Navbar() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
-  useEffect(() => { setMenuOpen(false); setSearchOpen(false); setOpenCat(null); }, [location]);
+  useEffect(() => { setMenuOpen(false); setSearchOpen(false); setOpenCat(null); setMegaCat(null); }, [location]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -769,14 +786,10 @@ function Navbar() {
   };
 
   // Category links are built from the live catalog, so any new category a seller
-  // adds shows up in the main bar automatically (built-ins always listed first).
+  // adds shows up in the category bar automatically (built-ins always listed
+  // first). ALL categories are shown — the bar wraps onto more rows as needed.
   const baseCats = ["Mobile Accessories", "Home Decoration", "Digital Services"];
   const allCats = Array.from(new Set([...baseCats, ...products.map(p => p.category)])).filter(Boolean);
-  // Keep the bar tidy: only a few categories sit on the navbar, the rest go under
-  // a "More" dropdown so the bar never overflows as new categories are added.
-  const NAV_CAT_LIMIT = 3;
-  const visibleCats = allCats.slice(0, NAV_CAT_LIMIT);
-  const moreCats = allCats.slice(NAV_CAT_LIMIT);
   // category -> its sub-categories (for the hover mega-menus)
   const catTree: Record<string, string[]> = {};
   for (const p of products) {
@@ -791,7 +804,7 @@ function Navbar() {
 
   return (
     <>
-      <nav className={`fixed top-0 left-0 right-0 z-50 glass-nav transition-all duration-300 ${scrolled ? "shadow-lg" : ""}`}>
+      <nav ref={navRef} className={`fixed top-0 left-0 right-0 z-50 glass-nav transition-all duration-300 ${scrolled ? "shadow-lg" : ""}`}>
         {/* Seller promo bar — continuously scrolling */}
         <Link to="/register" className="block bg-[#1E40AF] text-white py-2 overflow-hidden hover:bg-[#1e3a8a] transition-colors">
           <div className="flex w-max animate-marquee">
@@ -817,71 +830,9 @@ function Navbar() {
               </div>
             </Link>
 
-            {/* Desktop Nav — only from xl up, so it never crowds at laptop widths
-                (it collapses to the hamburger menu below that, same as mobile). */}
-            <div className="hidden xl:flex items-center gap-7 flex-1 min-w-0">
-              <Link to="/" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors">Home</Link>
-              <Link to="/shop" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors">Shop</Link>
-              {visibleCats.map(c => {
-                const subs = catTree[c] || [];
-                return (
-                  <div key={c} className="relative group">
-                    <Link to={`/shop?cat=${encodeURIComponent(c)}`}
-                      className="flex items-center gap-1 text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors py-2">
-                      {c}{subs.length > 0 && <ChevronDown size={13} className="text-gray-400 group-hover:text-[#1E40AF] group-hover:rotate-180 transition-transform" />}
-                    </Link>
-                    {subs.length > 0 && (
-                      <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 hidden group-hover:block z-50">
-                        <div className="bg-white rounded-xl border border-gray-100 py-2 min-w-[200px]" style={{ boxShadow: "0 14px 36px rgba(30,64,175,0.16)" }}>
-                          {subs.map(s => (
-                            <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`}
-                              className="block px-4 py-2 text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">
-                              {s}
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {moreCats.length > 0 && (
-                <div className="relative group">
-                  <button className="flex items-center gap-1 text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors py-2">
-                    More <ChevronDown size={13} className="text-gray-400 group-hover:text-[#1E40AF] group-hover:rotate-180 transition-transform" />
-                  </button>
-                  <div className="absolute right-0 top-full pt-2 hidden group-hover:block z-50">
-                    {/* Subcategories expand inline (not a side flyout) so they are
-                        never clipped by this menu's own scrollbar. */}
-                    <div className="bg-white rounded-xl border border-gray-100 py-2 min-w-[220px] max-h-[70vh] overflow-y-auto" style={{ boxShadow: "0 14px 36px rgba(30,64,175,0.16)" }}>
-                      {moreCats.map(c => {
-                        const subs = catTree[c] || [];
-                        return (
-                          <div key={c} className="group/item">
-                            <Link to={`/shop?cat=${encodeURIComponent(c)}`}
-                              className="flex items-center justify-between gap-2 px-4 py-2 text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">
-                              {c}
-                              {subs.length > 0 && <ChevronDown size={13} className="text-gray-400 group-hover/item:text-[#1E40AF] group-hover/item:rotate-180 transition-transform flex-shrink-0" />}
-                            </Link>
-                            {subs.length > 0 && (
-                              <div className="hidden group-hover/item:block bg-[#F8F9FB] py-1">
-                                <Link to={`/shop?cat=${encodeURIComponent(c)}`} className="block pl-7 pr-4 py-1.5 text-sm font-bold text-[#1E40AF] hover:bg-[#EFF6FF] transition-colors">All {c}</Link>
-                                {subs.map(s => (
-                                  <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`}
-                                    className="block pl-7 pr-4 py-1.5 text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">
-                                    {s}
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Categories live in the full-width bar below the header (KK Mart
+                style) — the middle of the header stays clean. */}
+            <div className="hidden xl:block flex-1" />
 
             {/* Actions */}
             <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ml-2">
@@ -933,6 +884,7 @@ function Navbar() {
                 <div className="flex gap-2">
                   <input
                     autoFocus value={searchQ} onChange={e => setSearchQ(e.target.value)}
+                    onBlur={() => { if (!searchQ.trim()) setSearchOpen(false); }}
                     placeholder="Search products..."
                     className="flex-1 px-4 py-2.5 rounded-xl border border-[#1E40AF]/20 text-sm outline-none focus:border-[#1E40AF] bg-[#F8F9FB]"
                   />
@@ -956,6 +908,59 @@ function Navbar() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Category bar (desktop) — every category on a full-width strip that
+            wraps onto more rows as sellers add categories; hovering one opens a
+            full-width mega menu of its sub-categories (KK Mart style). */}
+        <div className="hidden xl:block relative border-t border-gray-100" onMouseLeave={() => setMegaCat(null)}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-wrap items-center gap-x-8">
+              <Link to="/" onMouseEnter={() => setMegaCat(null)}
+                className="py-3 text-[13px] font-bold uppercase tracking-wide text-[#111827] border-b-2 border-transparent hover:border-[#1E40AF] hover:text-[#1E40AF] transition-colors">
+                Home
+              </Link>
+              <Link to="/shop" onMouseEnter={() => setMegaCat(null)}
+                className="py-3 text-[13px] font-bold uppercase tracking-wide text-[#111827] border-b-2 border-transparent hover:border-[#1E40AF] hover:text-[#1E40AF] transition-colors">
+                Shop
+              </Link>
+              {allCats.map(c => {
+                const subs = catTree[c] || [];
+                const active = megaCat === c;
+                return (
+                  <Link key={c} to={`/shop?cat=${encodeURIComponent(c)}`}
+                    onMouseEnter={() => setMegaCat(subs.length ? c : null)}
+                    className={`flex items-center gap-1 py-3 text-[13px] font-bold uppercase tracking-wide border-b-2 transition-colors ${active ? "border-[#1E40AF] text-[#1E40AF]" : "border-transparent text-[#111827] hover:border-[#1E40AF] hover:text-[#1E40AF]"}`}>
+                    {c}
+                    {subs.length > 0 && <ChevronDown size={13} className={`transition-transform ${active ? "rotate-180 text-[#1E40AF]" : "text-gray-400"}`} />}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+          {megaCat && (catTree[megaCat] || []).length > 0 && (
+            <div className="absolute left-0 right-0 top-full bg-white border-t border-gray-100 z-50"
+              style={{ boxShadow: "0 28px 48px rgba(30,64,175,0.14)" }}>
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7">
+                <div className="grid grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-x-10 gap-y-5">
+                  <div>
+                    <Link to={`/shop?cat=${encodeURIComponent(megaCat)}`}
+                      className="inline-block text-sm font-black text-[#1E40AF] pb-2 border-b-2 border-[#1E40AF] hover:text-[#F97316] hover:border-[#F97316] transition-colors">
+                      All {megaCat}
+                    </Link>
+                  </div>
+                  {(catTree[megaCat] || []).map(s => (
+                    <div key={s}>
+                      <Link to={`/shop?sub=${encodeURIComponent(s)}`}
+                        className="inline-block text-sm font-bold text-[#111827] pb-2 border-b border-gray-200 hover:text-[#1E40AF] hover:border-[#1E40AF] transition-colors">
+                        {s}
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -1014,7 +1019,9 @@ function Navbar() {
           </div>
         )}
       </nav>
-      <div className="h-[100px] sm:h-[104px]" />
+      {/* Spacer matching the fixed nav's real height (measured live — the
+          category bar wraps to more rows as categories grow). */}
+      <div style={{ height: navH }} />
     </>
   );
 }
