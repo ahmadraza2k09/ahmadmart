@@ -8,7 +8,7 @@ import {
   CheckCircle, ArrowRight, TrendingUp, Award, Gift,
   Instagram, Mail, Send, Smartphone,
   Battery, Plug, Wifi, RotateCcw, ZoomIn,
-  Copy, ShieldCheck, Lock, RefreshCw, MessageCircle, ImageOff, Upload, Globe, Download
+  Copy, ShieldCheck, Lock, RefreshCw, MessageCircle, ImageOff, Upload, Globe, Download, LayoutGrid
 } from "lucide-react";
 import {
   WHATSAPP_DISPLAY, WHATSAPP_NUMBER,
@@ -742,8 +742,19 @@ function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [unread, setUnread] = useState(0);
   const [openCat, setOpenCat] = useState<string | null>(null);
-  // Which category's full-width mega menu is open (desktop category bar).
+  // Desktop "Categories" panel: open state + which category is highlighted
+  // (its sub-categories show in the right pane).
+  const [catsOpen, setCatsOpen] = useState(false);
   const [megaCat, setMegaCat] = useState<string | null>(null);
+  const catsRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!catsOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (catsRef.current && !catsRef.current.contains(e.target as Node)) setCatsOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [catsOpen]);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -778,7 +789,7 @@ function Navbar() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
-  useEffect(() => { setMenuOpen(false); setSearchOpen(false); setOpenCat(null); setMegaCat(null); }, [location]);
+  useEffect(() => { setMenuOpen(false); setSearchOpen(false); setOpenCat(null); setMegaCat(null); setCatsOpen(false); }, [location]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -830,9 +841,58 @@ function Navbar() {
               </div>
             </Link>
 
-            {/* Categories live in the full-width bar below the header (KK Mart
-                style) — the middle of the header stays clean. */}
-            <div className="hidden xl:block flex-1" />
+            {/* Desktop nav: one "Categories" button opens a two-pane panel (all
+                categories on the left — it scrolls, so any number of categories
+                stays tidy — and the highlighted category's sub-categories on the
+                right). Home/Shop stay as plain links. */}
+            <div className="hidden xl:flex items-center gap-6 flex-1 min-w-0">
+              <div className="relative" ref={catsRef}>
+                <button onClick={() => { setCatsOpen(o => !o); setMegaCat(null); }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors ${catsOpen ? "bg-[#1E40AF] text-white" : "bg-[#EFF6FF] text-[#1E40AF] hover:bg-[#1E40AF] hover:text-white"}`}>
+                  <LayoutGrid size={15} /> Categories
+                  <ChevronDown size={14} className={`transition-transform ${catsOpen ? "rotate-180" : ""}`} />
+                </button>
+                {catsOpen && (() => {
+                  const activeCat = megaCat && allCats.includes(megaCat) ? megaCat : allCats[0];
+                  const subs = catTree[activeCat] || [];
+                  return (
+                    <div className="absolute left-0 top-full mt-2 z-50 flex bg-white rounded-2xl border border-gray-100 overflow-hidden"
+                      style={{ boxShadow: "0 24px 48px rgba(30,64,175,0.18)", width: 620 }}>
+                      {/* Left pane: every category, scrollable */}
+                      <div className="w-60 max-h-[420px] overflow-y-auto border-r border-gray-100 py-2 bg-[#F8F9FB] flex-shrink-0">
+                        {allCats.map(c => (
+                          <button key={c} onMouseEnter={() => setMegaCat(c)}
+                            onClick={() => navigate(`/shop?cat=${encodeURIComponent(c)}`)}
+                            className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 text-sm font-semibold text-left transition-colors ${activeCat === c ? "bg-white text-[#1E40AF]" : "text-[#374151] hover:bg-white hover:text-[#1E40AF]"}`}>
+                            <span className="truncate">{c}</span>
+                            <ChevronRight size={14} className={`flex-shrink-0 ${activeCat === c ? "text-[#1E40AF]" : "text-gray-300"}`} />
+                          </button>
+                        ))}
+                      </div>
+                      {/* Right pane: the highlighted category's sub-categories */}
+                      <div className="flex-1 p-5 max-h-[420px] overflow-y-auto min-w-0">
+                        <p className="text-sm font-black text-[#111827] mb-3">{activeCat}</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <Link to={`/shop?cat=${encodeURIComponent(activeCat)}`}
+                            className="px-3 py-2 rounded-lg text-sm font-bold text-[#1E40AF] bg-[#EFF6FF] hover:bg-[#1E40AF] hover:text-white transition-colors">
+                            All {activeCat}
+                          </Link>
+                          {subs.map(s => (
+                            <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`}
+                              className="px-3 py-2 rounded-lg text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors truncate">
+                              {s}
+                            </Link>
+                          ))}
+                        </div>
+                        {subs.length === 0 && <p className="text-xs text-[#6b7280]">No sub-categories yet.</p>}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+              <Link to="/" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors">Home</Link>
+              <Link to="/shop" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors">Shop</Link>
+            </div>
 
             {/* Actions */}
             <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ml-2">
@@ -908,59 +968,6 @@ function Navbar() {
                   ))}
                 </div>
               )}
-            </div>
-          )}
-        </div>
-
-        {/* Category bar (desktop) — every category on a full-width strip that
-            wraps onto more rows as sellers add categories; hovering one opens a
-            full-width mega menu of its sub-categories (KK Mart style). */}
-        <div className="hidden xl:block relative border-t border-gray-100" onMouseLeave={() => setMegaCat(null)}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-wrap items-center gap-x-8">
-              <Link to="/" onMouseEnter={() => setMegaCat(null)}
-                className="py-3 text-[13px] font-bold uppercase tracking-wide text-[#111827] border-b-2 border-transparent hover:border-[#1E40AF] hover:text-[#1E40AF] transition-colors">
-                Home
-              </Link>
-              <Link to="/shop" onMouseEnter={() => setMegaCat(null)}
-                className="py-3 text-[13px] font-bold uppercase tracking-wide text-[#111827] border-b-2 border-transparent hover:border-[#1E40AF] hover:text-[#1E40AF] transition-colors">
-                Shop
-              </Link>
-              {allCats.map(c => {
-                const subs = catTree[c] || [];
-                const active = megaCat === c;
-                return (
-                  <Link key={c} to={`/shop?cat=${encodeURIComponent(c)}`}
-                    onMouseEnter={() => setMegaCat(subs.length ? c : null)}
-                    className={`flex items-center gap-1 py-3 text-[13px] font-bold uppercase tracking-wide border-b-2 transition-colors ${active ? "border-[#1E40AF] text-[#1E40AF]" : "border-transparent text-[#111827] hover:border-[#1E40AF] hover:text-[#1E40AF]"}`}>
-                    {c}
-                    {subs.length > 0 && <ChevronDown size={13} className={`transition-transform ${active ? "rotate-180 text-[#1E40AF]" : "text-gray-400"}`} />}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-          {megaCat && (catTree[megaCat] || []).length > 0 && (
-            <div className="absolute left-0 right-0 top-full bg-white border-t border-gray-100 z-50"
-              style={{ boxShadow: "0 28px 48px rgba(30,64,175,0.14)" }}>
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7">
-                <div className="grid grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-x-10 gap-y-5">
-                  <div>
-                    <Link to={`/shop?cat=${encodeURIComponent(megaCat)}`}
-                      className="inline-block text-sm font-black text-[#1E40AF] pb-2 border-b-2 border-[#1E40AF] hover:text-[#F97316] hover:border-[#F97316] transition-colors">
-                      All {megaCat}
-                    </Link>
-                  </div>
-                  {(catTree[megaCat] || []).map(s => (
-                    <div key={s}>
-                      <Link to={`/shop?sub=${encodeURIComponent(s)}`}
-                        className="inline-block text-sm font-bold text-[#111827] pb-2 border-b border-gray-200 hover:text-[#1E40AF] hover:border-[#1E40AF] transition-colors">
-                        {s}
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
         </div>
