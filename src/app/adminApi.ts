@@ -75,7 +75,7 @@ export async function seedProducts(products: Product[], force = false): Promise<
  *  Categories with no override just aren't in the map — callers fall back to
  *  a product photo from that category. */
 export async function fetchCategoryImages(): Promise<Record<string, string>> {
-  const res = await fetch("/api/category-images", { cache: "no-store" });
+  const res = await fetch("/api/category-image", { cache: "no-store" });
   if (!res.ok) return {};
   const data = (await res.json()) as { images: Record<string, string> };
   return data.images || {};

@@ -1,9 +1,14 @@
-// /api/category-image?cat=NAME — one category's photo.
-//   GET    (public)     serves the stored base64 photo as a real binary image,
-//                        cached hard at the CDN (mirrors /api/product-image).
-//   PUT    (admin only) upload/replace the photo for a category.
-//   DELETE (admin only) remove the override (storefront falls back to a
-//                        product photo from that category).
+// /api/category-image — category photo management. Combined into one file
+// (rather than a separate list endpoint) to stay within Vercel Hobby's
+// 12-serverless-function-per-deployment cap.
+//   GET (no ?cat)     (public)     list every category with an uploaded photo,
+//                                  as lazy /api/category-image?cat=... URLs.
+//   GET ?cat=NAME     (public)     serves that category's photo as a real
+//                                  binary image, cached hard at the CDN
+//                                  (mirrors /api/product-image).
+//   PUT ?cat=NAME     (admin only) upload/replace the photo for a category.
+//   DELETE ?cat=NAME  (admin only) remove the override (storefront falls back
+//                                  to a product photo from that category).
 import { getSql, requireAdmin, readJsonBody } from "./_db.js";
 
 async function ensureTable(sql) {
@@ -18,6 +23,19 @@ export default async function handler(req, res) {
   try {
     const sql = getSql();
     const cat = (req.query.cat || "").toString();
+
+    if (req.method === "GET" && !cat) {
+      await ensureTable(sql);
+      const rows = await sql`select category, updated_at from category_images`;
+      const images = Object.fromEntries(rows.map(r => {
+        const v = new Date(r.updated_at).getTime();
+        return [r.category, `/api/category-image?cat=${encodeURIComponent(r.category)}&v=${v}`];
+      }));
+      res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=300");
+      res.status(200).json({ images });
+      return;
+    }
+
     if (!cat) { res.status(400).json({ error: "Missing category." }); return; }
 
     if (req.method === "GET") {
