@@ -3320,6 +3320,50 @@ function ImageThumb({ url, main }: { url: string; main?: boolean }) {
 
 const MAX_PRODUCT_IMAGES = 6;
 
+// Chip-style multi-value input (sizes, colours): type a value and press Enter
+// (or comma, or just click away) to add it as a removable chip — makes it
+// obvious that any number of values can be added.
+function TagInput({ label, values, onChange, placeholder }: {
+  label: React.ReactNode; values: string[]; onChange: (v: string[]) => void; placeholder?: string;
+}) {
+  const [draft, setDraft] = useState("");
+  const commit = (text: string) => {
+    const parts = text.split(",").map(s => s.trim()).filter(Boolean);
+    if (!parts.length) return;
+    const next = [...values];
+    for (const p of parts) if (!next.some(v => v.toLowerCase() === p.toLowerCase())) next.push(p);
+    onChange(next);
+    setDraft("");
+  };
+  return (
+    <div className="text-sm">
+      <span className="font-semibold text-[#374151] block mb-1">{label}</span>
+      <div className="w-full px-2 py-1.5 rounded-xl border border-gray-200 bg-gray-50 focus-within:border-[#1E40AF] flex flex-wrap items-center gap-1.5">
+        {values.map(v => (
+          <span key={v} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg bg-[#EFF6FF] text-[#1E40AF] text-xs font-bold">
+            {v}
+            <button type="button" onClick={() => onChange(values.filter(x => x !== v))} title={`Remove ${v}`}
+              className="w-4 h-4 grid place-items-center rounded hover:bg-[#1E40AF]/10">
+              <X size={11} />
+            </button>
+          </span>
+        ))}
+        <input
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commit(draft); }
+            if (e.key === "Backspace" && !draft && values.length) onChange(values.slice(0, -1));
+          }}
+          onBlur={() => commit(draft)}
+          placeholder={values.length ? "Add more…" : placeholder}
+          className="flex-1 min-w-[90px] px-1.5 py-1 bg-transparent text-sm outline-none"
+        />
+      </div>
+    </div>
+  );
+}
+
 function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { initial: Product | null; onSave: (p: Partial<Product>) => void; onCancel: () => void; busy: boolean; allowBadge?: boolean }) {
   const { products } = useContext(Store);
   // Categories offered = the built-in defaults plus every category already in use
@@ -3358,10 +3402,10 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
     isService: initial ? !!initial.isService : true,
     description: initial?.description ?? "",
     specs: Object.entries(initial?.specs ?? {}).map(([k, v]) => `${k}: ${v}`).join("\n"),
-    // Optional variants (clothing, shoes, etc.), edited as comma-separated text.
-    sizes: (initial?.sizes ?? []).join(", "),
-    colors: (initial?.colors ?? []).join(", "),
   }));
+  // Optional variants (clothing, shoes, etc.) — chip lists, any number of values.
+  const [sizes, setSizes] = useState<string[]>(initial?.sizes ?? []);
+  const [colors, setColors] = useState<string[]>(initial?.colors ?? []);
   // Product images managed as a list: the first item is the main image, the rest
   // are gallery images. Each is added/edited by URL with a live preview.
   const [imgs, setImgs] = useState<string[]>(() => {
@@ -3443,8 +3487,8 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
       isService: f.isService || undefined,
       description: f.description.trim(),
       specs,
-      sizes: f.sizes.split(",").map(s => s.trim()).filter(Boolean),
-      colors: f.colors.split(",").map(s => s.trim()).filter(Boolean),
+      sizes,
+      colors,
       rating: initial?.rating ?? 0,
       reviews: initial?.reviews ?? 0,
     });
@@ -3502,8 +3546,12 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Original Price (optional)</span><input className={inp} type="number" value={f.originalPrice} onChange={e => set("originalPrice", e.target.value)} /></label>
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Price Note (e.g. per month)</span><input className={inp} value={f.priceNote} onChange={e => set("priceNote", e.target.value)} /></label>
         <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Delivery Charge (Rs.)</span><input className={inp} type="number" value={f.deliveryCharge} onChange={e => set("deliveryCharge", e.target.value)} placeholder={`Default ${DELIVERY_FEE}`} /></label>
-        <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Available Sizes <span className="font-normal text-[#6b7280]">(optional — clothing, shoes, etc.)</span></span><input className={inp} value={f.sizes} onChange={e => set("sizes", e.target.value)} placeholder="e.g. S, M, L, XL  or  39, 40, 41, 42" /></label>
-        <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Available Colours <span className="font-normal text-[#6b7280]">(optional)</span></span><input className={inp} value={f.colors} onChange={e => set("colors", e.target.value)} placeholder="e.g. Black, White, Navy Blue" /></label>
+        <TagInput
+          label={<>Available Sizes <span className="font-normal text-[#6b7280]">(optional — type a size, press Enter, add as many as you need)</span></>}
+          values={sizes} onChange={setSizes} placeholder="e.g. S — press Enter, then M, L, XL…" />
+        <TagInput
+          label={<>Available Colours <span className="font-normal text-[#6b7280]">(optional — type a colour, press Enter)</span></>}
+          values={colors} onChange={setColors} placeholder="e.g. Black — press Enter, then White…" />
         {allowBadge && <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Badge</span><select className={inp} value={f.badge} onChange={e => set("badge", e.target.value)}><option value="">None</option><option value="new">new</option><option value="sale">sale</option><option value="bestseller">bestseller</option></select></label>}
         <div className="text-sm sm:col-span-2">
           <span className="font-semibold text-[#374151] block mb-1">Product Images</span>
