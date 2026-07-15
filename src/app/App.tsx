@@ -1566,7 +1566,7 @@ function ShopPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-black text-[#111827]">Our Products</h1>
+        <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight">Our Products</h1>
         <p className="text-[#6b7280] text-sm mt-1">{filtered.length} products found</p>
       </div>
 
@@ -1890,7 +1890,7 @@ function ProductDetailPage() {
   if (!product) return (
     <div className="max-w-7xl mx-auto px-4 py-20 text-center">
       <Package size={64} className="mx-auto text-gray-300 mb-4" />
-      <h2 className="font-black text-2xl text-[#111827] mb-2">Product not found</h2>
+      <h2 className="font-black text-2xl text-[#111827] tracking-tight mb-2">Product not found</h2>
       <button onClick={() => navigate("/shop")} className="mt-4 px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm">Back to Shop</button>
     </div>
   );
@@ -1967,7 +1967,7 @@ function ProductDetailPage() {
         {/* Info */}
         <div>
           <p className="text-sm font-semibold text-[#F97316] mb-2">{product.subcategory}</p>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] mb-3 leading-tight break-words">{product.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] mb-3 leading-tight tracking-tight break-words">{product.name}</h1>
           {product.sellerStore && (
             <div className="mb-3">
               <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EFF6FF] text-[#1E40AF] text-xs font-bold">
@@ -2163,7 +2163,7 @@ function CartPage() {
   if (cart.length === 0) return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
       <ShoppingCart size={64} className="mx-auto text-gray-300 mb-4" />
-      <h2 className="font-black text-2xl text-[#111827] mb-2">Your cart is empty</h2>
+      <h2 className="font-black text-2xl text-[#111827] tracking-tight mb-2">Your cart is empty</h2>
       <p className="text-[#6b7280] text-sm mb-6">Start shopping to add products to your cart</p>
       <button onClick={() => navigate("/shop")} className="px-8 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm"
         >
@@ -2174,7 +2174,7 @@ function CartPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl sm:text-3xl font-black text-[#111827] mb-6">Shopping Cart</h1>
+      <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight mb-6">Shopping Cart</h1>
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Items */}
         <div className="lg:col-span-2 space-y-4">
@@ -2378,7 +2378,7 @@ function CheckoutPage() {
           <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
             <Clock size={38} className="text-amber-500" />
           </div>
-          <h2 className="text-2xl font-black text-[#111827] mb-2">Order Placed!</h2>
+          <h2 className="text-2xl font-black text-[#111827] tracking-tight mb-2">Order Placed!</h2>
           <p className="text-[#374151] text-sm font-semibold">
             {placedOrders.length > 1
               ? `Your cart had items from ${placedOrders.length} stores, so we created ${placedOrders.length} separate orders. Send each store's WhatsApp message below.`
@@ -2420,7 +2420,7 @@ function CheckoutPage() {
   if (!user) return (
     <div className="max-w-md mx-auto px-4 py-20 text-center">
       <User size={56} className="mx-auto text-gray-300 mb-4" />
-      <h2 className="font-black text-xl text-[#111827] mb-2">Please sign in to checkout</h2>
+      <h2 className="font-black text-xl text-[#111827] tracking-tight mb-2">Please sign in to checkout</h2>
       <p className="text-sm text-[#6b7280] mb-6">Your order is saved to your account so you can track its status and the admin can confirm it.</p>
       <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm mr-3"
         >Sign In</button>
@@ -2448,7 +2448,7 @@ function CheckoutPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl sm:text-3xl font-black text-[#111827] mb-6">Checkout</h1>
+      <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight mb-6">Checkout</h1>
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Customer details */}
@@ -2613,7 +2613,7 @@ function WishlistPage() {
   const { wishlist, toggleWishlist } = useContext(Store);
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl sm:text-3xl font-black text-[#111827] mb-6">My Wishlist</h1>
+      <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight mb-6">My Wishlist</h1>
       {wishlist.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-sm border border-gray-200">
           <Heart size={64} className="mx-auto text-gray-300 mb-4" />
@@ -2657,7 +2657,7 @@ function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-16 w-16 mx-auto mb-3 object-contain" />
-          <h1 className="text-2xl font-black text-[#111827]">Welcome Back</h1>
+          <h1 className="text-2xl font-black text-[#111827] tracking-tight">Welcome Back</h1>
           <p className="text-[#6b7280] text-sm mt-1">Sign in to your Ahmad Mart account</p>
         </div>
         <div className="bg-white rounded-sm p-8 border border-gray-200">
@@ -2740,7 +2740,7 @@ function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-16 w-16 mx-auto mb-3 object-contain" />
-          <h1 className="text-2xl font-black text-[#111827]">Create Account</h1>
+          <h1 className="text-2xl font-black text-[#111827] tracking-tight">Create Account</h1>
           <p className="text-[#6b7280] text-sm mt-1">Join Ahmad Mart for exclusive deals</p>
         </div>
         <div className="bg-white rounded-sm p-8 border border-gray-200">
@@ -2915,7 +2915,7 @@ function AccountPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl sm:text-3xl font-black text-[#111827] mb-6">My Account</h1>
+      <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight mb-6">My Account</h1>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
@@ -3114,7 +3114,7 @@ function MessagesPage() {
   if (!user) return (
     <div className="max-w-md mx-auto px-4 py-20 text-center">
       <MessageCircle size={56} className="mx-auto text-gray-300 mb-4" />
-      <h2 className="font-black text-xl text-[#111827] mb-2">Sign in to view your messages</h2>
+      <h2 className="font-black text-xl text-[#111827] tracking-tight mb-2">Sign in to view your messages</h2>
       <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm mr-3">Sign In</button>
       <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-sm font-bold text-sm">Register</button>
     </div>
@@ -3124,7 +3124,7 @@ function MessagesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl sm:text-3xl font-black text-[#111827] mb-5 flex items-center gap-2"><MessageCircle size={24} className="text-[#1E40AF]" /> Messages</h1>
+      <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight mb-6 flex items-center gap-2"><MessageCircle size={24} className="text-[#1E40AF]" /> Messages</h1>
       {err && <div className="mb-4 rounded-sm bg-red-50 text-red-600 p-3 text-sm font-semibold">{err}</div>}
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Conversation list */}
@@ -3614,7 +3614,7 @@ function ProductForm({ initial, onSave, onCancel, busy, allowBadge = true }: { i
         {allowBadge && <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Badge</span><select className={inp} value={f.badge} onChange={e => set("badge", e.target.value)}><option value="">None</option><option value="new">new</option><option value="sale">sale</option><option value="bestseller">bestseller</option></select></label>}
         <div className="text-sm sm:col-span-2">
           <span className="font-semibold text-[#374151] block mb-1">Product Images</span>
-          <p className="text-xs text-[#6b7280] mb-2">Paste an image link <span className="font-semibold">or</span> upload a photo from your device — it loads instantly in the preview and is visible to everyone. The first image is the main one shown on the product. You can add up to {MAX_PRODUCT_IMAGES} images.</p>
+          <p className="text-xs text-[#6b7280] leading-relaxed mb-2">Paste an image link <span className="font-semibold">or</span> upload a photo from your device — it loads instantly in the preview and is visible to everyone. The first image is the main one shown on the product. You can add up to {MAX_PRODUCT_IMAGES} images.</p>
           <div className="space-y-2">
             {imgs.map((url, i) => {
               // data: = freshly uploaded this session; /api/product-image = an
@@ -3834,7 +3834,7 @@ function AdminProducts({ dbMode }: { dbMode: boolean }) {
       {renameOpen && dbMode && (
         <div className="bg-white rounded-sm p-5 mb-4 border border-gray-200">
           <p className="font-bold text-[#111827] text-sm mb-1">Rename or delete categories &amp; sub-categories</p>
-          <p className="text-xs text-[#6b7280] mb-4">Renaming changes it on <strong>every product</strong> that uses it — including sellers' products. Deleting removes the category <strong>and permanently deletes all of its products</strong>, so it always asks for confirmation first. The photo controls set the icon shown for that category on the homepage's "Shop by Category" row.</p>
+          <p className="text-xs text-[#6b7280] leading-relaxed mb-4">Renaming changes it on <strong>every product</strong> that uses it — including sellers' products. Deleting removes the category <strong>and permanently deletes all of its products</strong>, so it always asks for confirmation first. The photo controls set the icon shown for that category on the homepage's "Shop by Category" row.</p>
           <div className="space-y-3">
             {Array.from(new Set(products.map(p => p.category))).filter(Boolean).map(cat => {
               const subs = Array.from(new Set(products.filter(p => p.category === cat).map(p => p.subcategory))).filter(Boolean);
@@ -4127,7 +4127,7 @@ function AdminPage() {
         <div className="w-14 h-14 rounded-sm bg-[#1E40AF] flex items-center justify-center mx-auto mb-4">
           <Lock size={24} className="text-white" />
         </div>
-        <h2 className="font-black text-xl text-[#111827] mb-1">Admin Access</h2>
+        <h2 className="font-black text-xl text-[#111827] tracking-tight mb-1">Admin Access</h2>
         <p className="text-xs text-[#6b7280] mb-5">{user ? "This account is not an admin. Sign in with the admin email." : "Sign in with the admin email and password."}</p>
         <input type="email" value={form.email} autoFocus placeholder="Admin email"
           onChange={e => { setForm(f => ({ ...f, email: e.target.value })); setPassErr(""); }}
@@ -4149,7 +4149,7 @@ function AdminPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight flex items-center gap-2">
             <ShieldCheck size={26} className="text-[#1E40AF]" /> Admin Dashboard
           </h1>
           <p className="text-sm text-[#6b7280] mt-0.5">{dbMode ? "Connected to the database." : "Read-only — database not connected."}</p>
@@ -4259,7 +4259,7 @@ function SellerPage() {
   if (!user) return (
     <div className="max-w-md mx-auto px-4 py-20 text-center">
       <User size={56} className="mx-auto text-gray-300 mb-4" />
-      <h2 className="font-black text-xl text-[#111827] mb-2">Sign in to your seller account</h2>
+      <h2 className="font-black text-xl text-[#111827] tracking-tight mb-2">Sign in to your seller account</h2>
       <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm mr-3">Sign In</button>
       <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-sm font-bold text-sm">Register</button>
     </div>
@@ -4267,7 +4267,7 @@ function SellerPage() {
   if (user.role !== "seller" && user.role !== "admin") return (
     <div className="max-w-md mx-auto px-4 py-20 text-center">
       <Package size={56} className="mx-auto text-gray-300 mb-4" />
-      <h2 className="font-black text-xl text-[#111827] mb-2">Become a seller</h2>
+      <h2 className="font-black text-xl text-[#111827] tracking-tight mb-2">Become a seller</h2>
       <p className="text-sm text-[#6b7280] mb-6">Switch your account to a seller in your profile to list products.</p>
       <button onClick={() => navigate("/account")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm">Go to Profile</button>
     </div>
@@ -4291,9 +4291,9 @@ function SellerPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight flex items-center gap-2">
             <Package size={26} className="text-[#1E40AF]" /> {user.storeName || "Seller Dashboard"}
           </h1>
           <p className="text-sm text-[#6b7280] mt-0.5">Manage the products in your store.</p>
@@ -4495,7 +4495,7 @@ function SellerDeliveredOrders() {
       </Link>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight flex items-center gap-2">
             <CheckCircle size={26} className="text-[#059669]" /> Delivered Orders
           </h1>
           <p className="text-sm text-[#6b7280] mt-0.5">{delivered.length} order{delivered.length === 1 ? "" : "s"} · {fmt(total)} total</p>
