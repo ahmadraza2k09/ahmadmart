@@ -5,6 +5,13 @@
 import type { Product } from "./types";
 import { getToken } from "./auth";
 
+declare global {
+  interface Window {
+    /** Catalog request started by the inline preload script in index.html. */
+    __amProducts?: Promise<{ products: Product[] } | null>;
+  }
+}
+
 async function send(url: string, method: string, body?: unknown) {
   const res = await fetch(url, {
     method,
@@ -21,6 +28,18 @@ async function send(url: string, method: string, body?: unknown) {
  *  write so the unique query param bypasses the cache and the change shows
  *  immediately. */
 export async function fetchProducts(fresh = false): Promise<Product[]> {
+  // index.html fires this same request from a tiny inline script, so it is
+  // already travelling while the browser is still downloading and parsing the
+  // bundle. Adopt that in-flight response the first time rather than waiting
+  // for React to mount and then starting from scratch. Cleared once used (and
+  // skipped entirely for fresh=true) so later refreshes really do go to the
+  // network and a writer still sees their own change.
+  const preloaded = typeof window !== "undefined" ? window.__amProducts : undefined;
+  if (!fresh && preloaded) {
+    window.__amProducts = undefined;
+    const data = await preloaded;
+    if (data?.products) return data.products;
+  }
   const url = fresh ? `/api/products?fresh=${Date.now()}` : "/api/products";
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
@@ -74,8 +93,8 @@ export async function seedProducts(products: Product[], force = false): Promise<
 /** Public: every category that has an admin-uploaded photo, as lazy image URLs.
  *  Categories with no override just aren't in the map — callers fall back to
  *  a product photo from that category. */
-export async function fetchCategoryImages(): Promise<Record<string, string>> {
-  const res = await fetch("/api/category-image", { cache: "no-store" });
+export async function fetchCategoryImages(fresh = false): Promise<Record<string, string>> {
+  const res = await fetch(fresh ? `/api/category-image?fresh=${Date.now()}` : "/api/category-image", { cache: "no-store" });
   if (!res.ok) return {};
   const data = (await res.json()) as { images: Record<string, string> };
   return data.images || {};

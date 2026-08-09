@@ -15,10 +15,27 @@ export default async function handler(req, res) {
     if (!id) { res.status(400).json({ error: "Missing product id." }); return; }
 
     const sql = getSql();
-    const [row] = await sql`select image, images from products where id = ${id}`;
-    if (!row) { res.status(404).json({ error: "Product not found." }); return; }
+    // Select only the ONE photo being asked for. Reading `image, images` here
+    // pulled every photo of the product out of Neon to serve a single one, so a
+    // six-photo product page moved the whole set six times over — the second
+    // largest drain on the network-transfer allowance after the catalog query.
+    // coalesce runs inside Postgres, so falling back to the main photo when the
+    // index is out of range costs nothing extra on the wire.
+    //
+    // ($2)::int is load-bearing: the driver sends parameters untyped and jsonb
+    // has both ->>(int) and ->>(text) overloads, so left to infer Postgres
+    // resolves the text one — "look up this object key" — and quietly returns
+    // NULL for every array, i.e. no gallery photo would ever load.
+    const rows = i >= 0
+      ? await sql(
+          `select coalesce(
+             case when jsonb_typeof(images) = 'array' then images ->> ($2)::int end,
+             image) as src
+           from products where id = $1`, [id, i])
+      : await sql(`select image as src from products where id = $1`, [id]);
+    if (!rows.length) { res.status(404).json({ error: "Product not found." }); return; }
 
-    const src = i >= 0 ? ((row.images || [])[i] ?? row.image) : row.image;
+    const src = rows[0].src;
     if (!src) { res.status(404).json({ error: "Image not found." }); return; }
 
     // Guard against self-reference (an internal URL accidentally saved into the

@@ -1,7 +1,7 @@
 // /api/seller/products — a seller manages ONLY their own products.
 // GET (own list), POST (create), PUT (update own), DELETE (delete own).
 // Requires a Bearer token with role "seller" (admins may also use it).
-import { getSql, getAuthUser, rowToProduct, readJsonBody, resolveInternalImages } from "../_db.js";
+import { getSql, getAuthUser, rowToProduct, readJsonBody, resolveInternalImages, listSellerProducts, getProductRow } from "../_db.js";
 
 // A product with no name/category/subcategory or a non-positive price saves
 // without a DB error (those columns are `not null`, not "non-empty") but is
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET") {
-      const rows = await sql`select * from products where seller_id = ${auth.id} order by id desc`;
+      const rows = await listSellerProducts(sql, auth.id);
       res.status(200).json({ products: rows.map(rowToProduct) });
       return;
     }
@@ -60,8 +60,11 @@ export default async function handler(req, res) {
            ${p.reviews ?? 0}, ${null}, ${p.inStock ?? true}, ${p.isService ?? false},
            ${p.description ?? ""}, ${JSON.stringify(p.specs ?? {})}::jsonb, ${auth.id}, ${p.deliveryCharge ?? null},
            ${JSON.stringify(p.sizes ?? [])}::jsonb, ${JSON.stringify(p.colors ?? [])}::jsonb)
-        returning *`;
-      res.status(201).json({ product: rowToProduct(rows[0]) });
+        returning id`;
+      // Read the row back without the photo columns rather than `returning *`,
+      // which echoed every freshly uploaded photo straight back to the client
+      // that had just sent it.
+      res.status(201).json({ product: rowToProduct(await getProductRow(sql, rows[0].id)) });
       return;
     }
 
@@ -98,8 +101,9 @@ export default async function handler(req, res) {
           sizes=${JSON.stringify(p.sizes ?? [])}::jsonb, colors=${JSON.stringify(p.colors ?? [])}::jsonb,
           delivery_charge=${p.deliveryCharge ?? null}, updated_at=now()
         where id=${id}
-        returning *`;
-      res.status(200).json({ product: rowToProduct(rows[0]) });
+        returning id`;
+      if (!rows.length) { res.status(404).json({ error: "Product not found." }); return; }
+      res.status(200).json({ product: rowToProduct(await getProductRow(sql, rows[0].id)) });
       return;
     }
 

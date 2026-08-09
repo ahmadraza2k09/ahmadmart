@@ -31,7 +31,12 @@ export default async function handler(req, res) {
         const v = new Date(r.updated_at).getTime();
         return [r.category, `/api/category-image?cat=${encodeURIComponent(r.category)}&v=${v}`];
       }));
-      res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=300");
+      // Same edge-cache strategy as /api/products: a long stale-while-revalidate
+      // window means the homepage gets this from the CDN instantly and the
+      // refresh happens in the background. The admin's own reload after an
+      // upload passes ?fresh=<ts>, a distinct cache key, so they still see their
+      // change immediately.
+      res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=86400");
       res.status(200).json({ images });
       return;
     }

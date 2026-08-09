@@ -135,6 +135,112 @@ export function rowToProduct(r) {
   };
 }
 
+// ─── Reading products without moving the photos ───────────────────────────────
+// The image/images columns hold base64 data URLs — often several hundred KB
+// each, up to six per product. rowToProduct never passes those to the browser
+// (it rewrites them to /api/product-image URLs), but a `select *` still drags
+// every one of them out of Neon on its way here. That read was by far the
+// biggest consumer of the project's network-transfer allowance: one catalog
+// fetch moved the entire photo library, and the storefront refetches whenever
+// the edge cache expires.
+//
+// So Postgres now builds the /api/product-image URL itself and returns that
+// instead of the photo. A data-URL photo only ever crosses the wire when the
+// browser asks for that single image. Everything downstream is unchanged —
+// rowToProduct's `lazy()` passes a non-data string through untouched, so it
+// produces the exact same JSON either way, and callers that legitimately need
+// the raw photo (resolveInternalImages) still read the columns directly.
+//
+// `ord - 1` converts with-ordinality's 1-based counter to the 0-based index
+// that /api/product-image?i= expects, and the jsonb_typeof guard keeps a
+// malformed images value from failing the whole storefront query.
+const PRODUCT_IMAGE_COLUMNS = `
+      case when p.image like 'data:%'
+           then '/api/product-image?id=' || p.id || '&i=-1&v=' || v.ver
+           else p.image end as image,
+      coalesce((
+        select jsonb_agg(to_jsonb(
+                 case when e like 'data:%'
+                      then '/api/product-image?id=' || p.id || '&i=' || (ord - 1) || '&v=' || v.ver
+                      else e end) order by ord)
+        from jsonb_array_elements_text(
+               case when jsonb_typeof(p.images) = 'array' then p.images else '[]'::jsonb end
+             ) with ordinality as t(e, ord)
+      ), '[]'::jsonb) as images`;
+
+// Every non-photo column rowToProduct reads. Listed explicitly because `p.*`
+// would pull the photos back in.
+const PRODUCT_SCALAR_COLUMNS = `
+      p.id, p.name, p.price, p.original_price, p.price_note, p.category, p.subcategory,
+      p.rating, p.reviews, p.badge, p.featured, p.in_stock, p.is_service, p.description,
+      p.specs, p.sizes, p.colors, p.delivery_charge, p.seller_id, p.created_at, p.updated_at`;
+
+// `v.ver` — the row's updated_at in epoch milliseconds, matching the value
+// rowToProduct derives in JS, so a photo's URL changes the moment it is edited
+// and the immutable CDN entry for the old one is never reused.
+const PRODUCT_VERSION_JOIN = `
+      cross join lateral (select floor(extract(epoch from p.updated_at) * 1000)::bigint as ver) v`;
+
+// Naming columns explicitly means a column that predates a migration is now a
+// hard error rather than something `p.*` quietly omitted — so callers ensure
+// the late-added ones before falling back to a retry.
+export async function ensureProductColumns(sql) {
+  await sql`alter table products add column if not exists delivery_charge integer`;
+  await sql`alter table products add column if not exists featured boolean not null default false`;
+  await sql`alter table products add column if not exists sizes  jsonb not null default '[]'::jsonb`;
+  await sql`alter table products add column if not exists colors jsonb not null default '[]'::jsonb`;
+  await sql`alter table products add column if not exists price_note text`;
+  await sql`alter table products add column if not exists seller_id integer references users(id) on delete set null`;
+}
+
+// The public storefront catalog. "sold" is computed once across all orders (not
+// as a correlated subquery, which would re-unnest every order for every product)
+// then joined in, so this stays a single cheap pass however many products exist.
+export function listStoreProducts(sql) {
+  return sql(`
+    select
+      ${PRODUCT_SCALAR_COLUMNS},
+      ${PRODUCT_IMAGE_COLUMNS},
+      u.store_name      as seller_store,
+      u.whatsapp        as seller_whatsapp,
+      u.city            as seller_city,
+      u.jazzcash_number as seller_jazzcash_number,
+      u.jazzcash_title  as seller_jazzcash_title,
+      u.account_type    as seller_account_type,
+      u.payment_methods as seller_payment_methods,
+      coalesce(sold.qty, 0)::int as sold
+    from products p
+    ${PRODUCT_VERSION_JOIN}
+    left join users u on u.id = p.seller_id
+    left join (
+      select (item->>'id')::int as product_id, sum((item->>'qty')::int) as qty
+      from orders o, jsonb_array_elements(o.items) as item
+      where o.status in ('Payment Received', 'Confirmed (COD)', 'Shipped', 'Delivered')
+      group by 1
+    ) sold on sold.product_id = p.id
+    order by p.id`);
+}
+
+// One seller's own products, for their dashboard.
+export function listSellerProducts(sql, sellerId) {
+  return sql(`
+    select ${PRODUCT_SCALAR_COLUMNS}, ${PRODUCT_IMAGE_COLUMNS}
+    from products p ${PRODUCT_VERSION_JOIN}
+    where p.seller_id = $1
+    order by p.id desc`, [sellerId]);
+}
+
+// A single product, read back after a write. Writes used to `returning *`,
+// which echoed every uploaded photo straight back to the client that had just
+// sent it — this costs one extra (tiny) round trip instead.
+export async function getProductRow(sql, id) {
+  const rows = await sql(`
+    select ${PRODUCT_SCALAR_COLUMNS}, ${PRODUCT_IMAGE_COLUMNS}
+    from products p ${PRODUCT_VERSION_JOIN}
+    where p.id = $1`, [id]);
+  return rows[0] ?? null;
+}
+
 // When a product is edited, the form round-trips the /api/product-image URLs
 // that rowToProduct generated (the seller sees those instead of the raw base64
 // originals). Saving them as-is would overwrite the stored photos with

@@ -98,6 +98,21 @@
       </script>
       <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
 
+      <!-- Start the catalog request here, before the browser has even begun
+           downloading the app bundle. Without this the request cannot start
+           until React has mounted, so the bundle download and the API call run
+           one after the other instead of together. adminApi.fetchProducts picks
+           this promise up on its first call. Failures are swallowed to null —
+           fetchProducts then falls through to its own request, so a flaky
+           preload can never stop the catalog from loading. -->
+      <script>
+        try {
+          window.__amProducts = fetch("/api/products")
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .catch(function () { return null; });
+        } catch (e) {}
+      </script>
+
       <!-- Urdu translation (Google Translate), loaded only when the visitor has
            chosen Urdu so English visitors are unaffected. The Node patch makes
            React tolerant of Google Translate editing text nodes, so the store

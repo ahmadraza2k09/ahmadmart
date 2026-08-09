@@ -4,7 +4,7 @@
 // Note: admin has no orders endpoint — orders are managed entirely by the seller
 // (or the buyer, for their own history); admin only sees aggregate counts and
 // earnings per seller via the "sellers" resource below.
-import { getSql, requireAdmin, rowToProduct, readJsonBody, sellerAnalytics, deleteSellerCascade, ensureOrderHistoryColumns, ensureAccountTypeColumn, resolveInternalImages } from "../_db.js";
+import { getSql, requireAdmin, rowToProduct, readJsonBody, sellerAnalytics, deleteSellerCascade, ensureOrderHistoryColumns, ensureAccountTypeColumn, resolveInternalImages, getProductRow } from "../_db.js";
 
 // See the identical check in api/seller/products.js — a product with no
 // name/category/subcategory or a non-positive price would otherwise save
@@ -55,8 +55,10 @@ async function products(req, res) {
          ${p.badge ?? null}, ${p.inStock ?? true}, ${p.isService ?? false},
          ${p.description ?? ""}, ${JSON.stringify(p.specs ?? {})}::jsonb, ${p.deliveryCharge ?? null},
          ${JSON.stringify(p.sizes ?? [])}::jsonb, ${JSON.stringify(p.colors ?? [])}::jsonb)
-      returning *`;
-    res.status(201).json({ product: rowToProduct(rows[0]) });
+      returning id`;
+    // Read back without the photo columns rather than `returning *`, which
+    // echoed every freshly uploaded photo back to the client that just sent it.
+    res.status(201).json({ product: rowToProduct(await getProductRow(sql, rows[0].id)) });
     return;
   }
   if (req.method === "PUT") {
@@ -78,9 +80,9 @@ async function products(req, res) {
         sizes=${JSON.stringify(p.sizes ?? [])}::jsonb, colors=${JSON.stringify(p.colors ?? [])}::jsonb,
         delivery_charge=${p.deliveryCharge ?? null}, updated_at=now()
       where id=${p.id}
-      returning *`;
+      returning id`;
     if (!rows.length) { res.status(404).json({ error: "Product not found." }); return; }
-    res.status(200).json({ product: rowToProduct(rows[0]) });
+    res.status(200).json({ product: rowToProduct(await getProductRow(sql, rows[0].id)) });
     return;
   }
   if (req.method === "DELETE") {
@@ -98,9 +100,9 @@ async function products(req, res) {
     const body = await readJsonBody(req);
     if (!body.id) { res.status(400).json({ error: "Missing product id." }); return; }
     await sql`alter table products add column if not exists featured boolean not null default false`;
-    const rows = await sql`update products set featured = ${!!body.featured}, updated_at = now() where id = ${body.id} returning *`;
+    const rows = await sql`update products set featured = ${!!body.featured}, updated_at = now() where id = ${body.id} returning id`;
     if (!rows.length) { res.status(404).json({ error: "Product not found." }); return; }
-    res.status(200).json({ product: rowToProduct(rows[0]) });
+    res.status(200).json({ product: rowToProduct(await getProductRow(sql, rows[0].id)) });
     return;
   }
   res.status(405).json({ error: "Method not allowed" });

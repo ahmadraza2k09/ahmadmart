@@ -68,7 +68,7 @@ interface StoreCtx {
   // Admin-uploaded photo per category, for the homepage's "Shop by Category"
   // strip. Categories not in this map fall back to a product photo instead.
   categoryImages: Record<string, string>;
-  refreshCategoryImages: () => Promise<void>;
+  refreshCategoryImages: (fresh?: boolean) => Promise<void>;
   cart: CartItem[];
   wishlist: WishlistItem[];
   addToCart: (p: Product, qty?: number, variant?: { size?: string; color?: string }) => void;
@@ -432,8 +432,10 @@ function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { refreshProducts(); }, [refreshProducts]);
 
   const [categoryImages, setCategoryImages] = useState<Record<string, string>>({});
-  const refreshCategoryImages = useCallback(async () => {
-    try { setCategoryImages(await apiFetchCategoryImages()); } catch { /* falls back to product photos */ }
+  // fresh=true bypasses the CDN edge cache, so an admin who has just changed a
+  // category photo sees it right away instead of waiting for the cache to age out.
+  const refreshCategoryImages = useCallback(async (fresh = false) => {
+    try { setCategoryImages(await apiFetchCategoryImages(fresh)); } catch { /* falls back to product photos */ }
   }, []);
   useEffect(() => { refreshCategoryImages(); }, [refreshCategoryImages]);
 
@@ -1311,8 +1313,6 @@ function HomePage() {
         {slides.map((slide, i) => (
           <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${i === activeSlide ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className={`w-full h-full bg-gradient-to-br ${slide.bg} flex flex-col lg:flex-row items-center min-h-[380px] sm:min-h-[470px] relative overflow-hidden`}>
-              {/* soft dot texture */}
-              <div className="absolute top-0 left-0 w-40 h-40 opacity-20" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.6) 1.5px, transparent 1.5px)", backgroundSize: "16px 16px" }} />
               <div className="flex-1 px-8 sm:px-12 py-9 text-white z-10">
                 <span className="inline-block px-4 py-1.5 rounded-sm bg-[#F97316] text-white text-xs font-bold mb-4">{slide.badge}</span>
                 <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] mb-4 max-w-xl">{slide.title} <span className="text-[#F97316]">{slide.highlight}</span></h1>
@@ -1897,6 +1897,16 @@ function ProductDetailPage() {
 
   const related = products.filter(p => p.subcategory === product.subcategory && p.id !== product.id).slice(0, 4);
 
+  // The gallery reads from `images`, but a product can legitimately have only a
+  // main `image` — nothing forces the two to agree, and a product saved with a
+  // single photo (or one whose extra photos were removed) leaves `images`
+  // empty. Reading it blindly rendered an empty gallery on a product that
+  // clearly had a picture everywhere else in the store, so fall back to the
+  // main photo. Guard the index too: activeImg resets on navigation, but a
+  // catalog refresh can shrink the list under a thumbnail that's already selected.
+  const gallery = product.images?.length ? product.images : (product.image ? [product.image] : []);
+  const shownImg = gallery[activeImg] ?? gallery[0];
+
   // Products with variants require a pick before the cart accepts them.
   const needsSize = (product.sizes?.length ?? 0) > 0;
   const needsColor = (product.colors?.length ?? 0) > 0;
@@ -1935,7 +1945,7 @@ function ProductDetailPage() {
           <div className="bg-white rounded-sm overflow-hidden mb-3 relative group cursor-zoom-in border border-gray-200"
             onClick={() => setZoomOpen(true)}
             style={{ aspectRatio: "4/5" }}>
-            <ProductImage src={product.images[activeImg]} alt={product.name}
+            <ProductImage src={shownImg} alt={product.name}
               className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" />
             {product.badge && (
               <div className="absolute top-4 left-4"><Badge type={product.badge} /></div>
@@ -1950,12 +1960,12 @@ function ProductDetailPage() {
                 className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-colors">
                 <X size={20} />
               </button>
-              <ProductImage src={product.images[activeImg]} alt={product.name}
+              <ProductImage src={shownImg} alt={product.name}
                 className="max-w-full max-h-full object-contain" />
             </div>
           )}
           <div className="flex gap-2">
-            {product.images.map((img, i) => (
+            {gallery.map((img, i) => (
               <button key={i} onClick={() => setActiveImg(i)}
                 className={`w-16 h-16 rounded-sm overflow-hidden border-2 transition-all ${i === activeImg ? "border-[#1E40AF] scale-95" : "border-gray-200"}`}>
                 <ProductImage src={img} alt="" className="w-full h-full object-cover" />
@@ -3341,26 +3351,58 @@ function proxiedImage(url: string): string {
   return `https://wsrv.nl/?url=${encodeURIComponent(url)}`;
 }
 
+// Backoff before re-requesting a photo that failed to load. Photos kept in the
+// database are served by /api/product-image, a serverless function that has to
+// wake up and query Neon — a cold start or a momentary blip is enough for the
+// browser to fire onError. A same-origin path can't be sent through the hotlink
+// proxy, so that single blip used to fall straight through to the "broken
+// image" placeholder and stay there for the rest of the visit. That is why a
+// handful of pictures looked broken while the rest of the page was fine, and
+// why a reload broke a different handful. Two spaced-out retries ride out the
+// blip instead.
+const IMAGE_RETRY_DELAYS = [400, 1500];
+
 // Renders any product image so a pasted link "just works", whatever the source
 // site's hotlink rules are:
 //   1. load the URL directly (fast — local files, Unsplash, referer-friendly hosts);
-//   2. if that fails, retry through an image proxy (handles strict hotlink blocks);
-//   3. if it still fails, show a neutral placeholder instead of a broken icon.
+//   2. if that fails, retry — a remote URL goes through an image proxy (which is
+//      what a hotlink block needs), our own endpoint just asks again (which is
+//      what a transient failure needs);
+//   3. only once the retries are used up, show a neutral placeholder instead of
+//      a broken icon.
 function ProductImage({ src, alt = "", className = "", style }: { src?: string; alt?: string; className?: string; style?: CSSProperties }) {
   const url = (src ?? "").trim();
   const remote = /^https?:\/\//i.test(url);
-  const [stage, setStage] = useState(0); // 0 = direct · 1 = proxy · 2 = failed
-  useEffect(() => { setStage(0); }, [url]);
+  // Retrying a hotlink-blocked host is pointless — it fails identically every
+  // time — so a remote URL still gets exactly one attempt via the proxy.
+  const lastAttempt = remote ? 1 : IMAGE_RETRY_DELAYS.length;
+  const [attempt, setAttempt] = useState(0);
+  const [retrying, setRetrying] = useState(false);
+  useEffect(() => { setAttempt(0); setRetrying(false); }, [url]);
 
-  // No src, all attempts exhausted, or a local path that can't be proxied → placeholder.
-  if (!url || stage >= 2 || (stage === 1 && !remote)) {
+  useEffect(() => {
+    if (!retrying) return;
+    const wait = remote ? 0 : IMAGE_RETRY_DELAYS[attempt] ?? 0;
+    const t = setTimeout(() => { setAttempt(a => a + 1); setRetrying(false); }, wait);
+    return () => clearTimeout(t);
+  }, [retrying, attempt, remote]);
+
+  // No src, or every attempt used up → neutral placeholder.
+  if (!url || attempt > lastAttempt) {
     return <div className={`${className} grid place-items-center bg-gray-50`} style={style}><ImageOff size={20} className="text-gray-300" /></div>;
   }
-  const realSrc = stage === 1 ? proxiedImage(url) : url;
+  // Waiting out the backoff — hold an empty tile so the failed image isn't shown.
+  if (retrying) return <div className={`${className} bg-gray-50`} style={style} />;
+
+  // The attempt counter rides along in the URL so the browser issues a genuinely
+  // new request instead of replaying the failure it already has cached.
+  const realSrc = attempt === 0 ? url
+    : remote ? proxiedImage(url)
+    : `${url}${url.includes("?") ? "&" : "?"}retry=${attempt}`;
   return (
     <img src={realSrc} alt={alt} className={className} style={style}
       loading="lazy" decoding="async" referrerPolicy="no-referrer"
-      onError={() => setStage(s => s + 1)} />
+      onError={() => setRetrying(true)} />
   );
 }
 
@@ -3685,7 +3727,7 @@ function CategoryImageEditor({ category }: { category: string }) {
     try {
       const dataUrl = await fileToCompressedDataURL(file, 600, 0.75);
       await apiSetCategoryImage(category, dataUrl);
-      await refreshCategoryImages();
+      await refreshCategoryImages(true);
     } catch {
       setErr("Could not save that photo. Please try another file.");
     }
@@ -3693,7 +3735,7 @@ function CategoryImageEditor({ category }: { category: string }) {
   };
   const onRemove = async () => {
     setErr(""); setBusy(true);
-    try { await apiDeleteCategoryImage(category); await refreshCategoryImages(); }
+    try { await apiDeleteCategoryImage(category); await refreshCategoryImages(true); }
     catch { setErr("Could not remove the photo."); }
     setBusy(false);
   };
