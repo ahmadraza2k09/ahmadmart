@@ -3,7 +3,7 @@
 // Environment Variables):
 //   DATABASE_URL    = your Neon connection string (sslmode=require)
 //   JWT_SECRET      = a long random string used to sign login tokens
-//   ADMIN_EMAIL     = admin login email   (default: ahmadmart@mail.com)
+//   ADMIN_EMAIL     = admin login email   (default: tryahmadmart@gmail.com)
 //   ADMIN_PASSWORD  = admin login password (default: ahmadmart@123 — change it!)
 import { neon } from "@neondatabase/serverless";
 import jwt from "jsonwebtoken";

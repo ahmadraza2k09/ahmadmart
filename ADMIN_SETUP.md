@@ -28,7 +28,7 @@ Production (and Preview):
 | ---------------- | --------------------------------------------------------------------- |
 | `DATABASE_URL`   | your **new** Neon connection string (keep `?sslmode=require`)          |
 | `JWT_SECRET`     | a long random string (e.g. from `openssl rand -hex 32`) for login tokens |
-| `ADMIN_EMAIL`    | `ahmadmart@mail.com` (optional — this is the default)                 |
+| `ADMIN_EMAIL`    | `tryahmadmart@gmail.com` (optional — this is the default)              |
 | `ADMIN_PASSWORD` | `ahmadmart@123` (the admin login password — **change it!**)           |
 
 Then **redeploy** so the functions pick up the variables.
@@ -36,7 +36,7 @@ Then **redeploy** so the functions pick up the variables.
 ## Admin login
 
 Go to **/admin** (or /login) and sign in with `ADMIN_EMAIL` + `ADMIN_PASSWORD`
-(default `ahmadmart@mail.com` / `ahmadmart@123`). On first login the admin account
+(default `tryahmadmart@gmail.com` / `ahmadmart@123`). On first login the admin account
 is **created automatically in the Neon `users` table** (password hashed), and you
 get full access to the dashboard. To change the admin password later, update
 `ADMIN_PASSWORD` and the row, or just update the user's `password_hash` in Neon.

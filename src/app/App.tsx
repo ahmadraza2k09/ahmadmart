@@ -1174,9 +1174,9 @@ function Footer() {
               <Phone size={14} className="text-[#F97316]" />
               <span>+92 340 5463601</span>
             </a>
-            <a href="mailto:tryahmadmart.store@gmail.com" className="flex items-center gap-2 text-sm text-gray-400 hover:text-[#F97316] transition-colors mt-1 break-all">
+            <a href="mailto:tryahmadmart@gmail.com" className="flex items-center gap-2 text-sm text-gray-400 hover:text-[#F97316] transition-colors mt-1 break-all">
               <Mail size={14} className="text-[#F97316] flex-shrink-0" />
-              <span>tryahmadmart.store@gmail.com</span>
+              <span>tryahmadmart@gmail.com</span>
             </a>
             <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
               <MapPin size={14} className="text-[#F97316]" />

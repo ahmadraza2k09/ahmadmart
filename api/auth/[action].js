@@ -4,7 +4,7 @@
 import bcrypt from "bcryptjs";
 import { getSql, getAuthUser, signToken, userPublic, readJsonBody, ensureAccountTypeColumn } from "../_db.js";
 
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "ahmadmart@mail.com").toLowerCase();
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "tryahmadmart@gmail.com").toLowerCase();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ahmadmart@123";
 const ACCOUNT_TYPES = ["JazzCash", "SadaPay", "NayaPay", "Easypaisa"];
 const safeAccountType = t => (ACCOUNT_TYPES.includes(t) ? t : "JazzCash");

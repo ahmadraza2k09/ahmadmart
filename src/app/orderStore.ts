@@ -19,7 +19,7 @@ export type PaymentMethods = "both" | "online" | "cod";
 export const OFFICIAL_ACCOUNT_TYPE: AccountType = "JazzCash";
 export const OFFICIAL_ACCOUNT_NUMBER = "03085560981";
 export const OFFICIAL_ACCOUNT_TITLE = "M. Faizan Ali";
-export const ORDER_EMAIL = "tryahmadmart.store@gmail.com";
+export const ORDER_EMAIL = "tryahmadmart@gmail.com";
 
 // Store owner's WhatsApp. WHATSAPP_NUMBER must be international format with no "+",
 // spaces or leading zero (used to build wa.me click-to-chat links).
@@ -28,7 +28,7 @@ export const WHATSAPP_DISPLAY = "+92 340 5463601";
 
 // Web3Forms lets a static site email order details + the screenshot attachment to
 // ORDER_EMAIL with no backend. Create a FREE access key at https://web3forms.com
-// (sign up with tryahmadmart.store@gmail.com so order emails land in that inbox),
+// (sign up with tryahmadmart@gmail.com so order emails land in that inbox),
 // then paste the key below. Until it is set, orders still save to the admin panel
 // and the customer still gets the confirmation — only the email is skipped.
 export const WEB3FORMS_ACCESS_KEY = "";

@@ -4,7 +4,7 @@
 import ahmadMartLogo from "@/imports/ahmad-logo.png";
 import { WHATSAPP_DISPLAY } from "./orderStore";
 
-const SUPPORT_EMAIL = "tryahmadmart.store@gmail.com";
+const SUPPORT_EMAIL = "tryahmadmart@gmail.com";
 const SITE = "ahmadmart.store";
 
 export type PolicyId = "track-order" | "returns" | "privacy" | "terms" | "faq";
