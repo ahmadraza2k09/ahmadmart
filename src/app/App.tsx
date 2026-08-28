@@ -639,7 +639,7 @@ function ProductCardBase({ product }: { product: Product }) {
     <div
       ref={cardRef}
       onClick={() => navigate(`/product/${product.id}`)}
-      className="reveal group bg-white rounded-sm overflow-hidden cursor-pointer transition-colors duration-200 border border-gray-200 hover:border-[#1E40AF]"
+      className="reveal group bg-white rounded-2xl overflow-hidden cursor-pointer transition-colors duration-200 border border-gray-200 hover:border-[#1E40AF]"
     >
       <div className="relative overflow-hidden bg-gray-50" style={{ aspectRatio: "4/5" }}>
         <ProductImage
@@ -649,20 +649,20 @@ function ProductCardBase({ product }: { product: Product }) {
         />
         <div className="absolute top-3 left-3 flex flex-col gap-1">
           {product.featured && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-black text-white px-2 py-0.5 rounded-sm bg-[#F97316]">
+            <span className="inline-flex items-center gap-1 text-[10px] font-black text-white px-2.5 py-1 rounded-full bg-[#F97316]">
               <Star size={9} className="fill-white" /> Featured
             </span>
           )}
           {product.badge && <Badge type={product.badge} />}
           {product.originalPrice && (
-            <span className="text-[10px] font-bold bg-red-500 text-white px-2 py-0.5 rounded-sm">
+            <span className="text-[10px] font-bold bg-red-500 text-white px-2.5 py-1 rounded-full">
               -{discount(product.originalPrice, product.price)}%
             </span>
           )}
         </div>
         <button
           onClick={e => { e.stopPropagation(); toggleWishlist(product); }}
-          className="absolute top-3 right-3 w-8 h-8 rounded-sm bg-white/90 border border-gray-200 flex items-center justify-center transition-all duration-200 active:scale-90"
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center transition-all duration-200 active:scale-90"
         >
           <Heart size={15} className={inWishlist(product.id) ? "fill-red-500 text-red-500" : "text-gray-400"} />
         </button>
@@ -691,14 +691,14 @@ function ProductCardBase({ product }: { product: Product }) {
           {product.isService ? (
             <button
               onClick={e => { e.stopPropagation(); navigate(`/product/${product.id}`); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-sm text-xs font-semibold text-white transition-colors duration-200 active:scale-95 bg-[#1E40AF] hover:bg-[#1e3a8a]"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-colors duration-200 active:scale-95 bg-[#1E40AF] hover:bg-[#1e3a8a]"
             >
               <ShoppingCart size={13} /> Buy
             </button>
           ) : (
             <button
               onClick={handleAdd}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-sm text-xs font-semibold transition-colors duration-200 active:scale-95 ${adding ? "bg-emerald-500 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors duration-200 active:scale-95 ${adding ? "bg-emerald-500 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}
             >
               {adding ? <CheckCircle size={13} /> : <ShoppingCart size={13} />}
               {adding ? "Added!" : "Add"}
@@ -716,7 +716,7 @@ const ProductCard = memo(ProductCardBase);
 // cache) so the grid never flashes empty or shows stale dummy products.
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-sm overflow-hidden border border-gray-200">
+    <div className="bg-white rounded-2xl overflow-hidden border border-gray-200">
       <div className="bg-gray-100 animate-pulse" style={{ aspectRatio: "1/1" }} />
       <div className="p-3 sm:p-4 space-y-2">
         <div className="h-3 rounded bg-gray-100 animate-pulse w-3/4" />
@@ -866,12 +866,11 @@ function Navbar() {
 
             {/* Desktop nav: one "Categories" button opens a two-pane panel (all
                 categories on the left — it scrolls, so any number of categories
-                stays tidy — and the highlighted category's sub-categories on the
-                right). Home/Shop stay as plain links. */}
+            {/* Desktop nav */}
             <div className="hidden xl:flex items-center gap-6 flex-1 min-w-0">
               <div className="relative" ref={catsRef}>
                 <button onClick={() => { setCatsOpen(o => !o); setMegaCat(null); }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-bold transition-colors border ${catsOpen ? "bg-[#1E40AF] text-white border-[#1E40AF]" : "bg-white text-[#1E40AF] border-[#1E40AF] hover:bg-[#1E40AF] hover:text-white"}`}>
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors border ${catsOpen ? "bg-[#1E40AF] text-white border-[#1E40AF]" : "bg-white text-[#1E40AF] border-[#1E40AF] hover:bg-[#1E40AF] hover:text-white"}`}>
                   <LayoutGrid size={15} /> Categories
                   <ChevronDown size={14} className={`transition-transform ${catsOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -879,7 +878,7 @@ function Navbar() {
                   const activeCat = megaCat && allCats.includes(megaCat) ? megaCat : allCats[0];
                   const subs = catTree[activeCat] || [];
                   return (
-                    <div className="absolute left-0 top-full mt-2 z-50 flex bg-white border border-gray-200 overflow-hidden"
+                    <div className="absolute left-0 top-full mt-2 z-50 flex bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xl"
                       style={{ boxShadow: "0 12px 24px rgba(17,24,39,0.12)", width: 620 }}>
                       {/* Left pane: every category, scrollable */}
                       <div className="w-60 max-h-[420px] overflow-y-auto border-r border-gray-200 py-2 bg-[#F8F9FB] flex-shrink-0">
@@ -897,12 +896,12 @@ function Navbar() {
                         <p className="text-sm font-black text-[#111827] mb-3">{activeCat}</p>
                         <div className="grid grid-cols-2 gap-1.5">
                           <Link to={`/shop?cat=${encodeURIComponent(activeCat)}`}
-                            className="px-3 py-2 rounded-sm text-sm font-bold text-[#1E40AF] bg-[#EFF6FF] hover:bg-[#1E40AF] hover:text-white transition-colors">
+                            className="px-3 py-2 rounded-xl text-sm font-bold text-[#1E40AF] bg-[#EFF6FF] hover:bg-[#1E40AF] hover:text-white transition-colors">
                             All {activeCat}
                           </Link>
                           {subs.map(s => (
                             <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`}
-                              className="px-3 py-2 rounded-sm text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors truncate">
+                              className="px-3 py-2 rounded-xl text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors truncate">
                               {s}
                             </Link>
                           ))}
@@ -916,9 +915,7 @@ function Navbar() {
               <Link to="/" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors flex-shrink-0">Home</Link>
               <Link to="/shop" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors flex-shrink-0">Shop</Link>
 
-              {/* Persistent desktop search — a hidden/toggle search only shows on
-                  hover intent, so it reads as an afterthought; a marketplace this
-                  size should surface search all the time. */}
+              {/* Persistent desktop search */}
               <div className="relative flex-1 max-w-md ml-2">
                 <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -928,16 +925,16 @@ function Navbar() {
                   onBlur={() => setTimeout(() => setDeskSearchFocus(false), 150)}
                   onKeyDown={e => { if (e.key === "Enter" && searchQ.trim()) { navigate(`/shop?q=${encodeURIComponent(searchQ)}`); setDeskSearchFocus(false); (e.target as HTMLInputElement).blur(); } }}
                   placeholder="Search products, brands and categories..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-sm border border-gray-300 bg-[#F8F9FB] text-sm outline-none focus:border-[#1E40AF] focus:bg-white transition-colors"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 bg-[#F8F9FB] text-sm outline-none focus:border-[#1E40AF] focus:bg-white transition-colors"
                 />
                 {deskSearchFocus && q && (
-                  <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 overflow-hidden z-50" style={{ boxShadow: "0 12px 24px rgba(17,24,39,0.12)" }}>
+                  <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 rounded-2xl overflow-hidden z-50 shadow-xl" style={{ boxShadow: "0 12px 24px rgba(17,24,39,0.12)" }}>
                     {results.length === 0 ? (
                       <p className="px-4 py-3 text-sm text-[#6b7280]">No products match "{searchQ}".</p>
                     ) : results.map(p => (
                       <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchQ(""); setDeskSearchFocus(false); }}
                         className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#F8F9FB] transition-colors border-b border-gray-50 last:border-0">
-                        <ProductImage src={p.image} alt="" className="w-9 h-9 rounded-sm object-cover bg-gray-50 flex-shrink-0" />
+                        <ProductImage src={p.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-[#111827] truncate">{p.name}</p>
                           <p className="text-xs text-[#6b7280] truncate">{p.subcategory}{p.sellerStore ? ` · ${p.sellerStore}` : ""}</p>
@@ -954,16 +951,16 @@ function Navbar() {
             <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ml-2">
               <div className="hidden md:block"><LangToggle /></div>
               <button onClick={() => setSearchOpen(o => !o)}
-                className="xl:hidden w-9 h-9 flex items-center justify-center rounded-sm hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
+                className="xl:hidden w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
                 <Search size={18} />
               </button>
               <Link to="/wishlist"
-                className="w-9 h-9 hidden sm:flex items-center justify-center rounded-sm hover:bg-[#FFF7ED] text-[#111827] hover:text-[#F97316] transition-colors">
+                className="w-9 h-9 hidden sm:flex items-center justify-center rounded-xl hover:bg-[#FFF7ED] text-[#111827] hover:text-[#F97316] transition-colors">
                 <Heart size={18} />
               </Link>
               {user && (
                 <Link to="/messages"
-                  className="relative w-9 h-9 flex items-center justify-center rounded-sm hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
+                  className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
                   <MessageCircle size={18} />
                   {unread > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#F97316] text-white text-[10px] font-black flex items-center justify-center">
@@ -973,11 +970,11 @@ function Navbar() {
                 </Link>
               )}
               <Link to={user ? "/account" : "/login"}
-                className="w-9 h-9 hidden sm:flex items-center justify-center rounded-sm hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
+                className="w-9 h-9 hidden sm:flex items-center justify-center rounded-xl hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
                 <User size={18} />
               </Link>
               <span className="hidden sm:block w-px h-6 bg-gray-200 mx-1" />
-              <Link to="/cart" className="relative flex items-center gap-2 px-3.5 py-2 rounded-sm font-semibold text-sm transition-colors active:scale-95 bg-[#1E40AF] text-white hover:bg-[#1e3a8a]">
+              <Link to="/cart" className="relative flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-colors active:scale-95 bg-[#1E40AF] text-white hover:bg-[#1e3a8a]">
                 <ShoppingCart size={16} />
                 <span className="hidden sm:inline">Cart</span>
                 {cartCount > 0 && (
@@ -986,7 +983,7 @@ function Navbar() {
                   </span>
                 )}
               </Link>
-              <button onClick={() => setMenuOpen(o => !o)} className="xl:hidden w-9 h-9 flex items-center justify-center rounded-sm hover:bg-gray-100 transition-colors ml-0.5">
+              <button onClick={() => setMenuOpen(o => !o)} className="xl:hidden w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors ml-0.5">
                 {menuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             </div>
@@ -1001,19 +998,19 @@ function Navbar() {
                     autoFocus value={searchQ} onChange={e => setSearchQ(e.target.value)}
                     onBlur={() => { if (!searchQ.trim()) setSearchOpen(false); }}
                     placeholder="Search products..."
-                    className="flex-1 px-4 py-2.5 rounded-sm border border-gray-300 text-sm outline-none focus:border-[#1E40AF] bg-[#F8F9FB]"
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 text-sm outline-none focus:border-[#1E40AF] bg-[#F8F9FB]"
                   />
-                  <button type="submit" className="px-5 py-2.5 rounded-sm bg-[#1E40AF] text-white text-sm font-semibold">Search</button>
+                  <button type="submit" className="px-5 py-2.5 rounded-xl bg-[#1E40AF] text-white text-sm font-semibold">Search</button>
                 </div>
               </form>
               {searchQ.trim() && (
-                <div className="mt-2 bg-white border border-gray-200 overflow-hidden" style={{ boxShadow: "0 12px 24px rgba(17,24,39,0.12)" }}>
+                <div className="mt-2 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xl" style={{ boxShadow: "0 12px 24px rgba(17,24,39,0.12)" }}>
                   {results.length === 0 ? (
                     <p className="px-4 py-3 text-sm text-[#6b7280]">No products match “{searchQ}”.</p>
                   ) : results.map(p => (
                     <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchOpen(false); setSearchQ(""); }}
                       className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#F8F9FB] transition-colors border-b border-gray-50 last:border-0">
-                      <ProductImage src={p.image} alt="" className="w-9 h-9 rounded-sm object-cover bg-gray-50 flex-shrink-0" />
+                      <ProductImage src={p.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-[#111827] truncate">{p.name}</p>
                         <p className="text-xs text-[#6b7280] truncate">{p.subcategory}{p.sellerStore ? ` · ${p.sellerStore}` : ""}</p>
@@ -1027,14 +1024,12 @@ function Navbar() {
           )}
         </div>
 
-        {/* Mobile menu — scrolls within itself (the nav is fixed, so without this
-            a long category list would extend past the bottom of the screen with
-            no way to reach the items below). */}
+        {/* Mobile menu */}
         {menuOpen && (
           <div className="xl:hidden border-t border-gray-100 bg-white mobile-menu-scroll">
             <div className="px-4 py-3 flex flex-col gap-1">
-              <Link to="/" className="px-3 py-2.5 rounded-sm text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">Home</Link>
-              <Link to="/shop" className="px-3 py-2.5 rounded-sm text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">Shop</Link>
+              <Link to="/" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">Home</Link>
+              <Link to="/shop" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">Shop</Link>
               {allCats.map(c => {
                 const subs = catTree[c] || [];
                 const open = openCat === c;
@@ -1042,15 +1037,15 @@ function Navbar() {
                   <div key={c}>
                     <button
                       onClick={() => (subs.length ? setOpenCat(open ? null : c) : navigate(`/shop?cat=${encodeURIComponent(c)}`))}
-                      className="w-full px-3 py-2.5 rounded-sm text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center justify-between">
+                      className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center justify-between">
                       <span>{c}</span>
                       {subs.length > 0 && <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />}
                     </button>
                     {open && subs.length > 0 && (
                       <div className="pl-3 ml-2 border-l-2 border-[#EFF6FF] flex flex-col mt-0.5 mb-1">
-                        <Link to={`/shop?cat=${encodeURIComponent(c)}`} className="px-3 py-2 rounded-sm text-sm font-semibold text-[#1E40AF] hover:bg-[#EFF6FF] transition-colors">All {c}</Link>
+                        <Link to={`/shop?cat=${encodeURIComponent(c)}`} className="px-3 py-2 rounded-lg text-sm font-semibold text-[#1E40AF] hover:bg-[#EFF6FF] transition-colors">All {c}</Link>
                         {subs.map(s => (
-                          <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`} className="px-3 py-2 rounded-sm text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">{s}</Link>
+                          <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`} className="px-3 py-2 rounded-lg text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">{s}</Link>
                         ))}
                       </div>
                     )}
@@ -1059,21 +1054,21 @@ function Navbar() {
               })}
               <div className="border-t border-gray-100 mt-2 pt-2 flex flex-col gap-1">
                 <div className="md:hidden px-1 pb-1"><LangToggle full /></div>
-                <Link to="/wishlist" className="px-3 py-2.5 rounded-sm text-sm font-semibold text-[#111827] hover:bg-[#FFF7ED] hover:text-[#F97316] transition-colors flex items-center gap-2">
+                <Link to="/wishlist" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#FFF7ED] hover:text-[#F97316] transition-colors flex items-center gap-2">
                   <Heart size={16} /> Wishlist
                 </Link>
                 {user && (
-                  <Link to="/messages" className="px-3 py-2.5 rounded-sm text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center justify-between gap-2">
+                  <Link to="/messages" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center justify-between gap-2">
                     <span className="flex items-center gap-2"><MessageCircle size={16} /> Messages</span>
                     {unread > 0 && <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#F97316] text-white text-[10px] font-black flex items-center justify-center">{unread > 9 ? "9+" : unread}</span>}
                   </Link>
                 )}
                 {user && (user.role === "seller" || user.role === "admin") && (
-                  <Link to={user.role === "admin" ? "/admin" : "/seller"} className="px-3 py-2.5 rounded-sm text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center gap-2">
+                  <Link to={user.role === "admin" ? "/admin" : "/seller"} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center gap-2">
                     {user.role === "admin" ? <ShieldCheck size={16} /> : <Package size={16} />} {user.role === "admin" ? "Admin" : "Seller Dashboard"}
                   </Link>
                 )}
-                <Link to={user ? "/account" : "/login"} className="px-3 py-2.5 rounded-sm text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center gap-2">
+                <Link to={user ? "/account" : "/login"} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center gap-2">
                   <User size={16} /> {user ? user.name : "Login / Register"}
                 </Link>
               </div>
@@ -1109,9 +1104,9 @@ function Footer() {
               <input
                 type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="flex-1 md:w-64 px-4 py-2.5 rounded-sm text-sm text-gray-900 bg-white border border-white placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#F97316]"
+                className="flex-1 md:w-64 px-4 py-2.5 rounded-xl text-sm text-gray-900 bg-white border border-white placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#F97316]"
               />
-              <button type="submit" className="px-5 py-2.5 rounded-sm bg-[#F97316] text-white text-sm font-semibold hover:bg-orange-500 transition-colors flex items-center gap-2">
+              <button type="submit" className="px-5 py-2.5 rounded-xl bg-[#F97316] text-white text-sm font-semibold hover:bg-orange-500 transition-colors flex items-center gap-2">
                 <Send size={14} /> Subscribe
               </button>
             </form>
@@ -1136,7 +1131,7 @@ function Footer() {
                 href="https://www.instagram.com/ahmadmart.store"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 px-5 py-2.5 rounded-sm bg-white/10 hover:bg-[#F97316] transition-colors text-sm font-semibold text-white"
+                className="flex w-full items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-[#F97316] transition-colors text-sm font-semibold text-white"
               >
                 <Instagram size={18} /> Follow us on Instagram
               </a>
@@ -1194,7 +1189,7 @@ function Footer() {
             <span className="text-gray-500 text-xs mr-1">We accept:</span>
             <div className="flex flex-wrap gap-2">
               {["JazzCash", "SadaPay", "NayaPay", "Easypaisa", "COD"].map(m => (
-                <span key={m} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-sm text-xs text-gray-300 font-semibold">
+                <span key={m} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300 font-semibold">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#F97316]" />{m}
                 </span>
               ))}
@@ -1224,7 +1219,7 @@ function SectionHeader({ title, subtitle, eyebrow, action }: { title: string; su
 // Small pill link used as the "View All" action next to section headers.
 function ViewAllLink({ to }: { to: string }) {
   return (
-    <Link to={to} className="flex items-center gap-1 text-xs font-bold text-[#1E40AF] border border-[#1E40AF] hover:bg-[#1E40AF] hover:text-white px-4 py-2 rounded-sm transition-colors flex-shrink-0">
+    <Link to={to} className="flex items-center gap-1 text-xs font-bold text-[#1E40AF] border border-[#1E40AF] hover:bg-[#1E40AF] hover:text-white px-4 py-2 rounded-full transition-colors flex-shrink-0">
       View All <ChevronRight size={14} />
     </Link>
   );
@@ -1291,12 +1286,7 @@ function HomePage() {
     ...products.filter(p => !p.featured && (p.badge === "bestseller" || p.badge === "new")),
   ].slice(0, 4);
   const bestsellers = [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 8);
-  // One showcase block per category that actually has products — so a brand new
-  // category (from any seller) automatically gets its own block here, with no
-  // hardcoding needed. Colour themes cycle so the blocks stay visually varied.
   const showcaseCats = Array.from(new Set(products.map(p => p.category))).filter(Boolean);
-  // One thumbnail per category for the "Shop by Category" strip — an
-  // admin-uploaded photo if one's been set, otherwise a product photo.
   const catThumbs = showcaseCats.map(cat => ({ cat, image: categoryImages[cat] || products.find(p => p.category === cat && p.image)?.image }));
   const showcaseThemes = [
     { from: "#EFF6FF", to: "#DBEAFE", shadow: "rgba(30,64,175,0.1)", accent: "#1E40AF" },
@@ -1309,21 +1299,21 @@ function HomePage() {
   return (
     <div>
       {/* Hero Slider */}
-      <section className="relative overflow-hidden mb-12">
+      <section className="relative overflow-hidden mb-12 rounded-3xl mx-4 sm:mx-6 lg:mx-8">
         {slides.map((slide, i) => (
           <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${i === activeSlide ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className={`w-full h-full bg-gradient-to-br ${slide.bg} flex flex-col lg:flex-row items-center min-h-[380px] sm:min-h-[470px] relative overflow-hidden`}>
               <div className="flex-1 px-8 sm:px-12 py-9 text-white z-10">
-                <span className="inline-block px-4 py-1.5 rounded-sm bg-[#F97316] text-white text-xs font-bold mb-4">{slide.badge}</span>
+                <span className="inline-block px-4 py-1.5 rounded-full bg-[#F97316] text-white text-xs font-bold mb-4">{slide.badge}</span>
                 <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] mb-4 max-w-xl">{slide.title} <span className="text-[#F97316]">{slide.highlight}</span></h1>
                 <p className="text-blue-100 text-sm sm:text-base mb-6 max-w-md">{slide.sub}</p>
                 <div className="flex flex-wrap gap-3 mb-7">
                   <button onClick={() => navigate(slide.link)}
-                    className="px-6 py-3 rounded-sm bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-colors active:scale-95 inline-flex items-center gap-2">
+                    className="px-6 py-3 rounded-xl bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-colors active:scale-95 inline-flex items-center gap-2">
                     {slide.cta} <ArrowRight size={16} />
                   </button>
                   <button onClick={() => navigate("/shop")}
-                    className="px-6 py-3 rounded-sm bg-transparent text-white font-bold text-sm hover:bg-white/10 transition-colors border border-white/50 inline-flex items-center gap-2">
+                    className="px-6 py-3 rounded-xl bg-transparent text-white font-bold text-sm hover:bg-white/10 transition-colors border border-white/50 inline-flex items-center gap-2">
                     <SlidersHorizontal size={15} /> Explore Categories
                   </button>
                 </div>
@@ -1359,7 +1349,7 @@ function HomePage() {
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Shop by Category — fast visual navigation, scales to any number of categories */}
+        {/* Shop by Category */}
         {catThumbs.length > 0 && (
           <section className="mb-10">
             <p className="text-xs font-bold uppercase tracking-widest text-[#F97316] mb-1.5">Browse</p>
@@ -1368,7 +1358,7 @@ function HomePage() {
               {catThumbs.map(({ cat, image }) => (
                 <button key={cat} onClick={() => navigate(`/shop?cat=${encodeURIComponent(cat)}`)}
                   className="flex flex-col items-center gap-2 flex-shrink-0 w-24 group">
-                  <div className="w-20 h-20 rounded-sm overflow-hidden bg-[#F8F9FB] border border-gray-200 flex items-center justify-center group-hover:border-[#1E40AF] transition-colors">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#F8F9FB] border border-gray-200 flex items-center justify-center group-hover:border-[#1E40AF] transition-colors shadow-sm">
                     <ProductImage src={image} alt={cat} className="w-full h-full object-cover" />
                   </div>
                   <span className="text-xs font-semibold text-[#374151] text-center leading-tight group-hover:text-[#1E40AF] transition-colors line-clamp-2">{cat}</span>
@@ -1379,7 +1369,7 @@ function HomePage() {
         )}
 
         {/* Feature bar */}
-        <div className="bg-white mb-14 grid grid-cols-2 lg:grid-cols-4 lg:divide-x divide-gray-200 border border-gray-200">
+        <div className="bg-white rounded-2xl mb-14 grid grid-cols-2 lg:grid-cols-4 lg:divide-x divide-gray-200 border border-gray-200 overflow-hidden shadow-sm">
           {[
             { icon: Truck, title: "Fast Delivery", sub: "Across Pakistan" },
             { icon: RotateCcw, title: "7 Days Return", sub: "Hassle free returns" },
@@ -1387,7 +1377,7 @@ function HomePage() {
             { icon: Headphones, title: "24/7 Support", sub: "We're here to help" },
           ].map(({ icon: Icon, title, sub }) => (
             <div key={title} className="flex items-center gap-3.5 px-5 py-6">
-              <div className="w-11 h-11 rounded-sm bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
                 <Icon size={20} className="text-[#1E40AF]" />
               </div>
               <div className="min-w-0"><p className="font-bold text-[#111827] text-sm">{title}</p><p className="text-xs text-[#6b7280] truncate">{sub}</p></div>
@@ -1421,7 +1411,7 @@ function HomePage() {
           </div>
         </section>
 
-        {/* Category Showcases — one block per category, generated automatically */}
+        {/* Category Showcases */}
         {showcaseCats.length > 0 && (
         <section className="mb-14">
           <div className="grid lg:grid-cols-2 gap-6">
@@ -1430,22 +1420,22 @@ function HomePage() {
               if (items.length === 0) return null;
               const theme = showcaseThemes[i % showcaseThemes.length];
               return (
-                <div key={cat} className="p-6 border" style={{ background: theme.from, borderColor: theme.accent + "30" }}>
+                <div key={cat} className="p-6 border rounded-2xl" style={{ background: theme.from, borderColor: theme.accent + "30" }}>
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h3 className="text-lg font-black text-[#111827]">{cat}</h3>
                       <p className="text-sm text-[#6b7280]">Top picks in {cat}</p>
                     </div>
                     <Link to={`/shop?cat=${encodeURIComponent(cat)}`}
-                      className="text-xs font-bold flex items-center gap-1 border bg-white hover:bg-transparent px-3 py-1.5 rounded-sm transition-colors flex-shrink-0" style={{ color: theme.accent, borderColor: theme.accent }}>
+                      className="text-xs font-bold flex items-center gap-1 border bg-white hover:bg-transparent px-3.5 py-1.5 rounded-full transition-colors flex-shrink-0" style={{ color: theme.accent, borderColor: theme.accent }}>
                       View All <ChevronRight size={13} />
                     </Link>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {items.map(p => (
                       <Link key={p.id} to={`/product/${p.id}`}
-                        className="bg-white rounded-sm p-3 border border-gray-200 hover:border-current transition-colors" style={{ color: theme.accent }}>
-                        <ProductImage src={p.image} alt={p.name} className="w-full h-28 object-contain rounded-sm mb-2 bg-white" />
+                        className="bg-white rounded-xl p-3 border border-gray-200 hover:border-current transition-colors shadow-sm" style={{ color: theme.accent }}>
+                        <ProductImage src={p.image} alt={p.name} className="w-full h-28 object-contain rounded-lg mb-2 bg-white" />
                         <p className="text-xs font-semibold text-[#111827] line-clamp-2 mb-1">{p.name}</p>
                         <p className="text-xs font-bold" style={{ color: theme.accent }}>{fmt(p.price)}</p>
                       </Link>
@@ -1470,8 +1460,8 @@ function HomePage() {
               { icon: RotateCcw, title: "Easy Returns", desc: "Not satisfied? Return within 7 days for an easy, no fuss refund.", color: "#DC2626" },
               { icon: Headphones, title: "24/7 Support", desc: "Our team is always here to help. Reach us anytime on WhatsApp.", color: "#B45309" },
             ].map(({ icon: Icon, title, desc, color }) => (
-              <div key={title} className="bg-white rounded-sm p-6 border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="w-12 h-12 rounded-sm flex items-center justify-center mb-4"
+              <div key={title} className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-gray-300 transition-colors shadow-sm">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
                   style={{ background: color, color: "#fff" }}>
                   <Icon size={24} />
                 </div>
@@ -1488,7 +1478,7 @@ function HomePage() {
           <SectionHeader eyebrow="Testimonials" title="What Our Customers Say" subtitle="Real reviews from real customers across Pakistan" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {REVIEWS.map(r => (
-              <div key={r.id} className="bg-white rounded-sm p-6 border border-gray-200 hover:border-gray-300 transition-colors">
+              <div key={r.id} className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-gray-300 transition-colors shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
                     style={{ background: "#1E40AF" }}>
@@ -1573,14 +1563,14 @@ function ShopPage() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Filters Sidebar */}
         <div className={`lg:w-64 flex-shrink-0 ${showFilters ? "block" : "hidden lg:block"}`}>
-          <div className="bg-white rounded-sm p-5 sticky top-24 border border-gray-200">
+          <div className="bg-white rounded-2xl p-5 sticky top-24 border border-gray-200 shadow-sm">
             <h3 className="font-bold text-[#111827] mb-4 flex items-center gap-2"><SlidersHorizontal size={16} /> Filters</h3>
 
             <div className="mb-5">
               <label className="text-xs font-bold text-[#6b7280] uppercase tracking-wide mb-2 block">Search</label>
               <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search products..."
-                className="w-full px-3 py-2 rounded-sm border border-gray-200 text-sm outline-none focus:border-[#1E40AF] bg-gray-50" />
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1E40AF] bg-gray-50" />
             </div>
 
             <div className="mb-5">
@@ -1588,7 +1578,7 @@ function ShopPage() {
               <div className="flex flex-col gap-1">
                 {cats.map(c => (
                   <button key={c} onClick={() => { setCategory(c); setSubcategory("All"); }}
-                    className={`text-left px-3 py-2 rounded-sm text-sm font-medium transition-colors ${category === c ? "bg-[#1E40AF] text-white" : "text-[#374151] hover:bg-gray-100"}`}>
+                    className={`text-left px-3 py-2 rounded-xl text-sm font-medium transition-colors ${category === c ? "bg-[#1E40AF] text-white" : "text-[#374151] hover:bg-gray-100"}`}>
                     {c}
                   </button>
                 ))}
@@ -1600,7 +1590,7 @@ function ShopPage() {
               <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
                 {subs.map(s => (
                   <button key={s} onClick={() => setSubcategory(s)}
-                    className={`text-left px-3 py-2 rounded-sm text-sm font-medium transition-colors ${subcategory === s ? "bg-[#F97316] text-white" : "text-[#374151] hover:bg-gray-100"}`}>
+                    className={`text-left px-3 py-2 rounded-xl text-sm font-medium transition-colors ${subcategory === s ? "bg-[#F97316] text-white" : "text-[#374151] hover:bg-gray-100"}`}>
                     {s}
                   </button>
                 ))}
@@ -1619,7 +1609,7 @@ function ShopPage() {
             </div>
 
             <button onClick={() => { setSearch(""); setCategory("All"); setSubcategory("All"); setSort("random"); setMinPrice(0); setMaxPrice(10000); }}
-              className="w-full py-2 rounded-sm border border-[#1E40AF]/30 text-[#1E40AF] text-sm font-semibold hover:bg-[#EFF6FF] transition-colors">
+              className="w-full py-2 rounded-xl border border-[#1E40AF]/30 text-[#1E40AF] text-sm font-semibold hover:bg-[#EFF6FF] transition-colors">
               Clear Filters
             </button>
           </div>
@@ -1629,13 +1619,13 @@ function ShopPage() {
         <div className="flex-1">
           <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
             <button onClick={() => setShowFilters(o => !o)}
-              className="lg:hidden flex items-center gap-2 px-4 py-2 rounded-sm bg-[#1E40AF] text-white text-sm font-semibold">
+              className="lg:hidden flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1E40AF] text-white text-sm font-semibold">
               <Filter size={15} /> {showFilters ? "Hide" : "Show"} Filters
             </button>
             <div className="flex items-center gap-2 ml-auto">
               <label className="text-xs text-[#6b7280] font-semibold">Sort by:</label>
               <select value={sort} onChange={e => setSort(e.target.value)}
-                className="px-3 py-2 rounded-sm border border-gray-200 text-sm outline-none focus:border-[#1E40AF] bg-white">
+                className="px-3 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:border-[#1E40AF] bg-white">
                 <option value="random">Random</option>
                 <option value="popular">Most Popular</option>
                 <option value="rating">Highest Rated</option>
@@ -1650,7 +1640,7 @@ function ShopPage() {
               <SkeletonGrid count={8} />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-sm border border-gray-200">
+            <div className="text-center py-20 bg-white rounded-2xl border border-gray-200">
               <Package size={48} className="mx-auto text-gray-300 mb-4" />
               <p className="font-bold text-[#111827] mb-2">No products found</p>
               <p className="text-[#6b7280] text-sm">Try adjusting your filters or search query</p>
@@ -1683,7 +1673,7 @@ function ReviewSection({ productId }: { productId: number }) {
 
   const pickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    e.target.value = ""; // allow re-selecting the same file
+    e.target.value = "";
     if (!file) return;
     const v = validateProofFile(file);
     if (v) { setErr(v); return; }
@@ -1721,18 +1711,18 @@ function ReviewSection({ productId }: { productId: number }) {
   return (
     <div className="space-y-6">
       {/* Write a review */}
-      <div className="rounded-sm border border-gray-100 bg-[#F8F9FB] p-5">
+      <div className="rounded-2xl border border-gray-100 bg-[#F8F9FB] p-5">
         <h4 className="font-bold text-[#111827] mb-4">Write a Review</h4>
         {done && (
-          <div className="mb-4 rounded-sm border border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2 text-sm text-emerald-700 font-semibold">
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2 text-sm text-emerald-700 font-semibold">
             <CheckCircle size={16} /> Thanks for your review! It's now live below.
           </div>
         )}
         <div className="space-y-3">
           <div className="grid sm:grid-cols-2 gap-3">
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name"
-              className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
-            <div className="flex items-center gap-2 px-4 py-3 rounded-sm border border-gray-200 bg-white">
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-gray-200 bg-white">
               <span className="text-sm text-[#6b7280] mr-1">Your rating:</span>
               {[1, 2, 3, 4, 5].map(s => (
                 <button key={s} type="button"
@@ -1745,12 +1735,12 @@ function ReviewSection({ productId }: { productId: number }) {
           </div>
           <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
             placeholder="Share your experience with this product..."
-            className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF] resize-none" />
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF] resize-none" />
 
           {/* Photo of received product */}
           {imageData ? (
             <div className="flex items-center gap-3">
-              <img src={imageData} alt="Your product" className="w-16 h-16 rounded-sm object-cover border border-gray-200" />
+              <img src={imageData} alt="Your product" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-[#111827] truncate max-w-[180px]">{imageName}</p>
                 <button onClick={() => { setImageData(""); setImageName(""); }}
@@ -1758,7 +1748,7 @@ function ReviewSection({ productId }: { productId: number }) {
               </div>
             </div>
           ) : (
-            <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-sm border border-dashed border-gray-300 bg-white text-sm font-semibold text-[#374151] cursor-pointer hover:border-[#1E40AF] transition-colors">
+            <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-gray-300 bg-white text-sm font-semibold text-[#374151] cursor-pointer hover:border-[#1E40AF] transition-colors">
               <ZoomIn size={15} className="text-[#1E40AF]" /> Add a photo of your product (optional)
               <input type="file" accept="image/jpeg,image/png" onChange={pickImage} className="hidden" />
             </label>
@@ -1766,7 +1756,7 @@ function ReviewSection({ productId }: { productId: number }) {
 
           {err && <p className="text-xs text-red-500 font-semibold">{err}</p>}
           <button onClick={submit} disabled={busy}
-            className="px-6 py-3 rounded-sm bg-[#1E40AF] text-white font-bold text-sm hover:bg-[#1e3a8a] transition-all active:scale-95 disabled:opacity-60"
+            className="px-6 py-3 rounded-xl bg-[#1E40AF] text-white font-bold text-sm hover:bg-[#1e3a8a] transition-all active:scale-95 disabled:opacity-60"
             >
             {busy ? "Posting..." : "Submit Review"}
           </button>
@@ -1778,7 +1768,7 @@ function ReviewSection({ productId }: { productId: number }) {
         <div className="space-y-4">
           <p className="font-bold text-[#111827] text-sm">Customer Reviews ({reviews.length})</p>
           {reviews.map(r => (
-            <div key={r.id} className="flex gap-4 p-4 bg-white rounded-sm border border-gray-100">
+            <div key={r.id} className="flex gap-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
               <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-xs flex-shrink-0"
                 style={{ background: "#1E40AF" }}>
                 {r.name.trim().slice(0, 2).toUpperCase()}
@@ -1791,7 +1781,7 @@ function ReviewSection({ productId }: { productId: number }) {
                 </div>
                 <p className="text-[#374151] text-sm">"{r.text}"</p>
                 {r.image && (
-                  <img src={r.image} alt="Customer product" className="mt-2 w-24 h-24 rounded-sm object-cover border border-gray-200" />
+                  <img src={r.image} alt="Customer product" className="mt-2 w-24 h-24 rounded-xl object-cover border border-gray-200" />
                 )}
               </div>
             </div>
@@ -1841,11 +1831,11 @@ function AskSeller({ product }: { product: Product }) {
         <div>
           <p className="text-sm font-bold text-[#111827] mb-2 flex items-center gap-1.5"><MessageCircle size={15} className="text-[#1E40AF]" /> Ask {product.sellerStore || "the seller"}</p>
           <textarea value={body} onChange={e => setBody(e.target.value)} rows={2} placeholder="e.g. Is this available in black? Any discount on 2?"
-            className="w-full px-3 py-2 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF] resize-none mb-2" />
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF] resize-none mb-2" />
           {err && <p className="text-xs text-red-500 mb-2">{err}</p>}
           <div className="flex gap-2">
-            <button onClick={submit} disabled={busy || !body.trim()} className="px-4 py-2 rounded-sm bg-[#1E40AF] text-white text-sm font-bold disabled:opacity-60 flex items-center gap-1.5"><Send size={14} /> {busy ? "Sending…" : "Send"}</button>
-            <button onClick={() => setOpen(false)} className="px-4 py-2 rounded-sm border border-gray-200 text-[#374151] text-sm font-bold">Cancel</button>
+            <button onClick={submit} disabled={busy || !body.trim()} className="px-4 py-2 rounded-xl bg-[#1E40AF] text-white text-sm font-bold disabled:opacity-60 flex items-center gap-1.5"><Send size={14} /> {busy ? "Sending…" : "Send"}</button>
+            <button onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl border border-gray-200 text-[#374151] text-sm font-bold">Cancel</button>
           </div>
         </div>
       )}
@@ -1862,7 +1852,6 @@ function ProductDetailPage() {
   const [tab, setTab] = useState<"desc" | "specs" | "reviews">("desc");
   const [added, setAdded] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
-  // Buyer's variant picks for products that have sizes/colours.
   const [selSize, setSelSize] = useState<string | null>(null);
   const [selColor, setSelColor] = useState<string | null>(null);
   const [variantErr, setVariantErr] = useState("");
@@ -1882,8 +1871,6 @@ function ProductDetailPage() {
     }
   }, [id]);
 
-  // While the catalog is still loading (e.g. a deep link opened before the fetch
-  // resolves) show a quiet loading state instead of flashing "not found".
   if (!product && productsLoading && products.length === 0) return (
     <div className="max-w-7xl mx-auto px-4 py-32 text-center text-sm text-[#6b7280]">Loading product…</div>
   );
@@ -1891,23 +1878,14 @@ function ProductDetailPage() {
     <div className="max-w-7xl mx-auto px-4 py-20 text-center">
       <Package size={64} className="mx-auto text-gray-300 mb-4" />
       <h2 className="font-black text-2xl text-[#111827] tracking-tight mb-2">Product not found</h2>
-      <button onClick={() => navigate("/shop")} className="mt-4 px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm">Back to Shop</button>
+      <button onClick={() => navigate("/shop")} className="mt-4 px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm">Back to Shop</button>
     </div>
   );
 
   const related = products.filter(p => p.subcategory === product.subcategory && p.id !== product.id).slice(0, 4);
-
-  // The gallery reads from `images`, but a product can legitimately have only a
-  // main `image` — nothing forces the two to agree, and a product saved with a
-  // single photo (or one whose extra photos were removed) leaves `images`
-  // empty. Reading it blindly rendered an empty gallery on a product that
-  // clearly had a picture everywhere else in the store, so fall back to the
-  // main photo. Guard the index too: activeImg resets on navigation, but a
-  // catalog refresh can shrink the list under a thumbnail that's already selected.
   const gallery = product.images?.length ? product.images : (product.image ? [product.image] : []);
   const shownImg = gallery[activeImg] ?? gallery[0];
 
-  // Products with variants require a pick before the cart accepts them.
   const needsSize = (product.sizes?.length ?? 0) > 0;
   const needsColor = (product.colors?.length ?? 0) > 0;
   const variantOk = () => {
@@ -1927,8 +1905,6 @@ function ProductDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb — wraps onto a new line for a long product name instead of
-          forcing this row wider than the viewport. */}
       <div className="flex items-center flex-wrap gap-2 text-xs text-[#6b7280] mb-6">
         <Link to="/" className="hover:text-[#1E40AF]">Home</Link>
         <ChevronRight size={12} />
@@ -1942,7 +1918,7 @@ function ProductDetailPage() {
       <div className="grid lg:grid-cols-2 gap-8 mb-12">
         {/* Gallery */}
         <div>
-          <div className="bg-white rounded-sm overflow-hidden mb-3 relative group cursor-zoom-in border border-gray-200"
+          <div className="bg-white rounded-2xl overflow-hidden mb-3 relative group cursor-zoom-in border border-gray-200 shadow-sm"
             onClick={() => setZoomOpen(true)}
             style={{ aspectRatio: "4/5" }}>
             <ProductImage src={shownImg} alt={product.name}
@@ -1967,7 +1943,7 @@ function ProductDetailPage() {
           <div className="flex gap-2">
             {gallery.map((img, i) => (
               <button key={i} onClick={() => setActiveImg(i)}
-                className={`w-16 h-16 rounded-sm overflow-hidden border-2 transition-all ${i === activeImg ? "border-[#1E40AF] scale-95" : "border-gray-200"}`}>
+                className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${i === activeImg ? "border-[#1E40AF] scale-95" : "border-gray-200"}`}>
                 <ProductImage src={img} alt="" className="w-full h-full object-cover" />
               </button>
             ))}
@@ -2013,14 +1989,14 @@ function ProductDetailPage() {
 
           <p className="text-[#374151] text-sm leading-relaxed mb-6">{product.description}</p>
 
-          {/* Variant pickers — shown only when the seller provided them */}
+          {/* Variant pickers */}
           {needsSize && (
             <div className="mb-4">
               <p className="text-xs font-bold text-[#6b7280] uppercase tracking-wide mb-2">Size {selSize && <span className="text-[#1E40AF] normal-case">— {selSize}</span>}</p>
               <div className="flex flex-wrap gap-2">
                 {product.sizes!.map(s => (
                   <button key={s} onClick={() => { setSelSize(s); setVariantErr(""); }}
-                    className={`min-w-[44px] px-3 py-2 rounded-sm border-2 text-sm font-bold transition-all active:scale-95 ${selSize === s ? "border-[#1E40AF] bg-[#1E40AF] text-white" : "border-gray-200 text-[#374151] hover:border-[#1E40AF] hover:text-[#1E40AF]"}`}>
+                    className={`min-w-[44px] px-3 py-2 rounded-xl border-2 text-sm font-bold transition-all active:scale-95 ${selSize === s ? "border-[#1E40AF] bg-[#1E40AF] text-white" : "border-gray-200 text-[#374151] hover:border-[#1E40AF] hover:text-[#1E40AF]"}`}>
                     {s}
                   </button>
                 ))}
@@ -2033,7 +2009,7 @@ function ProductDetailPage() {
               <div className="flex flex-wrap gap-2">
                 {product.colors!.map(c => (
                   <button key={c} onClick={() => { setSelColor(c); setVariantErr(""); }}
-                    className={`px-3 py-2 rounded-sm border-2 text-sm font-bold transition-all active:scale-95 ${selColor === c ? "border-[#1E40AF] bg-[#1E40AF] text-white" : "border-gray-200 text-[#374151] hover:border-[#1E40AF] hover:text-[#1E40AF]"}`}>
+                    className={`px-3 py-2 rounded-xl border-2 text-sm font-bold transition-all active:scale-95 ${selColor === c ? "border-[#1E40AF] bg-[#1E40AF] text-white" : "border-gray-200 text-[#374151] hover:border-[#1E40AF] hover:text-[#1E40AF]"}`}>
                     {c}
                   </button>
                 ))}
@@ -2042,9 +2018,9 @@ function ProductDetailPage() {
           )}
           {variantErr && <p className="text-xs text-red-500 font-semibold mb-4">{variantErr}</p>}
 
-          {/* Qty + Actions / Service contact */}
+          {/* Qty + Actions */}
           <div className="flex flex-wrap items-center gap-3 mb-6">
-            <div className="flex items-center rounded-sm overflow-hidden border border-gray-200">
+            <div className="flex items-center rounded-xl overflow-hidden border border-gray-200">
               <button onClick={() => setQty(q => Math.max(1, q - 1))}
                 className="w-10 h-11 flex items-center justify-center hover:bg-gray-100 transition-colors text-[#374151]">
                 <Minus size={16} />
@@ -2056,7 +2032,7 @@ function ProductDetailPage() {
               </button>
             </div>
             <button onClick={handleAddToCart}
-              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-sm font-bold text-sm transition-colors active:scale-95 ${added ? "bg-emerald-500 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}>
+              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-colors active:scale-95 ${added ? "bg-emerald-500 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}>
               {added ? <CheckCircle size={16} /> : <ShoppingCart size={16} />}
               {added ? "Added to Cart!" : "Add to Cart"}
             </button>
@@ -2077,7 +2053,7 @@ function ProductDetailPage() {
               { icon: RotateCcw, text: "7 Day Return" },
               { icon: Shield, text: "Secure Pay" },
             ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-2 p-3 bg-[#F8F9FB] rounded-sm">
+              <div key={text} className="flex items-center gap-2 p-3 bg-[#F8F9FB] rounded-xl">
                 <Icon size={14} className="text-[#1E40AF] flex-shrink-0" />
                 <span className="text-xs font-semibold text-[#374151]">{text}</span>
               </div>
@@ -2087,7 +2063,7 @@ function ProductDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-sm mb-10 border border-gray-200">
+      <div className="bg-white rounded-2xl mb-10 border border-gray-200 shadow-sm overflow-hidden">
         <div className="flex border-b border-gray-100">
           {(["desc", "specs", "reviews"] as const).filter(t => !(t === "specs" && Object.keys(product.specs).length === 0)).map(t => {
             const labels = { desc: "Description", specs: "Specifications", reviews: `Reviews (${product.reviews + getProductReviews(product.id).length})` };
@@ -2106,12 +2082,12 @@ function ProductDetailPage() {
             <div className="grid sm:grid-cols-2 gap-3">
               {Object.entries(product.specs).map(([k, v]) => (
                 v ? (
-                  <div key={k} className="flex items-center justify-between p-3 bg-[#F8F9FB] rounded-sm">
+                  <div key={k} className="flex items-center justify-between p-3 bg-[#F8F9FB] rounded-xl">
                     <span className="text-xs font-semibold text-[#6b7280]">{k}</span>
                     <span className="text-xs font-bold text-[#111827]">{v}</span>
                   </div>
                 ) : (
-                  <div key={k} className="flex items-center gap-2 p-3 bg-[#F8F9FB] rounded-sm sm:col-span-2">
+                  <div key={k} className="flex items-center gap-2 p-3 bg-[#F8F9FB] rounded-xl sm:col-span-2">
                     <CheckCircle size={14} className="text-[#1E40AF] flex-shrink-0" />
                     <span className="text-xs font-semibold text-[#374151]">{k}</span>
                   </div>
@@ -2126,7 +2102,7 @@ function ProductDetailPage() {
               <div className="space-y-4">
                 <p className="text-xs font-bold text-[#6b7280] uppercase tracking-wide">More customer feedback</p>
                 {REVIEWS.slice(0, 3).map(r => (
-                  <div key={r.id} className="flex gap-4 p-4 bg-[#F8F9FB] rounded-sm">
+                  <div key={r.id} className="flex gap-4 p-4 bg-[#F8F9FB] rounded-2xl">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-xs flex-shrink-0"
                       style={{ background: "#1E40AF" }}>
                       {r.avatar}
@@ -2166,7 +2142,6 @@ function CartPage() {
   const { cart, removeFromCart, updateQty, cartTotal } = useContext(Store);
   const navigate = useNavigate();
 
-  // Delivery is set by each seller (per product), charged once per seller.
   const shipping = computeDelivery(cart);
   const final = cartTotal + shipping;
 
@@ -2175,7 +2150,7 @@ function CartPage() {
       <ShoppingCart size={64} className="mx-auto text-gray-300 mb-4" />
       <h2 className="font-black text-2xl text-[#111827] tracking-tight mb-2">Your cart is empty</h2>
       <p className="text-[#6b7280] text-sm mb-6">Start shopping to add products to your cart</p>
-      <button onClick={() => navigate("/shop")} className="px-8 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm"
+      <button onClick={() => navigate("/shop")} className="px-8 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm"
         >
         Continue Shopping
       </button>
@@ -2189,9 +2164,9 @@ function CartPage() {
         {/* Items */}
         <div className="lg:col-span-2 space-y-4">
           {cart.map(item => (
-            <div key={`${item.id}|${item.chosenSize ?? ""}|${item.chosenColor ?? ""}`} className="bg-white rounded-sm p-4 flex gap-4 border border-gray-200">
+            <div key={`${item.id}|${item.chosenSize ?? ""}|${item.chosenColor ?? ""}`} className="bg-white rounded-2xl p-4 flex gap-4 border border-gray-200 shadow-sm">
               <ProductImage src={item.image} alt={item.name}
-                className="w-24 h-24 object-cover rounded-sm flex-shrink-0" />
+                className="w-24 h-24 object-cover rounded-xl flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <Link to={`/product/${item.id}`} className="font-bold text-[#111827] text-sm hover:text-[#1E40AF] line-clamp-2">{item.name}</Link>
                 <p className="text-xs text-[#6b7280] mt-0.5">{item.subcategory}</p>
@@ -2201,7 +2176,7 @@ function CartPage() {
                   </p>
                 )}
                 <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
-                  <div className="flex items-center rounded-sm border border-gray-200 overflow-hidden">
+                  <div className="flex items-center rounded-xl border border-gray-200 overflow-hidden">
                     <button onClick={() => updateQty(item.id, item.qty - 1, item.chosenSize, item.chosenColor)}
                       className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-colors">
                       <Minus size={13} />
@@ -2432,9 +2407,9 @@ function CheckoutPage() {
       <User size={56} className="mx-auto text-gray-300 mb-4" />
       <h2 className="font-black text-xl text-[#111827] tracking-tight mb-2">Please sign in to checkout</h2>
       <p className="text-sm text-[#6b7280] mb-6">Your order is saved to your account so you can track its status and the admin can confirm it.</p>
-      <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm mr-3"
+      <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm mr-3"
         >Sign In</button>
-      <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-sm font-bold text-sm">Register</button>
+      <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-xl font-bold text-sm">Register</button>
     </div>
   );
 
@@ -2442,7 +2417,7 @@ function CheckoutPage() {
     <div className="max-w-7xl mx-auto px-4 py-20 text-center">
       <ShoppingCart size={64} className="mx-auto text-gray-300 mb-4" />
       <p className="font-bold text-[#111827] mb-4">Your cart is empty</p>
-      <button onClick={() => navigate("/shop")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm">Shop Now</button>
+      <button onClick={() => navigate("/shop")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm">Shop Now</button>
     </div>
   );
 
@@ -2451,7 +2426,7 @@ function CheckoutPage() {
       <label className="text-sm font-semibold text-[#374151] mb-1.5 block">{label}</label>
       <input type={type} value={form[name]} onChange={e => setForm(f => ({ ...f, [name]: e.target.value }))}
         placeholder={placeholder}
-        className={`w-full px-4 py-3 rounded-sm border text-sm outline-none transition-colors ${errors[name] ? "border-red-400 bg-red-50" : "border-gray-200 bg-gray-50 focus:border-[#1E40AF]"}`} />
+        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-colors ${errors[name] ? "border-red-400 bg-red-50" : "border-gray-200 bg-gray-50 focus:border-[#1E40AF]"}`} />
       {errors[name] && <p className="text-xs text-red-500 mt-1">{errors[name]}</p>}
     </div>
   );
@@ -2462,7 +2437,7 @@ function CheckoutPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Customer details */}
-          <div className="bg-white rounded-sm p-6 border border-gray-200">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 className="font-bold text-[#111827] mb-5 flex items-center gap-2"><MapPin size={18} className="text-[#F97316]" /> Customer Details</h3>
             <div className="space-y-4">
               {field("name", "Full Name", "text", "Enter your full name")}
@@ -2473,7 +2448,7 @@ function CheckoutPage() {
                 <textarea value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
                   placeholder="House no., street, area, city, province, postal code"
                   rows={3}
-                  className={`w-full px-4 py-3 rounded-sm border text-sm outline-none transition-colors resize-none ${errors.address ? "border-red-400 bg-red-50" : "border-gray-200 bg-gray-50 focus:border-[#1E40AF]"}`} />
+                  className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-colors resize-none ${errors.address ? "border-red-400 bg-red-50" : "border-gray-200 bg-gray-50 focus:border-[#1E40AF]"}`} />
                 {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
               </div>
               <div>
@@ -2481,18 +2456,18 @@ function CheckoutPage() {
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                   placeholder="Any special instructions..."
                   rows={2}
-                  className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF] resize-none" />
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF] resize-none" />
               </div>
             </div>
           </div>
 
           {/* Payment method selector */}
-          <div className="bg-white rounded-sm p-6 border border-gray-200">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
             <h3 className="font-bold text-[#111827] mb-4 flex items-center gap-2"><Tag size={18} className="text-[#F97316]" /> Delivery & Payment</h3>
             <div className="grid sm:grid-cols-2 gap-3">
               {walletAllowed && (
                 <button type="button" onClick={() => setPayment("wallet")}
-                  className={`text-left rounded-sm border-2 p-4 transition-all ${!isCOD ? "border-[#1E40AF] bg-blue-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
+                  className={`text-left rounded-xl border-2 p-4 transition-all ${!isCOD ? "border-[#1E40AF] bg-blue-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="flex items-center gap-2 font-bold text-[#111827] text-sm"><Smartphone size={16} className="text-[#1E40AF]" /> {walletLabel}</span>
                     <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${!isCOD ? "border-[#1E40AF] bg-[#1E40AF]" : "border-gray-300"}`} />
@@ -2502,7 +2477,7 @@ function CheckoutPage() {
               )}
               {codAllowed && (
                 <button type="button" onClick={() => { setPayment("cod"); setPromoMsg(""); }}
-                  className={`text-left rounded-sm border-2 p-4 transition-all ${isCOD ? "border-[#059669] bg-emerald-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
+                  className={`text-left rounded-xl border-2 p-4 transition-all ${isCOD ? "border-[#059669] bg-emerald-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="flex items-center gap-2 font-bold text-[#111827] text-sm"><Truck size={16} className="text-[#059669]" /> Cash on Delivery</span>
                     <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${isCOD ? "border-[#059669] bg-[#059669]" : "border-gray-300"}`} />
@@ -2520,9 +2495,9 @@ function CheckoutPage() {
           </div>
 
           {/* Method details */}
-          <div className="bg-white rounded-sm overflow-hidden border border-gray-200">
+          <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
             <div className="px-6 py-4 flex items-center gap-3" style={{ background: isCOD ? "#059669" : "#1E40AF" }}>
-              <div className="w-10 h-10 rounded-sm bg-white/15 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
                 {isCOD ? <Truck size={20} className="text-white" /> : <Smartphone size={20} className="text-white" />}
               </div>
               <div>
@@ -2531,7 +2506,7 @@ function CheckoutPage() {
               </div>
             </div>
             <div className="p-6">
-              <div className={`rounded-sm border p-4 mb-4 ${isCOD ? "border-emerald-100 bg-emerald-50/60" : "border-blue-100 bg-blue-50/60"}`}>
+              <div className={`rounded-xl border p-4 mb-4 ${isCOD ? "border-emerald-100 bg-emerald-50/60" : "border-blue-100 bg-blue-50/60"}`}>
                 <p className={`font-bold text-sm mb-3 ${isCOD ? "text-[#065F46]" : "text-[#1E40AF]"}`}>How it works</p>
                 <ol className="space-y-2.5">
                   {(isCOD
@@ -2565,19 +2540,19 @@ function CheckoutPage() {
 
         {/* Order Summary */}
         <div>
-          <div className="bg-white rounded-sm p-6 sticky top-24 border border-gray-200">
+          <div className="bg-white rounded-2xl p-6 sticky top-24 border border-gray-200 shadow-sm">
             <h3 className="font-bold text-[#111827] mb-4">Order Summary</h3>
             {groups.length > 1 && <p className="text-xs text-[#6b7280] -mt-2 mb-3">Your cart has items from {groups.length} stores — a separate order is created for each.</p>}
             <div className="space-y-4 mb-4 max-h-60 overflow-y-auto">
               {groups.map((g, gi) => {
                 const { subtotal, groupShipping, groupTotal } = groupTotals(g);
                 return (
-                  <div key={gi} className="rounded-sm bg-[#F8F9FB] p-3">
+                  <div key={gi} className="rounded-xl bg-[#F8F9FB] p-3">
                     <p className="text-xs font-bold text-[#111827] mb-2 flex items-center gap-1.5"><User size={12} className="text-[#1E40AF]" /> {g.sellerStore || "Ahmad Mart"}</p>
                     <div className="space-y-2">
                       {g.items.map(item => (
                         <div key={`${item.id}|${item.chosenSize ?? ""}|${item.chosenColor ?? ""}`} className="flex gap-2 items-center">
-                          <ProductImage src={item.image} alt={item.name} className="w-9 h-9 object-cover rounded-sm flex-shrink-0" />
+                          <ProductImage src={item.image} alt={item.name} className="w-9 h-9 object-cover rounded-lg flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold text-[#111827] line-clamp-1">{item.name}</p>
                             <p className="text-[11px] text-[#6b7280]">Qty: {item.qty}{item.chosenSize ? ` · Size: ${item.chosenSize}` : ""}{item.chosenColor ? ` · ${item.chosenColor}` : ""}</p>
@@ -2601,7 +2576,7 @@ function CheckoutPage() {
               <div className="flex justify-between font-black text-[#111827] text-base border-t border-gray-100 pt-2"><span>Total</span><span className="text-[#1E40AF]">{fmt(grandTotal)}</span></div>
             </div>
             <button onClick={handleSubmit} disabled={submitting || (!walletAllowed && !codAllowed)}
-              className="w-full py-3.5 rounded-sm text-white font-black text-sm transition-transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
+              className="w-full py-3.5 rounded-xl text-white font-black text-sm transition-transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60"
               style={{ background: "#25D366" }}>
               <MessageCircle size={18} /> {submitting ? "Placing order…" : `${isCOD ? "Place COD Order on WhatsApp" : "Pay via WhatsApp"} — ${fmt(grandTotal)}`}
             </button>
@@ -2620,16 +2595,16 @@ function CheckoutPage() {
 
 // ─── Wishlist Page ────────────────────────────────────────────────────────────
 function WishlistPage() {
-  const { wishlist, toggleWishlist } = useContext(Store);
+  const { wishlist } = useContext(Store);
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight mb-6">My Wishlist</h1>
       {wishlist.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-sm border border-gray-200">
+        <div className="text-center py-20 bg-white rounded-2xl border border-gray-200 shadow-sm">
           <Heart size={64} className="mx-auto text-gray-300 mb-4" />
           <p className="font-bold text-[#111827] mb-2">Your wishlist is empty</p>
           <p className="text-[#6b7280] text-sm">Save products you love by clicking the heart icon</p>
-          <Link to="/shop" className="inline-block mt-5 px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm">Browse Products</Link>
+          <Link to="/shop" className="inline-block mt-5 px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm">Browse Products</Link>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -2670,20 +2645,20 @@ function LoginPage() {
           <h1 className="text-2xl font-black text-[#111827] tracking-tight">Welcome Back</h1>
           <p className="text-[#6b7280] text-sm mt-1">Sign in to your Ahmad Mart account</p>
         </div>
-        <div className="bg-white rounded-sm p-8 border border-gray-200">
+        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm">
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Email Address</label>
               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="you@example.com" required
-                className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
             </div>
             <div>
               <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Password</label>
               <div className="relative">
                 <input type={showPw ? "text" : "password"} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   placeholder="Enter your password" required
-                  className="w-full px-4 py-3 pr-11 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
+                  className="w-full px-4 py-3 pr-11 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
                 <button type="button" onClick={() => setShowPw(s => !s)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -2698,7 +2673,7 @@ function LoginPage() {
               <a href="#" className="text-xs text-[#1E40AF] font-semibold hover:text-[#F97316]">Forgot password?</a>
             </div>
             <button type="submit" disabled={busy}
-              className="w-full py-3.5 rounded-sm bg-[#1E40AF] text-white font-black text-sm hover:bg-[#1e3a8a] transition-all active:scale-95 disabled:opacity-60"
+              className="w-full py-3.5 rounded-xl bg-[#1E40AF] text-white font-black text-sm hover:bg-[#1e3a8a] transition-all active:scale-95 disabled:opacity-60"
               >
               {busy ? "Signing in…" : "Sign In"}
             </button>
@@ -2753,7 +2728,7 @@ function RegisterPage() {
           <h1 className="text-2xl font-black text-[#111827] tracking-tight">Create Account</h1>
           <p className="text-[#6b7280] text-sm mt-1">Join Ahmad Mart for exclusive deals</p>
         </div>
-        <div className="bg-white rounded-sm p-8 border border-gray-200">
+        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm">
           <form onSubmit={handleRegister} className="space-y-4">
             {[
               { key: "name", label: "Full Name", type: "text", placeholder: "Your full name" },
@@ -2764,7 +2739,7 @@ function RegisterPage() {
                 <label className="text-sm font-semibold text-[#374151] mb-1.5 block">{label}</label>
                 <input type={type} value={form[key as keyof typeof form]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                   placeholder={placeholder}
-                  className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
               </div>
             ))}
             <div>
@@ -2772,7 +2747,7 @@ function RegisterPage() {
               <div className="relative">
                 <input type={showPw ? "text" : "password"} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   placeholder="Min. 6 characters"
-                  className="w-full px-4 py-3 pr-11 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
+                  className="w-full px-4 py-3 pr-11 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
                 <button type="button" onClick={() => setShowPw(s => !s)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -2783,7 +2758,7 @@ function RegisterPage() {
               <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Confirm Password</label>
               <input type="password" value={form.confirm} onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
                 placeholder="Repeat your password"
-                className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
             </div>
             <div>
               <label className="text-sm font-semibold text-[#374151] mb-1.5 block">I want to join as</label>
@@ -2793,7 +2768,7 @@ function RegisterPage() {
                   { v: "seller", t: "Seller", d: "List and sell products" },
                 ] as const).map(o => (
                   <button key={o.v} type="button" onClick={() => setForm(f => ({ ...f, role: o.v }))}
-                    className={`text-left rounded-sm border-2 p-3 transition-all ${form.role === o.v ? "border-[#1E40AF] bg-blue-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
+                    className={`text-left rounded-xl border-2 p-3 transition-all ${form.role === o.v ? "border-[#1E40AF] bg-blue-50/60" : "border-gray-200 bg-gray-50 hover:border-gray-300"}`}>
                     <span className="flex items-center justify-between mb-0.5">
                       <span className="font-bold text-[#111827] text-sm">{o.t}</span>
                       <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${form.role === o.v ? "border-[#1E40AF] bg-[#1E40AF]" : "border-gray-300"}`} />
@@ -2806,32 +2781,32 @@ function RegisterPage() {
             </div>
 
             {form.role === "seller" && (
-              <div className="space-y-3 rounded-sm bg-[#F8F9FB] border border-gray-100 p-4">
+              <div className="space-y-3 rounded-2xl bg-[#F8F9FB] border border-gray-100 p-4">
                 <p className="text-sm font-bold text-[#111827]">Store details</p>
                 <div>
                   <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Store Name *</label>
                   <input type="text" value={form.storeName} onChange={e => setForm(f => ({ ...f, storeName: e.target.value }))}
                     placeholder="e.g. Bilal Electronics"
-                    className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Store WhatsApp Number *</label>
                   <input type="tel" value={form.whatsapp} onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))}
                     placeholder="03001234567"
-                    className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
                   <p className="text-[11px] text-[#6b7280] mt-1">Buyers check out and contact you on this number.</p>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-[#374151] mb-1.5 block">City *</label>
                   <input type="text" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
                     placeholder="e.g. Multan"
-                    className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
                   <p className="text-[11px] text-[#6b7280] mt-1">The city your store ships from.</p>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Payment Method</label>
                   <select value={form.accountType} onChange={e => setForm(f => ({ ...f, accountType: e.target.value as AccountType }))}
-                    className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]">
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]">
                     {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                   <p className="text-[11px] text-[#6b7280] mt-1">Buyers send your payment to this account on WhatsApp.</p>
@@ -2841,19 +2816,19 @@ function RegisterPage() {
                     <label className="text-sm font-semibold text-[#374151] mb-1.5 block">{form.accountType} Number</label>
                     <input type="tel" value={form.accountNumber} onChange={e => setForm(f => ({ ...f, accountNumber: e.target.value }))}
                       placeholder="03001234567"
-                      className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-[#374151] mb-1.5 block">{form.accountType} Title</label>
                     <input type="text" value={form.accountTitle} onChange={e => setForm(f => ({ ...f, accountTitle: e.target.value }))}
                       placeholder="Account holder name"
-                      className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]" />
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-[#374151] mb-1.5 block">Checkout options for buyers</label>
                   <select value={form.paymentMethods} onChange={e => setForm(f => ({ ...f, paymentMethods: e.target.value as PaymentMethods }))}
-                    className="w-full px-4 py-3 rounded-sm border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]">
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:border-[#1E40AF]">
                     <option value="both">Online payment + Cash on Delivery (both)</option>
                     <option value="online">Online payment only</option>
                     <option value="cod">Cash on Delivery only</option>
@@ -2864,7 +2839,7 @@ function RegisterPage() {
             )}
             {err && <p className="text-xs text-red-500 font-semibold">{err}</p>}
             <button type="submit" disabled={busy}
-              className="w-full py-3.5 rounded-sm bg-[#1E40AF] text-white font-black text-sm hover:bg-[#1e3a8a] transition-all active:scale-95 disabled:opacity-60"
+              className="w-full py-3.5 rounded-xl bg-[#1E40AF] text-white font-black text-sm hover:bg-[#1e3a8a] transition-all active:scale-95 disabled:opacity-60"
               >
               {busy ? "Creating account…" : "Create Account"}
             </button>
@@ -2906,11 +2881,11 @@ function AccountPage() {
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
         <User size={64} className="mx-auto text-gray-300 mb-4" />
         <p className="font-bold text-[#111827] mb-4">Please sign in to view your account</p>
-        <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm mr-3"
+        <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm mr-3"
           >
           Sign In
         </button>
-        <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-sm font-bold text-sm">
+        <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-xl font-bold text-sm">
           Register
         </button>
       </div>
@@ -2934,7 +2909,7 @@ function AccountPage() {
           { label: "Wishlist Items", value: wishlist.length, icon: Heart, color: "#F97316" },
           { label: "Cart Items", value: cart.length, icon: ShoppingCart, color: "#059669" },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white rounded-sm p-5 text-center border border-gray-200">
+          <div key={label} className="bg-white rounded-2xl p-5 text-center border border-gray-200 shadow-sm">
             <Icon size={22} className="mx-auto mb-2" style={{ color }} />
             <p className="text-2xl font-black" style={{ color }}>{value}</p>
             <p className="text-xs text-[#6b7280] mt-0.5">{label}</p>
@@ -2945,7 +2920,7 @@ function AccountPage() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar */}
         <div className="lg:w-56 flex-shrink-0">
-          <div className="bg-white rounded-sm p-4 border border-gray-200">
+          <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
             <div className="text-center mb-4 pb-4 border-b border-gray-100">
               <div className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center font-black text-xl text-white"
                 style={{ background: "#1E40AF" }}>
@@ -2957,15 +2932,15 @@ function AccountPage() {
             <div className="space-y-1">
               {tabs.map(({ key, label, icon: Icon }) => (
                 <button key={key} onClick={() => setTab(key as any)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm font-semibold transition-colors ${tab === key ? "bg-[#1E40AF] text-white" : "text-[#374151] hover:bg-gray-100"}`}>
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${tab === key ? "bg-[#1E40AF] text-white" : "text-[#374151] hover:bg-gray-100"}`}>
                   <Icon size={15} /> {label}
                 </button>
               ))}
-              <Link to="/messages" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm font-semibold text-[#374151] hover:bg-gray-100 transition-colors">
+              <Link to="/messages" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#374151] hover:bg-gray-100 transition-colors">
                 <MessageCircle size={15} /> Messages
               </Link>
               <button onClick={() => { logout(); navigate("/"); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors">
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors">
                 <X size={15} /> Sign Out
               </button>
             </div>
@@ -2975,7 +2950,7 @@ function AccountPage() {
         {/* Content */}
         <div className="flex-1">
           {tab === "profile" && (
-            <div className="bg-white rounded-sm p-6 border border-gray-200">
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <h3 className="font-bold text-[#111827] mb-5">Profile Information</h3>
               <div className="space-y-4 max-w-md">
                 {[
@@ -2984,25 +2959,25 @@ function AccountPage() {
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <label className="text-xs font-bold text-[#6b7280] uppercase tracking-wide mb-1 block">{label}</label>
-                    <div className="px-4 py-3 rounded-sm bg-[#F8F9FB] text-sm font-semibold text-[#111827]">{value}</div>
+                    <div className="px-4 py-3 rounded-xl bg-[#F8F9FB] text-sm font-semibold text-[#111827]">{value}</div>
                   </div>
                 ))}
                 <div>
                   <label className="text-xs font-bold text-[#6b7280] uppercase tracking-wide mb-1 block">Account Type</label>
-                  <div className="px-4 py-3 rounded-sm bg-[#F8F9FB] text-sm font-semibold text-[#111827] capitalize flex items-center gap-2">
+                  <div className="px-4 py-3 rounded-xl bg-[#F8F9FB] text-sm font-semibold text-[#111827] capitalize flex items-center gap-2">
                     {user.role}
                     {user.role === "admin" && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#1E40AF] text-white uppercase tracking-wide">Admin</span>}
                   </div>
                 </div>
 
                 {user.role === "admin" && (
-                  <Link to="/admin" className="inline-flex items-center gap-2 px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm"
+                  <Link to="/admin" className="inline-flex items-center gap-2 px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm"
                     >
                     <ShieldCheck size={16} /> Go to Admin Dashboard
                   </Link>
                 )}
                 {user.role === "seller" && (
-                  <Link to="/seller" className="inline-flex items-center gap-2 px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm"
+                  <Link to="/seller" className="inline-flex items-center gap-2 px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm"
                     >
                     <Package size={16} /> Go to Seller Dashboard
                   </Link>
@@ -3013,7 +2988,7 @@ function AccountPage() {
                     <div className="grid grid-cols-2 gap-3">
                       {(["buyer", "seller"] as const).map(r => (
                         <button key={r} type="button" onClick={() => switchRole(r)} disabled={roleBusy || user.role === r}
-                          className={`rounded-sm border-2 p-3 text-sm font-bold capitalize transition-all disabled:cursor-default ${user.role === r ? "border-[#1E40AF] bg-blue-50/60 text-[#1E40AF]" : "border-gray-200 text-[#374151] hover:border-gray-300"}`}>
+                          className={`rounded-xl border-2 p-3 text-sm font-bold capitalize transition-all disabled:cursor-default ${user.role === r ? "border-[#1E40AF] bg-blue-50/60 text-[#1E40AF]" : "border-gray-200 text-[#374151] hover:border-gray-300"}`}>
                           {r}{user.role === r && " · current"}
                         </button>
                       ))}
@@ -3028,19 +3003,19 @@ function AccountPage() {
           )}
 
           {tab === "orders" && (
-            <div className="bg-white rounded-sm p-6 border border-gray-200">
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <h3 className="font-bold text-[#111827] mb-5">Order History</h3>
               {myOrders.length === 0 ? (
                 <div className="text-center py-10">
                   <Package size={44} className="mx-auto text-gray-300 mb-3" />
                   <p className="font-bold text-[#111827] text-sm mb-1">No orders yet</p>
                   <p className="text-xs text-[#6b7280] mb-4">Your orders will appear here once you place them.</p>
-                  <Link to="/shop" className="inline-block px-5 py-2.5 bg-[#1E40AF] text-white rounded-sm font-bold text-sm">Start Shopping</Link>
+                  <Link to="/shop" className="inline-block px-5 py-2.5 bg-[#1E40AF] text-white rounded-xl font-bold text-sm">Start Shopping</Link>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {myOrders.map(o => (
-                    <div key={o.id} className="p-4 rounded-sm bg-[#F8F9FB]">
+                    <div key={o.id} className="p-4 rounded-xl bg-[#F8F9FB]">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="font-bold text-[#1E40AF] text-sm">#{o.id}</p>
@@ -3054,7 +3029,7 @@ function AccountPage() {
                             </span>
                           </div>
                           <button onClick={() => removeOrder(o)} title="Remove from my history"
-                            className="w-7 h-7 grid place-items-center rounded-sm text-red-500 hover:bg-red-50 transition-colors flex-shrink-0">
+                            className="w-7 h-7 grid place-items-center rounded-lg text-red-500 hover:bg-red-50 transition-colors flex-shrink-0">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -3072,10 +3047,10 @@ function AccountPage() {
           {tab === "wishlist" && (
             <div>
               {wishlist.length === 0 ? (
-                <div className="bg-white rounded-sm p-12 text-center border border-gray-200">
+                <div className="bg-white rounded-2xl p-12 text-center border border-gray-200 shadow-sm">
                   <Heart size={48} className="mx-auto text-gray-300 mb-3" />
                   <p className="font-bold text-[#111827]">No wishlist items yet</p>
-                  <Link to="/shop" className="inline-block mt-4 px-5 py-2.5 bg-[#1E40AF] text-white rounded-sm font-bold text-sm">Browse Products</Link>
+                  <Link to="/shop" className="inline-block mt-4 px-5 py-2.5 bg-[#1E40AF] text-white rounded-xl font-bold text-sm">Browse Products</Link>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -3125,8 +3100,8 @@ function MessagesPage() {
     <div className="max-w-md mx-auto px-4 py-20 text-center">
       <MessageCircle size={56} className="mx-auto text-gray-300 mb-4" />
       <h2 className="font-black text-xl text-[#111827] tracking-tight mb-2">Sign in to view your messages</h2>
-      <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm mr-3">Sign In</button>
-      <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-sm font-bold text-sm">Register</button>
+      <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm mr-3">Sign In</button>
+      <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-xl font-bold text-sm">Register</button>
     </div>
   );
 
@@ -3135,17 +3110,17 @@ function MessagesPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight mb-6 flex items-center gap-2"><MessageCircle size={24} className="text-[#1E40AF]" /> Messages</h1>
-      {err && <div className="mb-4 rounded-sm bg-red-50 text-red-600 p-3 text-sm font-semibold">{err}</div>}
+      {err && <div className="mb-4 rounded-xl bg-red-50 text-red-600 p-3 text-sm font-semibold">{err}</div>}
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Conversation list */}
         <div className={`lg:col-span-1 ${active ? "hidden lg:block" : "block"}`}>
-          <div className="bg-white rounded-sm overflow-hidden border border-gray-200">
+          <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
             {conversations.length === 0 ? (
               <div className="p-8 text-center text-sm text-[#6b7280]">No conversations yet. Ask a seller a question from any product page.</div>
             ) : conversations.map(c => (
               <button key={`${c.productId}-${c.buyerId}-${c.sellerId}`} onClick={() => openThread(c)}
                 className={`w-full text-left flex items-center gap-3 p-3 border-b border-gray-100 last:border-0 transition-colors ${active && active.productId === c.productId && active.buyerId === c.buyerId && active.sellerId === c.sellerId ? "bg-blue-50/60" : "hover:bg-gray-50"}`}>
-                <ProductImage src={c.productImage} alt="" className="w-10 h-10 rounded-sm object-cover bg-gray-50 flex-shrink-0" />
+                <ProductImage src={c.productImage} alt="" className="w-10 h-10 rounded-xl object-cover bg-gray-50 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-[#111827] truncate">{other(c)}</p>
                   <p className="text-xs text-[#6b7280] truncate">{c.productName}: {c.lastBody}</p>
@@ -3159,14 +3134,14 @@ function MessagesPage() {
         {/* Active thread */}
         <div className={`lg:col-span-2 ${active ? "block" : "hidden lg:block"}`}>
           {!active ? (
-            <div className="bg-white rounded-sm p-12 text-center text-sm text-[#6b7280] h-full flex items-center justify-center border border-gray-200">
+            <div className="bg-white rounded-2xl p-12 text-center text-sm text-[#6b7280] h-full flex items-center justify-center border border-gray-200 shadow-sm">
               Select a conversation to read and reply.
             </div>
           ) : (
-            <div className="bg-white rounded-sm flex flex-col border border-gray-200" style={{ height: "70vh" }}>
+            <div className="bg-white rounded-2xl flex flex-col border border-gray-200 shadow-sm overflow-hidden" style={{ height: "70vh" }}>
               <div className="flex items-center gap-2 p-4 border-b border-gray-100">
                 <button onClick={() => setActive(null)} className="lg:hidden text-[#1E40AF]"><ChevronLeft size={20} /></button>
-                <ProductImage src={active.productImage} alt="" className="w-9 h-9 rounded-sm object-cover bg-gray-50" />
+                <ProductImage src={active.productImage} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-[#111827] truncate">{other(active)}</p>
                   <Link to={`/product/${active.productId}`} className="text-xs text-[#6b7280] truncate hover:text-[#1E40AF]">About: {active.productName}</Link>
@@ -3175,7 +3150,7 @@ function MessagesPage() {
               <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
                 {messages.map(m => (
                   <div key={m.id} className={`flex ${m.senderId === user.id ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[75%] px-3.5 py-2 rounded-sm text-sm ${m.senderId === user.id ? "bg-[#1E40AF] text-white rounded-br-sm" : "bg-[#F1F5F9] text-[#111827] rounded-bl-sm"}`}>
+                    <div className={`max-w-[75%] px-3.5 py-2 text-sm ${m.senderId === user.id ? "bg-[#1E40AF] text-white rounded-2xl rounded-br-sm" : "bg-[#F1F5F9] text-[#111827] rounded-2xl rounded-bl-sm"}`}>
                       {m.body}
                       <span className={`block text-[10px] mt-0.5 ${m.senderId === user.id ? "text-blue-200" : "text-[#9ca3af]"}`}>{new Date(m.createdAt).toLocaleString()}</span>
                     </div>
@@ -3186,9 +3161,9 @@ function MessagesPage() {
               <div className="p-3 border-t border-gray-100 flex gap-2">
                 <input value={body} onChange={e => setBody(e.target.value)} onKeyDown={e => e.key === "Enter" && send()}
                   placeholder="Type a message…"
-                  className="flex-1 px-4 py-2.5 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
                 <button onClick={send} disabled={busy || !body.trim()}
-                  className="px-4 py-2.5 rounded-sm bg-[#1E40AF] text-white text-sm font-bold flex items-center gap-1.5 disabled:opacity-60">
+                  className="px-4 py-2.5 rounded-xl bg-[#1E40AF] text-white text-sm font-bold flex items-center gap-1.5 disabled:opacity-60">
                   <Send size={15} /> Send
                 </button>
               </div>
@@ -3210,16 +3185,13 @@ const STATUS_STYLE: Record<OrderStatus, { bg: string; text: string }> = {
   "Cancelled": { bg: "#FEF2F2", text: "#B91C1C" },
 };
 
-// Order card used by the seller's order-management views (active orders and
-// delivered history) — buyer details, product list, and the status controls
-// used to approve/ship/deliver/cancel.
 function OrderCard({ order: o, onSetStatus }: {
   order: Order;
   onSetStatus: (id: string, status: OrderStatus) => void;
 }) {
   const approve = () => onSetStatus(o.id, isCashOnDelivery(o) ? "Confirmed (COD)" : "Payment Received");
   return (
-    <div className="bg-white rounded-sm p-5 border border-gray-200">
+    <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
       <div className="flex flex-col lg:flex-row gap-5">
         {/* Verify payment proof on WhatsApp */}
         <a href={`https://wa.me/${toWaNumber(o.phone)}`} target="_blank" rel="noopener noreferrer"
@@ -4302,8 +4274,8 @@ function SellerPage() {
     <div className="max-w-md mx-auto px-4 py-20 text-center">
       <User size={56} className="mx-auto text-gray-300 mb-4" />
       <h2 className="font-black text-xl text-[#111827] tracking-tight mb-2">Sign in to your seller account</h2>
-      <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm mr-3">Sign In</button>
-      <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-sm font-bold text-sm">Register</button>
+      <button onClick={() => navigate("/login")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm mr-3">Sign In</button>
+      <button onClick={() => navigate("/register")} className="px-6 py-3 border border-[#1E40AF] text-[#1E40AF] rounded-xl font-bold text-sm">Register</button>
     </div>
   );
   if (user.role !== "seller" && user.role !== "admin") return (
@@ -4311,7 +4283,7 @@ function SellerPage() {
       <Package size={56} className="mx-auto text-gray-300 mb-4" />
       <h2 className="font-black text-xl text-[#111827] tracking-tight mb-2">Become a seller</h2>
       <p className="text-sm text-[#6b7280] mb-6">Switch your account to a seller in your profile to list products.</p>
-      <button onClick={() => navigate("/account")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-sm font-bold text-sm">Go to Profile</button>
+      <button onClick={() => navigate("/account")} className="px-6 py-3 bg-[#1E40AF] text-white rounded-xl font-bold text-sm">Go to Profile</button>
     </div>
   );
 
@@ -4340,17 +4312,17 @@ function SellerPage() {
           </h1>
           <p className="text-sm text-[#6b7280] mt-0.5">Manage the products in your store.</p>
         </div>
-        <button onClick={() => setEditing("new")} className="px-4 py-2.5 rounded-sm bg-[#1E40AF] text-white text-sm font-bold flex items-center gap-1.5">
+        <button onClick={() => setEditing("new")} className="px-4 py-2.5 rounded-xl bg-[#1E40AF] text-white text-sm font-bold flex items-center gap-1.5">
           <Plus size={15} /> Add Product
         </button>
       </div>
 
       <div className="grid sm:grid-cols-3 gap-3 mb-6">
-        <div className="bg-white rounded-sm p-4 border border-gray-200">
+        <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
           <p className="text-2xl font-black text-[#1E40AF]">{products.length}</p>
           <p className="text-xs font-semibold text-[#6b7280]">Your Products</p>
         </div>
-        <div className="bg-white rounded-sm p-4 sm:col-span-2 text-sm border border-gray-200">
+        <div className="bg-white rounded-2xl p-4 sm:col-span-2 text-sm border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between mb-1">
             <p className="text-xs font-bold text-[#6b7280] uppercase tracking-wide">Store contact (used at checkout)</p>
             <button onClick={openStoreEdit} className="text-xs font-bold text-[#1E40AF] hover:underline">Edit</button>
@@ -4373,26 +4345,26 @@ function SellerPage() {
           <div className="flex items-center gap-2">
             <PakistanClock />
             <button onClick={resetEarnings} disabled={resetBusy} title="Permanently reset your all-time earnings to zero"
-              className="text-xs font-bold px-3 py-1.5 rounded-sm border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60">
+              className="text-xs font-bold px-3 py-1.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60">
               {resetBusy ? "Working…" : "Reset Earnings"}
             </button>
           </div>
         </div>
         {analytics
           ? <SalesAnalyticsView data={analytics} />
-          : <div className="bg-white rounded-sm p-6 text-center text-sm text-[#6b7280] border border-gray-100">Loading your sales…</div>}
+          : <div className="bg-white rounded-2xl p-6 text-center text-sm text-[#6b7280] border border-gray-100 shadow-sm">Loading your sales…</div>}
       </div>
 
       {/* Your orders — approve, mark payment received, ship, deliver or cancel */}
       <div className="mb-6">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
           <h2 className="font-black text-[#111827] flex items-center gap-2"><Truck size={18} className="text-[#1E40AF]" /> Your orders</h2>
-          <button onClick={loadOrders} className="flex items-center gap-2 px-4 py-2 rounded-sm bg-white border border-gray-200 text-sm font-bold text-[#374151] hover:border-[#1E40AF] transition-colors">
+          <button onClick={loadOrders} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-sm font-bold text-[#374151] hover:border-[#1E40AF] transition-colors">
             <RefreshCw size={15} /> Refresh
           </button>
         </div>
         {activeOrders.length === 0 ? (
-          <div className="bg-white rounded-sm p-10 text-center border border-gray-200">
+          <div className="bg-white rounded-2xl p-10 text-center border border-gray-200 shadow-sm">
             <Package size={44} className="mx-auto text-gray-300 mb-3" />
             <p className="font-bold text-[#111827] mb-1">No active orders</p>
             <p className="text-sm text-[#6b7280]">Orders placed for your products will appear here.</p>
@@ -4404,13 +4376,11 @@ function SellerPage() {
         )}
       </div>
 
-      {/* Delivered orders move out of the active list automatically and live on
-          their own page, so this dashboard doesn't fill up with completed cards. */}
       {deliveredCount > 0 && (
         <Link to="/seller/delivered"
-          className="mb-6 flex items-center justify-between gap-3 bg-white rounded-sm p-4 hover:-translate-y-0.5 transition-transform border border-gray-200">
+          className="mb-6 flex items-center justify-between gap-3 bg-white rounded-2xl p-4 hover:-translate-y-0.5 transition-transform border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-sm bg-[#ECFDF5] grid place-items-center flex-shrink-0"><CheckCircle size={18} className="text-[#059669]" /></div>
+            <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] grid place-items-center flex-shrink-0"><CheckCircle size={18} className="text-[#059669]" /></div>
             <div>
               <p className="font-bold text-[#111827] text-sm">Delivered Orders</p>
               <p className="text-xs text-[#6b7280]">{deliveredCount} order{deliveredCount === 1 ? "" : "s"} · view, download as PDF, or clear</p>
@@ -4421,22 +4391,22 @@ function SellerPage() {
       )}
 
       {storeOpen && (
-        <div className="bg-white rounded-sm p-5 mb-6 border border-gray-200">
+        <div className="bg-white rounded-2xl p-5 mb-6 border border-gray-200 shadow-sm">
           <p className="font-bold text-[#111827] mb-1">Edit store details</p>
           <p className="text-xs text-[#6b7280] mb-4">Buyers check out and contact you on this WhatsApp; payments go to this account.</p>
           <div className="grid sm:grid-cols-2 gap-3">
-            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Store Name *</span><input className="w-full px-3 py-2 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.storeName} onChange={e => setStoreForm(f => ({ ...f, storeName: e.target.value }))} /></label>
-            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Store WhatsApp *</span><input className="w-full px-3 py-2 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.whatsapp} onChange={e => setStoreForm(f => ({ ...f, whatsapp: e.target.value }))} placeholder="03001234567" /></label>
-            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">City *</span><input className="w-full px-3 py-2 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.city} onChange={e => setStoreForm(f => ({ ...f, city: e.target.value }))} placeholder="e.g. Multan" /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Store Name *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.storeName} onChange={e => setStoreForm(f => ({ ...f, storeName: e.target.value }))} /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Store WhatsApp *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.whatsapp} onChange={e => setStoreForm(f => ({ ...f, whatsapp: e.target.value }))} placeholder="03001234567" /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">City *</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.city} onChange={e => setStoreForm(f => ({ ...f, city: e.target.value }))} placeholder="e.g. Multan" /></label>
             <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">Payment Method</span>
-              <select className="w-full px-3 py-2 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountType} onChange={e => setStoreForm(f => ({ ...f, accountType: e.target.value as AccountType }))}>
+              <select className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountType} onChange={e => setStoreForm(f => ({ ...f, accountType: e.target.value as AccountType }))}>
                 {ACCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </label>
-            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">{storeForm.accountType} Number</span><input className="w-full px-3 py-2 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountNumber} onChange={e => setStoreForm(f => ({ ...f, accountNumber: e.target.value }))} placeholder="03001234567" /></label>
-            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">{storeForm.accountType} Title</span><input className="w-full px-3 py-2 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountTitle} onChange={e => setStoreForm(f => ({ ...f, accountTitle: e.target.value }))} placeholder="Account holder name" /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">{storeForm.accountType} Number</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountNumber} onChange={e => setStoreForm(f => ({ ...f, accountNumber: e.target.value }))} placeholder="03001234567" /></label>
+            <label className="text-sm"><span className="font-semibold text-[#374151] block mb-1">{storeForm.accountType} Title</span><input className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.accountTitle} onChange={e => setStoreForm(f => ({ ...f, accountTitle: e.target.value }))} placeholder="Account holder name" /></label>
             <label className="text-sm sm:col-span-2"><span className="font-semibold text-[#374151] block mb-1">Checkout options for buyers</span>
-              <select className="w-full px-3 py-2 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.paymentMethods} onChange={e => setStoreForm(f => ({ ...f, paymentMethods: e.target.value as PaymentMethods }))}>
+              <select className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" value={storeForm.paymentMethods} onChange={e => setStoreForm(f => ({ ...f, paymentMethods: e.target.value as PaymentMethods }))}>
                 <option value="both">Online payment + Cash on Delivery (both)</option>
                 <option value="online">Online payment only</option>
                 <option value="cod">Cash on Delivery only</option>
@@ -4446,13 +4416,13 @@ function SellerPage() {
           </div>
           {storeMsg && <p className="text-xs text-red-500 font-semibold mt-2">{storeMsg}</p>}
           <div className="flex gap-2 mt-4">
-            <button onClick={saveStore} disabled={storeBusy} className="px-5 py-2.5 rounded-sm bg-[#1E40AF] text-white font-bold text-sm disabled:opacity-60">{storeBusy ? "Saving…" : "Save store details"}</button>
-            <button onClick={() => setStoreOpen(false)} className="px-5 py-2.5 rounded-sm border border-gray-200 text-[#374151] font-bold text-sm">Cancel</button>
+            <button onClick={saveStore} disabled={storeBusy} className="px-5 py-2.5 rounded-xl bg-[#1E40AF] text-white font-bold text-sm disabled:opacity-60">{storeBusy ? "Saving…" : "Save store details"}</button>
+            <button onClick={() => setStoreOpen(false)} className="px-5 py-2.5 rounded-xl border border-gray-200 text-[#374151] font-bold text-sm">Cancel</button>
           </div>
         </div>
       )}
 
-      {(msg || err) && <div className={`mb-4 rounded-sm p-3 text-sm font-semibold ${err ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"}`}>{err || msg}</div>}
+      {(msg || err) && <div className={`mb-4 rounded-xl p-3 text-sm font-semibold ${err ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"}`}>{err || msg}</div>}
 
       {editing !== null && (
         <div ref={formRef}>
@@ -4461,7 +4431,7 @@ function SellerPage() {
       )}
 
       {/* Bulk delivery charge — your choice */}
-      <div className="bg-white rounded-sm p-4 mb-4 border border-gray-200">
+      <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200 shadow-sm">
         <div className="flex items-center gap-2 mb-1">
           <Truck size={16} className="text-[#1E40AF]" />
           <p className="font-bold text-[#111827] text-sm">Delivery charges (your choice)</p>
@@ -4469,25 +4439,25 @@ function SellerPage() {
         <p className="text-xs text-[#6b7280] mb-3">Set one charge for <strong>all</strong> your products at once below, or set a specific charge per product when you add or edit it. Leave blank to use the Ahmad Mart default (Rs. {DELIVERY_FEE}).</p>
         <div className="flex flex-wrap items-center gap-2">
           <input type="number" value={bulkDelivery} onChange={e => setBulkDelivery(e.target.value)} placeholder={`Rs. (e.g. ${DELIVERY_FEE})`}
-            className="w-44 px-3 py-2 rounded-sm border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
+            className="w-44 px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:border-[#1E40AF]" />
           <button onClick={applyBulkDelivery} disabled={bulkBusy}
-            className="px-4 py-2 rounded-sm bg-[#1E40AF] text-white text-sm font-bold disabled:opacity-60">{bulkBusy ? "Applying…" : "Apply to all my products"}</button>
+            className="px-4 py-2 rounded-xl bg-[#1E40AF] text-white text-sm font-bold disabled:opacity-60">{bulkBusy ? "Applying…" : "Apply to all my products"}</button>
           {bulkMsg && <span className="text-xs font-semibold text-emerald-600">{bulkMsg}</span>}
         </div>
       </div>
 
-      <div className="bg-white rounded-sm overflow-hidden border border-gray-200">
+      <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
         {products.length === 0 ? (
           <div className="p-10 text-center text-sm text-[#6b7280]">You haven't added any products yet. Click <strong>Add Product</strong> to start.</div>
         ) : products.map(p => (
           <div key={p.id} className="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0">
-            <ProductImage src={p.image} alt="" className="w-12 h-12 rounded-sm object-cover bg-gray-50 flex-shrink-0" />
+            <ProductImage src={p.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-[#111827] truncate">{p.name}</p>
               <p className="text-xs text-[#6b7280]">{p.category} · {p.subcategory} · {fmt(p.price)} · Delivery {fmt(p.deliveryCharge ?? DELIVERY_FEE)}{!p.inStock && <span className="text-red-500 font-semibold"> · Out of stock</span>}</p>
             </div>
-            <button onClick={() => setEditing(p)} className="px-3 py-1.5 rounded-sm text-xs font-bold text-[#1E40AF] hover:bg-blue-50">Edit</button>
-            <button onClick={() => remove(p)} className="px-3 py-1.5 rounded-sm text-xs font-bold text-red-500 hover:bg-red-50">Delete</button>
+            <button onClick={() => setEditing(p)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-[#1E40AF] hover:bg-blue-50">Edit</button>
+            <button onClick={() => remove(p)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 hover:bg-red-50">Delete</button>
           </div>
         ))}
       </div>
@@ -4495,8 +4465,7 @@ function SellerPage() {
   );
 }
 
-// ─── Seller: Delivered Orders (its own page, so the main dashboard doesn't fill
-// up with stacked cards as delivered history grows) ────────────────────────────
+// ─── Seller: Delivered Orders ─────────────────────────────────────────────────
 function SellerDeliveredOrders() {
   const { user, authReady } = useContext(Store);
   const navigate = useNavigate();
@@ -4543,26 +4512,26 @@ function SellerDeliveredOrders() {
           <p className="text-sm text-[#6b7280] mt-0.5">{delivered.length} order{delivered.length === 1 ? "" : "s"} · {fmt(total)} total</p>
         </div>
         <button onClick={clearHistory} disabled={clearBusy || delivered.length === 0}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-sm bg-[#1E40AF] text-white text-sm font-bold disabled:opacity-60">
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1E40AF] text-white text-sm font-bold disabled:opacity-60">
           <Download size={15} /> {clearBusy ? "Working…" : "Download PDF & Clear"}
         </button>
       </div>
 
       {delivered.length > 0 && (
-        <div className="flex items-start gap-2 rounded-sm border border-amber-200 bg-amber-50 p-3 mb-5 text-xs text-amber-800">
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 mb-5 text-xs text-amber-800">
           <ShieldCheck size={15} className="flex-shrink-0 mt-0.5" />
           <span>Downloading will permanently remove your all-time earnings and this order history — the PDF (with full order and customer details) becomes your only record. This cannot be undone.</span>
         </div>
       )}
 
       {delivered.length === 0 ? (
-        <div className="bg-white rounded-sm p-16 text-center border border-gray-200">
+        <div className="bg-white rounded-2xl p-16 text-center border border-gray-200 shadow-sm">
           <Package size={56} className="mx-auto text-gray-300 mb-4" />
           <p className="font-bold text-[#111827] mb-1">No delivered orders yet</p>
           <p className="text-sm text-[#6b7280]">Orders you mark Delivered will show up here.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-sm overflow-hidden border border-gray-200">
+        <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
           {delivered.map(o => (
             <div key={o.id} className="flex flex-wrap items-center gap-3 p-3 border-b border-gray-100 last:border-0 text-sm">
               <div className="w-24 flex-shrink-0">
@@ -4577,7 +4546,7 @@ function SellerDeliveredOrders() {
               <div className="flex-1 min-w-[140px] text-[#6b7280] truncate">{o.items.map(it => `${it.name} ×${it.qty}`).join(", ")}</div>
               <div className="w-20 flex-shrink-0 text-right font-bold text-[#111827]">{fmt(o.total)}</div>
               <select value={o.status} onChange={e => setOrderStatus(o.id, e.target.value as OrderStatus)}
-                className="flex-shrink-0 text-xs font-bold px-2 py-1.5 rounded-sm border border-gray-200 bg-gray-50 outline-none focus:border-[#1E40AF]">
+                className="flex-shrink-0 text-xs font-bold px-2 py-1.5 rounded-xl border border-gray-200 bg-gray-50 outline-none focus:border-[#1E40AF]">
                 {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
