@@ -1335,28 +1335,28 @@ function HomePage() {
   return (
     <div>
       {/* Hero Slider */}
-      <section className="relative overflow-hidden mb-12 rounded-3xl mx-4 sm:mx-6 lg:mx-8">
+      <section className="relative overflow-hidden mb-12 rounded-xl mx-4 sm:mx-6 lg:mx-8">
         {slides.map((slide, i) => (
           <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${i === activeSlide ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className={`w-full h-full bg-gradient-to-br ${slide.bg} flex flex-col lg:flex-row items-center min-h-[380px] sm:min-h-[470px] relative overflow-hidden`}>
               <div className="flex-1 px-8 sm:px-12 py-9 text-white z-10">
-                <span className="inline-block px-4 py-1.5 rounded-full bg-[#F97316] text-white text-xs font-bold mb-4">{slide.badge}</span>
+                <span className="inline-block px-3 py-1 rounded-md bg-[#F97316] text-white text-xs font-bold mb-4">{slide.badge}</span>
                 <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] mb-4 max-w-xl">{slide.title} <span className="text-[#F97316]">{slide.highlight}</span></h1>
                 <p className="text-blue-100 text-sm sm:text-base mb-6 max-w-md">{slide.sub}</p>
                 <div className="flex flex-wrap gap-3 mb-7">
                   <button onClick={() => navigate(slide.link)}
-                    className="px-6 py-3 rounded-xl bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-colors active:scale-95 inline-flex items-center gap-2">
+                    className="px-6 py-3 rounded-lg bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-colors active:scale-95 inline-flex items-center gap-2">
                     {slide.cta} <ArrowRight size={16} />
                   </button>
                   <button onClick={() => navigate("/shop")}
-                    className="px-6 py-3 rounded-xl bg-transparent text-white font-bold text-sm hover:bg-white/10 transition-colors border border-white/50 inline-flex items-center gap-2">
+                    className="px-6 py-3 rounded-lg bg-transparent text-white font-bold text-sm hover:bg-white/10 transition-colors border border-white/50 inline-flex items-center gap-2">
                     <SlidersHorizontal size={15} /> Explore Categories
                   </button>
                 </div>
                 <div className="hidden sm:flex items-center gap-6 flex-wrap">
                   {slide.features.map((f, fi) => (
                     <div key={fi} className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0"><f.icon size={16} className="text-white" /></div>
+                      <div className="w-9 h-9 rounded-md bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0"><f.icon size={16} className="text-white" /></div>
                       <div><p className="text-xs font-bold leading-tight">{f.title}</p><p className="text-[11px] text-blue-200 leading-tight">{f.sub}</p></div>
                     </div>
                   ))}
@@ -1394,7 +1394,7 @@ function HomePage() {
               {catThumbs.map(({ cat, image }) => (
                 <button key={cat} onClick={() => navigate(`/shop?cat=${encodeURIComponent(cat)}`)}
                   className="flex flex-col items-center gap-2 flex-shrink-0 w-24 group">
-                  <div className="w-20 h-20 rounded-2xl overflow-hidden bg-[#F8F9FB] border border-gray-200 flex items-center justify-center group-hover:border-[#1E40AF] transition-colors shadow-sm">
+                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-[#F8F9FB] border border-gray-200 flex items-center justify-center group-hover:border-[#1E40AF] transition-colors shadow-sm">
                     <ProductImage src={image} alt={cat} className="w-full h-full object-cover" />
                   </div>
                   <span className="text-xs font-semibold text-[#374151] text-center leading-tight group-hover:text-[#1E40AF] transition-colors line-clamp-2">{cat}</span>
@@ -1440,22 +1440,22 @@ function HomePage() {
               if (items.length === 0) return null;
               const theme = showcaseThemes[i % showcaseThemes.length];
               return (
-                <div key={cat} className="p-6 border rounded-2xl" style={{ background: theme.from, borderColor: theme.accent + "30" }}>
+                <div key={cat} className="p-6 border rounded-lg" style={{ background: theme.from, borderColor: theme.accent + "30" }}>
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h3 className="text-lg font-black text-[#111827]">{cat}</h3>
                       <p className="text-sm text-[#6b7280]">Top picks in {cat}</p>
                     </div>
                     <Link to={`/shop?cat=${encodeURIComponent(cat)}`}
-                      className="text-xs font-bold flex items-center gap-1 border bg-white hover:bg-transparent px-3.5 py-1.5 rounded-full transition-colors flex-shrink-0" style={{ color: theme.accent, borderColor: theme.accent }}>
+                      className="text-xs font-bold flex items-center gap-1 border bg-white hover:bg-transparent px-3.5 py-1.5 rounded-md transition-colors flex-shrink-0" style={{ color: theme.accent, borderColor: theme.accent }}>
                       View All <ChevronRight size={13} />
                     </Link>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {items.map(p => (
                       <Link key={p.id} to={`/product/${p.id}`}
-                        className="bg-white rounded-xl p-3 border border-gray-200 hover:border-current transition-colors shadow-sm" style={{ color: theme.accent }}>
-                        <ProductImage src={p.image} alt={p.name} className="w-full h-28 object-contain rounded-lg mb-2 bg-white" />
+                        className="bg-white rounded-lg p-3 border border-gray-200 hover:border-current transition-colors shadow-sm" style={{ color: theme.accent }}>
+                        <ProductImage src={p.image} alt={p.name} className="w-full h-28 object-contain rounded-md mb-2 bg-white" />
                         <p className="text-xs font-semibold text-[#111827] line-clamp-2 mb-1">{p.name}</p>
                         <p className="text-xs font-bold" style={{ color: theme.accent }}>{fmt(p.price)}</p>
                       </Link>
@@ -1480,8 +1480,8 @@ function HomePage() {
               { icon: RotateCcw, title: "Easy Returns", desc: "Not satisfied? Return within 7 days for an easy, no fuss refund.", color: "#DC2626" },
               { icon: Headphones, title: "24/7 Support", desc: "Our team is always here to help. Reach us anytime on WhatsApp.", color: "#B45309" },
             ].map(({ icon: Icon, title, desc, color }) => (
-              <div key={title} className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-gray-300 transition-colors shadow-sm">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+              <div key={title} className="bg-white rounded-lg p-6 border border-gray-200 hover:border-gray-300 transition-colors shadow-sm">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
                   style={{ background: color, color: "#fff" }}>
                   <Icon size={24} />
                 </div>
@@ -1498,7 +1498,7 @@ function HomePage() {
           <SectionHeader eyebrow="Testimonials" title="What Our Customers Say" subtitle="Real reviews from real customers across Pakistan" />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {REVIEWS.map(r => (
-              <div key={r.id} className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-gray-300 transition-colors shadow-sm">
+              <div key={r.id} className="bg-white rounded-lg p-6 border border-gray-200 hover:border-gray-300 transition-colors shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
                     style={{ background: "#1E40AF" }}>
