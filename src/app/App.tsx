@@ -533,8 +533,8 @@ function PakistanClock() {
     hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
   });
   return (
-    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-sm bg-[#EFF6FF] text-[#1E40AF] text-xs font-bold">
-      <Clock size={14} /> Pakistan time: <span className="font-mono">{text}</span>
+    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/10 text-gray-200 text-xs font-medium border border-white/10 shadow-xs">
+      <Clock size={13} className="text-[#F97316]" /> <span>PK Time:</span> <span className="font-mono text-white font-bold">{text}</span>
     </div>
   );
 }
@@ -639,7 +639,7 @@ function ProductCardBase({ product }: { product: Product }) {
     <div
       ref={cardRef}
       onClick={() => navigate(`/product/${product.id}`)}
-      className="reveal group wp-card overflow-hidden cursor-pointer transition-all duration-200 border border-slate-200 hover:border-[#1E40AF] hover:shadow-md rounded-xl bg-white flex flex-col justify-between"
+      className="reveal group wp-card overflow-hidden cursor-pointer transition-all duration-200 border border-slate-200 hover:border-[#1E40AF] hover:shadow-md rounded-lg bg-white flex flex-col justify-between"
     >
       <div className="relative overflow-hidden bg-slate-50 border-b border-slate-100" style={{ aspectRatio: "4/5" }}>
         <ProductImage
@@ -649,13 +649,13 @@ function ProductCardBase({ product }: { product: Product }) {
         />
         <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
           {product.featured && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-black text-white px-2 py-0.5 rounded bg-[#F97316] shadow-xs">
+            <span className="inline-flex items-center gap-1 text-[10px] font-black text-white px-2 py-0.5 rounded-md bg-[#F97316] shadow-xs">
               <Star size={9} className="fill-white" /> Featured
             </span>
           )}
           {product.badge && <Badge type={product.badge} />}
           {product.originalPrice && (
-            <span className="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded shadow-xs">
+            <span className="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded-md shadow-xs">
               -{discount(product.originalPrice, product.price)}%
             </span>
           )}
@@ -695,14 +695,14 @@ function ProductCardBase({ product }: { product: Product }) {
           {product.isService ? (
             <button
               onClick={e => { e.stopPropagation(); navigate(`/product/${product.id}`); }}
-              className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-bold text-white transition-all active:scale-95 bg-[#1E40AF] hover:bg-[#1e3a8a] shadow-xs"
+              className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs font-bold text-white transition-all active:scale-95 bg-[#1E40AF] hover:bg-[#1e3a8a] shadow-xs"
             >
               <ShoppingCart size={13} /> Buy
             </button>
           ) : (
             <button
               onClick={handleAdd}
-              className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-xs ${adding ? "bg-emerald-600 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}
+              className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs font-bold transition-all active:scale-95 shadow-xs ${adding ? "bg-emerald-600 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}
             >
               {adding ? <CheckCircle size={13} /> : <ShoppingCart size={13} />}
               {adding ? "Added!" : "Add"}
@@ -720,7 +720,7 @@ const ProductCard = memo(ProductCardBase);
 // cache) so the grid never flashes empty or shows stale dummy products.
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-gray-200">
+    <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
       <div className="bg-gray-100 animate-pulse" style={{ aspectRatio: "1/1" }} />
       <div className="p-3 sm:p-4 space-y-2">
         <div className="h-3 rounded bg-gray-100 animate-pulse w-3/4" />
@@ -832,27 +832,13 @@ function Navbar() {
   return (
     <>
       <nav ref={navRef} className={`fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 transition-all duration-300 ${scrolled ? "shadow-md" : ""}`}>
-        {/* Top bar (WordPress Dark Slate) */}
+        {/* Top bar */}
         <div className="bg-[#0F172A] text-white py-1.5 px-4 text-xs">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex-1 overflow-hidden">
-              <div className="flex w-max animate-marquee">
-                {[0, 1].map(g => (
-                  <div key={g} className="flex shrink-0" aria-hidden={g === 1}>
-                    {[0, 1].map(i => (
-                      <span key={i} className="px-6 text-[11px] sm:text-xs font-semibold whitespace-nowrap">
-                        🎉 Welcome to Ahmad Mart — 100% Verified Quality & Nationwide Delivery Across Pakistan
-                      </span>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="hidden lg:flex items-center gap-4 flex-shrink-0 text-slate-300 font-medium text-[11px]">
-              <PakistanClock />
-              <a href="https://wa.me/923405463601" target="_blank" rel="noopener noreferrer" className="hover:text-white flex items-center gap-1">
-                <MessageCircle size={13} className="text-emerald-400" /> WhatsApp Support
-              </a>
+            <a href="https://wa.me/923405463601" target="_blank" rel="noopener noreferrer" className="hover:text-white flex items-center gap-1.5 text-slate-300 font-medium text-[11px]">
+              <MessageCircle size={13} className="text-emerald-400" /> <span>WhatsApp Support:</span> <span className="font-semibold text-white">0340 5463601</span>
+            </a>
+            <div className="flex items-center gap-4 text-slate-300 font-medium text-[11px]">
               <LangToggle />
             </div>
           </div>
@@ -1216,19 +1202,22 @@ function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-white/10 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-center sm:text-left">
+        <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="text-center md:text-left">
             <p className="text-gray-500 text-sm">© 2026 Ahmad Mart. All rights reserved.</p>
             <p className="text-gray-500 text-xs mt-1">Made by <a href="https://linkin.bio/ahmadraza/" target="_blank" rel="noopener noreferrer" className="text-[#F97316] font-semibold hover:underline">Ahmad Raza</a></p>
           </div>
-          <div className="flex flex-wrap gap-2 items-center justify-center">
-            <span className="text-gray-500 text-xs mr-1">We accept:</span>
-            <div className="flex flex-wrap gap-2">
-              {["JazzCash", "SadaPay", "NayaPay", "Easypaisa", "COD"].map(m => (
-                <span key={m} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300 font-semibold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#F97316]" />{m}
-                </span>
-              ))}
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <PakistanClock />
+            <div className="flex flex-wrap gap-2 items-center justify-center">
+              <span className="text-gray-500 text-xs mr-1">We accept:</span>
+              <div className="flex flex-wrap gap-2">
+                {["JazzCash", "SadaPay", "NayaPay", "Easypaisa", "COD"].map(m => (
+                  <span key={m} className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/10 rounded-md text-xs text-gray-300 font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#F97316]" />{m}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
