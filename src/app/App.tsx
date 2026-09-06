@@ -533,8 +533,8 @@ function PakistanClock() {
     hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
   });
   return (
-    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/10 text-gray-200 text-xs font-medium border border-white/10 shadow-xs">
-      <Clock size={13} className="text-[#F97316]" /> <span>PK Time:</span> <span className="font-mono text-white font-bold">{text}</span>
+    <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-md bg-[#1E40AF] text-white text-xs font-semibold shadow-sm border border-blue-600">
+      <Clock size={14} className="text-[#F97316] flex-shrink-0" /> <span>PK Time:</span> <span className="font-mono text-white font-bold">{text}</span>
     </div>
   );
 }
@@ -1204,8 +1204,8 @@ function Footer() {
               <span className="text-gray-500 text-xs mr-1">We accept:</span>
               <div className="flex flex-wrap gap-2">
                 {["JazzCash", "SadaPay", "NayaPay", "Easypaisa", "COD"].map(m => (
-                  <span key={m} className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/10 rounded-md text-xs text-gray-300 font-semibold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#F97316]" />{m}
+                  <span key={m} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-md text-xs text-white font-bold shadow-xs">
+                    <span className="w-2 h-2 rounded-full bg-[#F97316]" />{m}
                   </span>
                 ))}
               </div>
