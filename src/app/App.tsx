@@ -1451,24 +1451,26 @@ function HomePage() {
         )}
 
         {/* Why Choose Us */}
-        <section className="mb-14">
+        <section className="mb-12">
           <SectionHeader eyebrow="Our Promise" title="Why Choose Ahmad Mart?" subtitle="We put our customers first, always." />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {[
-              { icon: Award, title: "Premium Quality", desc: "Every product is checked for quality and sourced from verified suppliers.", color: "#1E40AF" },
-              { icon: TrendingUp, title: "Best Prices", desc: "We offer the most competitive prices in Pakistan with no hidden charges.", color: "#F97316" },
-              { icon: Truck, title: "Nationwide Delivery", desc: "Fast, reliable delivery to all cities across Pakistan. Pay by mobile wallet or Cash on Delivery — available nationwide.", color: "#059669" },
-              { icon: Shield, title: "Secure Shopping", desc: "Your data and payments are completely safe with strong encryption.", color: "#7C3AED" },
-              { icon: RotateCcw, title: "Easy Returns", desc: "Not satisfied? Return within 7 days for an easy, no fuss refund.", color: "#DC2626" },
-              { icon: Headphones, title: "24/7 Support", desc: "Our team is always here to help. Reach us anytime on WhatsApp.", color: "#B45309" },
+              { icon: Award, title: "Premium Quality", desc: "Checked for quality & sourced from verified suppliers.", color: "#1E40AF" },
+              { icon: TrendingUp, title: "Best Prices", desc: "Competitive prices with zero hidden charges.", color: "#F97316" },
+              { icon: Truck, title: "Nationwide Delivery", desc: "Fast delivery across Pakistan with COD & Wallet options.", color: "#059669" },
+              { icon: Shield, title: "Secure Shopping", desc: "Encrypted payments & 100% safe checkout.", color: "#7C3AED" },
+              { icon: RotateCcw, title: "Easy Returns", desc: "7-day hassle-free returns & quick refunds.", color: "#DC2626" },
+              { icon: Headphones, title: "24/7 Support", desc: "Instant customer assistance anytime via WhatsApp.", color: "#B45309" },
             ].map(({ icon: Icon, title, desc, color }) => (
-              <div key={title} className="bg-white rounded-lg p-6 border border-gray-200 hover:border-gray-300 transition-colors shadow-sm">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
-                  style={{ background: color, color: "#fff" }}>
-                  <Icon size={24} />
+              <div key={title} className="bg-white rounded-md p-4 border border-slate-200 hover:border-[#1E40AF] transition-colors shadow-xs flex items-start gap-3.5">
+                <div className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 text-white shadow-xs"
+                  style={{ background: color }}>
+                  <Icon size={18} />
                 </div>
-                <h4 className="font-bold text-[#111827] mb-2">{title}</h4>
-                <p className="text-[#6b7280] text-sm leading-relaxed">{desc}</p>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-slate-900 text-sm mb-0.5">{title}</h4>
+                  <p className="text-slate-500 text-xs leading-relaxed">{desc}</p>
+                </div>
               </div>
             ))}
           </div>
