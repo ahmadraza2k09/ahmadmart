@@ -189,7 +189,7 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
       },
       {
         heading: "Sellers",
-        paragraphs: ["Independent sellers are responsible for their own products, descriptions, pricing, stock, and order fulfillment. Ahmad Mart connects buyers and sellers and charges sellers 0% commission."],
+        paragraphs: ["Independent sellers are responsible for their own products, descriptions, pricing, stock, and order fulfillment. Ahmad Mart connects buyers and sellers."],
       },
       {
         heading: "Acceptable Use",
@@ -222,7 +222,7 @@ export const POLICY_DOCS: Record<PolicyId, PolicyDoc> = {
           { q: "How do I place an order?", a: "Add items to your cart or tap Buy Now, fill in your details at checkout, choose wallet transfer or Cash on Delivery, then place the order. It opens on WhatsApp so you can complete payment and confirm." },
           { q: "How do I track my order?", a: "Sign in and open My Orders to see the live status, or message us on WhatsApp with your Order ID." },
           { q: "Can I return a product?", a: "Yes. You can request a return within 7 days of delivery if the item is unused and in its original condition. See our Return and Refund Policy for full details." },
-          { q: "How do I become a seller?", a: "Register as a seller, add your store name, WhatsApp, and payment account (JazzCash, SadaPay, NayaPay, or Easypaisa) details, then list your products. Ahmad Mart charges 0% commission." },
+          { q: "How do I become a seller?", a: "Register as a seller, add your store name, WhatsApp, and payment account (JazzCash, SadaPay, NayaPay, or Easypaisa) details, then list your products." },
           { q: "How can I contact Ahmad Mart?", a: `Message us on WhatsApp at ${WHATSAPP_DISPLAY} or email ${SUPPORT_EMAIL}. We are happy to help.` },
         ],
       },

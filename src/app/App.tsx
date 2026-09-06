@@ -763,7 +763,6 @@ function LangToggle({ full = false }: { full?: boolean }) {
 function Navbar() {
   const { cartCount, user, products } = useContext(Store);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -842,7 +841,7 @@ function Navbar() {
                   <div key={g} className="flex shrink-0" aria-hidden={g === 1}>
                     {[0, 1].map(i => (
                       <span key={i} className="px-6 text-[11px] sm:text-xs font-semibold whitespace-nowrap">
-                        🎉 Pakistan's Zero Commission Marketplace — Sellers sell with <span className="text-[#F97316] font-extrabold">0% Fee</span> | 100% Verified Quality & Nationwide Delivery
+                        🎉 Welcome to Ahmad Mart — 100% Verified Quality & Nationwide Delivery Across Pakistan
                       </span>
                     ))}
                   </div>
@@ -868,7 +867,6 @@ function Navbar() {
               <div className="notranslate leading-none" translate="no">
                 <span className="text-xl sm:text-2xl font-black text-[#1E40AF] tracking-tight">Ahmad</span>
                 <span className="text-xl sm:text-2xl font-black text-[#F97316] tracking-tight">Mart</span>
-                <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mt-0.5">WooCommerce Store</span>
               </div>
             </Link>
 
@@ -917,11 +915,7 @@ function Navbar() {
             </div>
 
             {/* Header Actions */}
-            <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-              <button onClick={() => setSearchOpen(o => !o)}
-                className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors">
-                <Search size={20} />
-              </button>
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <Link to="/wishlist"
                 className="p-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors hidden sm:flex flex-col items-center text-[10px] font-semibold">
                 <Heart size={20} />
@@ -929,11 +923,11 @@ function Navbar() {
               </Link>
               {user && (
                 <Link to="/messages"
-                  className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors flex flex-col items-center text-[10px] font-semibold">
+                  className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors flex sm:flex-col items-center text-[10px] font-semibold">
                   <MessageCircle size={20} />
-                  <span>Messages</span>
+                  <span className="hidden sm:inline">Messages</span>
                   {unread > 0 && (
-                    <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#F97316] text-white text-[10px] font-black flex items-center justify-center">
+                    <span className="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#F97316] text-white text-[10px] font-black flex items-center justify-center shadow-xs">
                       {unread > 9 ? "9+" : unread}
                     </span>
                   )}
@@ -945,57 +939,63 @@ function Navbar() {
                 <span>{user ? user.name.split(" ")[0] : "Account"}</span>
               </Link>
 
-              <Link to="/cart" className="relative flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all active:scale-95 bg-[#1E40AF] text-white hover:bg-[#1e3a8a] shadow-xs">
+              <Link to="/cart" className="relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all active:scale-95 bg-[#1E40AF] text-white hover:bg-[#1e3a8a] shadow-xs">
                 <ShoppingCart size={18} />
                 <span className="hidden sm:inline">Cart</span>
                 {cartCount > 0 && (
-                  <span className="min-w-[20px] h-[20px] px-1 rounded-full bg-[#F97316] text-white text-[11px] font-black flex items-center justify-center">
+                  <span className="min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] px-1 rounded-full bg-[#F97316] text-white text-[10px] sm:text-[11px] font-black flex items-center justify-center">
                     {cartCount > 9 ? "9+" : cartCount}
                   </span>
                 )}
               </Link>
 
-              <button onClick={() => setMenuOpen(o => !o)} className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-800 transition-colors">
+              <button onClick={() => setMenuOpen(o => !o)} className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-800 transition-colors" aria-label="Toggle navigation menu">
                 {menuOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
             </div>
           </div>
 
-          {/* Mobile Search Overlay Input */}
-          {searchOpen && (
-            <div className="pt-2 pb-1 md:hidden">
-              <form onSubmit={handleSearch}>
-                <div className="flex gap-2">
-                  <input
-                    autoFocus value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                    placeholder="Search products..."
-                    className="flex-1 px-3.5 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-[#1E40AF] bg-slate-50"
-                  />
-                  <button type="submit" className="px-4 py-2 rounded-lg bg-[#1E40AF] text-white text-sm font-bold">Search</button>
-                </div>
-              </form>
-              {searchQ.trim() && (
-                <div className="mt-2 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xl">
-                  {results.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-slate-500">No products match "{searchQ}".</p>
-                  ) : results.map(p => (
-                    <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchOpen(false); setSearchQ(""); }}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
-                      <ProductImage src={p.image} alt="" className="w-9 h-9 rounded object-cover bg-slate-50 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{p.name}</p>
-                        <p className="text-xs text-slate-500 truncate">{p.subcategory}</p>
-                      </div>
-                      <span className="text-sm font-bold text-[#1E40AF] flex-shrink-0">{fmt(p.price)}</span>
-                    </button>
-                  ))}
-                </div>
+          {/* Mobile Persistent Search Bar */}
+          <div className="md:hidden pt-2 pb-1 relative">
+            <div className="relative flex items-center">
+              <input
+                value={searchQ}
+                onChange={e => setSearchQ(e.target.value)}
+                onFocus={() => setDeskSearchFocus(true)}
+                onBlur={() => setTimeout(() => setDeskSearchFocus(false), 150)}
+                onKeyDown={e => { if (e.key === "Enter" && searchQ.trim()) { navigate(`/shop?q=${encodeURIComponent(searchQ)}`); setDeskSearchFocus(false); (e.target as HTMLInputElement).blur(); } }}
+                placeholder="Search products, brands & categories..."
+                className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-300 text-xs outline-none focus:border-[#1E40AF] bg-slate-50 focus:bg-white transition-colors"
+              />
+              <Search size={15} className="absolute left-3 text-slate-400 pointer-events-none" />
+              {searchQ && (
+                <button onClick={() => setSearchQ("")} className="absolute right-2.5 text-slate-400 hover:text-slate-600">
+                  <X size={14} />
+                </button>
               )}
             </div>
-          )}
+
+            {deskSearchFocus && q && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl overflow-hidden z-50 shadow-2xl">
+                {results.length === 0 ? (
+                  <p className="px-4 py-3 text-sm text-slate-500">No products match "{searchQ}".</p>
+                ) : results.map(p => (
+                  <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchQ(""); setDeskSearchFocus(false); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                    <ProductImage src={p.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-slate-50 flex-shrink-0 border border-slate-200" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{p.name}</p>
+                      <p className="text-xs text-slate-500 truncate">{p.subcategory}{p.sellerStore ? ` · ${p.sellerStore}` : ""}</p>
+                    </div>
+                    <span className="text-xs font-black text-[#1E40AF] flex-shrink-0">{fmt(p.price)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Secondary Category Navigation Bar (WordPress / WooCommerce Style) */}
+        {/* Secondary Category Navigation Bar */}
         <div className="hidden md:block bg-slate-100 border-t border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between text-xs sm:text-sm">
             <div className="flex items-center gap-1 font-semibold text-slate-800">
@@ -1044,14 +1044,11 @@ function Navbar() {
 
               <Link to="/" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Home</Link>
               <Link to="/shop" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Shop Catalog</Link>
-              <Link to="/shop?sub=Earbuds" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Earbuds</Link>
-              <Link to="/shop?sub=Chargers" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Chargers</Link>
-              <Link to="/shop?cat=Digital Services" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Digital Services</Link>
             </div>
 
             <div className="flex items-center gap-3">
               <Link to="/register" className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F97316]/10 text-[#F97316] hover:bg-[#F97316] hover:text-white rounded font-bold text-xs transition-colors">
-                <Zap size={13} /> Sell with 0% Fee
+                <Zap size={13} /> Become a Seller
               </Link>
             </div>
           </div>
@@ -1093,7 +1090,7 @@ function Navbar() {
 
               <div className="border-t border-slate-200 pt-2 flex flex-col gap-1 mt-1">
                 <Link to="/register" className="px-3 py-2 rounded-lg text-sm font-bold bg-orange-50 text-[#F97316] flex items-center gap-2">
-                  <Zap size={16} /> Become a Seller (0% Fee)
+                  <Zap size={16} /> Become a Seller
                 </Link>
                 <Link to="/wishlist" className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2">
                   <Heart size={16} /> Wishlist
@@ -1407,22 +1404,6 @@ function HomePage() {
           </section>
         )}
 
-        {/* Feature bar */}
-        <div className="bg-white rounded-2xl mb-14 grid grid-cols-2 lg:grid-cols-4 lg:divide-x divide-gray-200 border border-gray-200 overflow-hidden shadow-sm">
-          {[
-            { icon: Truck, title: "Fast Delivery", sub: "Across Pakistan" },
-            { icon: RotateCcw, title: "7 Days Return", sub: "Hassle free returns" },
-            { icon: Shield, title: "Secure Payment", sub: "100% secure checkout" },
-            { icon: Headphones, title: "24/7 Support", sub: "We're here to help" },
-          ].map(({ icon: Icon, title, sub }) => (
-            <div key={title} className="flex items-center gap-3.5 px-5 py-6">
-              <div className="w-11 h-11 rounded-xl bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
-                <Icon size={20} className="text-[#1E40AF]" />
-              </div>
-              <div className="min-w-0"><p className="font-bold text-[#111827] text-sm">{title}</p><p className="text-xs text-[#6b7280] truncate">{sub}</p></div>
-            </div>
-          ))}
-        </div>
 
         {/* Featured Products */}
         <section className="mb-14">
