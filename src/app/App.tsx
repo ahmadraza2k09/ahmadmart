@@ -764,13 +764,9 @@ function LangToggle({ full = false }: { full?: boolean }) {
       translate="no"
       onClick={() => switchTo(isUrdu ? "en" : "ur")}
       title={isUrdu ? "Switch to English" : "اردو میں دیکھیں"}
-      className={`notranslate inline-flex items-center gap-1.5 rounded-full font-bold transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer ${
-        isUrdu
-          ? "bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-300"
-          : "bg-white/20 hover:bg-white/30 text-white border border-white/40"
-      } ${full ? "w-full justify-center px-4 py-2 text-sm" : "px-3 py-1 text-xs"}`}
+      className={`notranslate inline-flex items-center gap-1.5 rounded-full font-bold transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer bg-white text-[#1E3A8A] hover:bg-slate-100 border border-white shadow-xs ${full ? "w-full justify-center px-4 py-2 text-sm" : "px-3 py-1 text-xs"}`}
     >
-      <Globe size={14} className={isUrdu ? "text-slate-900" : "text-amber-300"} />
+      <Globe size={14} className="text-[#1E3A8A]" />
       <span>{isUrdu ? "English" : "اردو"}</span>
     </button>
   );
@@ -855,11 +851,6 @@ function Navbar() {
               <MessageCircle size={13} className="text-emerald-400" /> <span className="hidden sm:inline">WhatsApp Support:</span> <span className="font-semibold text-white">0340 5463601</span>
             </a>
             
-            <div className="hidden md:flex items-center gap-2 text-blue-100 text-[11px] font-semibold truncate">
-              <span className="bg-amber-400/20 text-amber-300 font-extrabold px-2 py-0.5 rounded-full text-[10px] border border-amber-400/30">0% Commission</span>
-              <span className="text-slate-100 font-medium truncate">Pakistan's Zero Commission Marketplace — Buy &amp; Sell Free!</span>
-            </div>
-
             <div className="flex items-center gap-2 text-blue-100 font-medium text-[11px] flex-shrink-0">
               <LangToggle />
             </div>
