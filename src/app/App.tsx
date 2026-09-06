@@ -810,11 +810,11 @@ function Navbar() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
-  useEffect(() => { setMenuOpen(false); setSearchOpen(false); setOpenCat(null); setMegaCat(null); setCatsOpen(false); }, [location]);
+  useEffect(() => { setMenuOpen(false); setOpenCat(null); setMegaCat(null); setCatsOpen(false); }, [location]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQ.trim()) { navigate(`/shop?q=${encodeURIComponent(searchQ)}`); setSearchOpen(false); setSearchQ(""); }
+    if (searchQ.trim()) { navigate(`/shop?q=${encodeURIComponent(searchQ)}`); setSearchQ(""); }
   };
 
   const baseCats = ["Mobile Accessories", "Home Decoration", "Digital Services"];
