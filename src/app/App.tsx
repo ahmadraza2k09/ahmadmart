@@ -1031,12 +1031,6 @@ function Navbar() {
               <Link to="/" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Home</Link>
               <Link to="/shop" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Shop Catalog</Link>
             </div>
-
-            <div className="flex items-center gap-3">
-              <Link to="/register" className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F97316]/10 text-[#F97316] hover:bg-[#F97316] hover:text-white rounded font-bold text-xs transition-colors">
-                <Zap size={13} /> Become a Seller
-              </Link>
-            </div>
           </div>
         </div>
 
@@ -1075,9 +1069,6 @@ function Navbar() {
               </div>
 
               <div className="border-t border-slate-200 pt-2 flex flex-col gap-1 mt-1">
-                <Link to="/register" className="px-3 py-2 rounded-lg text-sm font-bold bg-orange-50 text-[#F97316] flex items-center gap-2">
-                  <Zap size={16} /> Become a Seller
-                </Link>
                 <Link to="/wishlist" className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2">
                   <Heart size={16} /> Wishlist
                 </Link>
@@ -1324,31 +1315,33 @@ function HomePage() {
   return (
     <div>
       {/* Hero Slider */}
-      <section className="relative overflow-hidden mb-12 rounded-xl mx-4 sm:mx-6 lg:mx-8">
+      <section className="relative overflow-hidden mb-12 w-full">
         {slides.map((slide, i) => (
           <div key={i} className={`absolute inset-0 transition-opacity duration-700 ${i === activeSlide ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-            <div className={`w-full h-full bg-gradient-to-br ${slide.bg} flex flex-col lg:flex-row items-center min-h-[380px] sm:min-h-[470px] relative overflow-hidden`}>
-              <div className="flex-1 px-8 sm:px-12 py-9 text-white z-10">
-                <span className="inline-block px-3 py-1 rounded-md bg-[#F97316] text-white text-xs font-bold mb-4">{slide.badge}</span>
-                <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] mb-4 max-w-xl">{slide.title} <span className="text-[#F97316]">{slide.highlight}</span></h1>
-                <p className="text-blue-100 text-sm sm:text-base mb-6 max-w-md">{slide.sub}</p>
-                <div className="flex flex-wrap gap-3 mb-7">
-                  <button onClick={() => navigate(slide.link)}
-                    className="px-6 py-3 rounded-lg bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-colors active:scale-95 inline-flex items-center gap-2">
-                    {slide.cta} <ArrowRight size={16} />
-                  </button>
-                  <button onClick={() => navigate("/shop")}
-                    className="px-6 py-3 rounded-lg bg-transparent text-white font-bold text-sm hover:bg-white/10 transition-colors border border-white/50 inline-flex items-center gap-2">
-                    <SlidersHorizontal size={15} /> Explore Categories
-                  </button>
-                </div>
-                <div className="hidden sm:flex items-center gap-6 flex-wrap">
-                  {slide.features.map((f, fi) => (
-                    <div key={fi} className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-md bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0"><f.icon size={16} className="text-white" /></div>
-                      <div><p className="text-xs font-bold leading-tight">{f.title}</p><p className="text-[11px] text-blue-200 leading-tight">{f.sub}</p></div>
-                    </div>
-                  ))}
+            <div className={`w-full h-full bg-gradient-to-br ${slide.bg} flex items-center min-h-[380px] sm:min-h-[470px] relative overflow-hidden`}>
+              <div className="max-w-7xl mx-auto w-full px-6 sm:px-8 lg:px-12 py-9 text-white z-10 flex flex-col lg:flex-row items-center">
+                <div className="flex-1">
+                  <span className="inline-block px-3 py-1 rounded-md bg-[#F97316] text-white text-xs font-bold mb-4">{slide.badge}</span>
+                  <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] mb-4 max-w-xl">{slide.title} <span className="text-[#F97316]">{slide.highlight}</span></h1>
+                  <p className="text-blue-100 text-sm sm:text-base mb-6 max-w-md">{slide.sub}</p>
+                  <div className="flex flex-wrap gap-3 mb-7">
+                    <button onClick={() => navigate(slide.link)}
+                      className="px-6 py-3 rounded-lg bg-[#F97316] text-white font-bold text-sm hover:bg-orange-500 transition-colors active:scale-95 inline-flex items-center gap-2">
+                      {slide.cta} <ArrowRight size={16} />
+                    </button>
+                    <button onClick={() => navigate("/shop")}
+                      className="px-6 py-3 rounded-lg bg-transparent text-white font-bold text-sm hover:bg-white/10 transition-colors border border-white/50 inline-flex items-center gap-2">
+                      <SlidersHorizontal size={15} /> Explore Categories
+                    </button>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-6 flex-wrap">
+                    {slide.features.map((f, fi) => (
+                      <div key={fi} className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-md bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0"><f.icon size={16} className="text-white" /></div>
+                        <div><p className="text-xs font-bold leading-tight">{f.title}</p><p className="text-[11px] text-blue-200 leading-tight">{f.sub}</p></div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1364,12 +1357,12 @@ function HomePage() {
           ))}
         </div>
         <button onClick={() => setActiveSlide(s => (s - 1 + slides.length) % slides.length)}
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/20 hidden sm:flex items-center justify-center text-white hover:bg-white/30 transition-colors z-20">
-          <ChevronLeft size={18} />
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hidden sm:flex items-center justify-center text-white hover:bg-white/30 transition-colors z-20">
+          <ChevronLeft size={20} />
         </button>
         <button onClick={() => setActiveSlide(s => (s + 1) % slides.length)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/20 hidden sm:flex items-center justify-center text-white hover:bg-white/30 transition-colors z-20">
-          <ChevronRight size={18} />
+          className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hidden sm:flex items-center justify-center text-white hover:bg-white/30 transition-colors z-20">
+          <ChevronRight size={20} />
         </button>
       </section>
 
