@@ -2,8 +2,27 @@
 @import './tailwind.css';
 @import './theme.css';
 
-/* Continuous scrolling marquee for the top promo bar. The track holds two
-   identical halves and slides by -50%, so the loop is seamless and never stops. */
+/* Global Typography & WordPress Theme Styles */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  line-height: 1.25;
+}
+
+/* Ensure descenders (g, p, q, y) and multi-line Urdu/English texts are never clipped */
+.line-clamp-1, .line-clamp-2, .line-clamp-3 {
+  padding-bottom: 2px;
+  line-height: 1.35 !important;
+}
+
+/* Continuous scrolling marquee for the top promo bar */
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -13,18 +32,43 @@
   will-change: transform;
 }
 
-/* Main navigation bar — solid white (no glass effect). */
+/* WordPress WooCommerce style Navigation bar */
 .glass-nav {
   background: #ffffff;
-  border-bottom: 1px solid rgba(30, 64, 175, 0.08);
-  box-shadow: 0 4px 16px rgba(30, 64, 175, 0.05);
+  border-bottom: 2px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
 }
 
-/* The hamburger menu lives inside the fixed nav, so it must scroll within
-   itself — capped at the viewport minus the promo bar + header (~110px), using
-   dvh where supported so mobile browsers' collapsing URL bar is accounted for.
-   overscroll-behavior stops the page behind from scrolling once the menu's own
-   scroll hits its end. */
+/* WordPress Theme Utility Classes */
+.wp-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease-in-out;
+}
+.wp-card:hover {
+  border-color: #1E40AF;
+  box-shadow: 0 8px 20px rgba(30, 64, 175, 0.08);
+}
+
+.wp-section-header {
+  border-left: 4px solid #1E40AF;
+  padding-left: 0.75rem;
+}
+
+.wp-[#1E40AF] {
+  background-color: #1E40AF;
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+.wp-[#1E40AF]:hover {
+  background-color: #1e3a8a;
+}
+
+/* Mobile drawer scroll behavior */
 .mobile-menu-scroll {
   max-height: calc(100vh - 110px);
   max-height: calc(100dvh - 110px);
@@ -32,10 +76,7 @@
   overscroll-behavior: contain;
 }
 
-/* Stop iOS Safari from auto-zooming when a form field is focused. The zoom only
-   happens when an input's font-size is under 16px, and after a search the page
-   would stay stuck zoomed-in. Forcing 16px on touch devices prevents the zoom
-   entirely — on phones/tablets only, so desktop sizing is untouched. */
+/* Stop iOS Safari auto-zooming on focus */
 @media (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   textarea,
@@ -44,33 +85,17 @@
   }
 }
 
-/* ─── Entrance & scroll-reveal animations ─────────────────────────────────────
-   Products and sections start hidden and ease in as they scroll into view (JS
-   adds .is-visible). GPU-friendly (opacity/transform) and short, so it stays
-   smooth on phones. Respects prefers-reduced-motion. */
+/* ─── Entrance & scroll-reveal animations ───────────────────────────────────── */
 @keyframes amFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes amFadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 
-/* Reveal uses a ONE-SHOT animation (not a transition) so it never overrides an
-   element's own hover/press transitions, and needs no permanent `will-change`
-   (which would create dozens of GPU layers and make mobile scrolling janky). */
 .reveal { opacity: 0; }
 .reveal.is-visible { animation: amFadeIn 0.5s ease forwards; }
 .reveal-up { opacity: 0; }
 .reveal-up.is-visible { animation: amFadeInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 
-/* Whole-page fade-in on every route change. */
 .page-in { animation: amFadeIn 0.35s ease both; }
 
-/* Grid items default to min-width:auto, which refuses to shrink below a child's
-   own content width — a long unbroken product title (or address, or any long
-   string) inside a grid cell can then force the whole grid, and the page,
-   wider than the viewport (a classic CSS Grid gotcha). Tailwind's grid-cols-N
-   utilities already guard against this via minmax(0, 1fr), but a grid that only
-   gets a `grid-cols-N` class at a larger breakpoint (e.g. `lg:grid-cols-2`) has
-   no such guard below that breakpoint, since it's just a plain single-column
-   grid there. This is a blanket fix for every grid on the site, not just the
-   ones we've already found and patched individually. */
 .grid > * { min-width: 0; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -78,9 +103,17 @@
   .page-in { animation: none !important; }
 }
 
-/* ─── Google Translate (Urdu) — hide its injected banner/tooltips ──────────────
-   We drive translation with our own language toggle, so Google's top banner and
-   hover popups are hidden and the page is never pushed down. */
+/* Responsive Table Container */
+.wp-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #ffffff;
+}
+
+/* ─── Google Translate (Urdu) — hide banners ─────────────────────────────── */
 .goog-te-banner-frame.skiptranslate,
 .goog-te-gadget-icon,
 #goog-gt-tt,
@@ -90,3 +123,4 @@
 body { top: 0 !important; position: static !important; }
 .goog-text-highlight { background: none !important; box-shadow: none !important; }
 font[style] { background: transparent !important; box-shadow: none !important; }
+

@@ -639,66 +639,70 @@ function ProductCardBase({ product }: { product: Product }) {
     <div
       ref={cardRef}
       onClick={() => navigate(`/product/${product.id}`)}
-      className="reveal group bg-white rounded-2xl overflow-hidden cursor-pointer transition-colors duration-200 border border-gray-200 hover:border-[#1E40AF]"
+      className="reveal group wp-card overflow-hidden cursor-pointer transition-all duration-200 border border-slate-200 hover:border-[#1E40AF] hover:shadow-md rounded-xl bg-white flex flex-col justify-between"
     >
-      <div className="relative overflow-hidden bg-gray-50" style={{ aspectRatio: "4/5" }}>
+      <div className="relative overflow-hidden bg-slate-50 border-b border-slate-100" style={{ aspectRatio: "4/5" }}>
         <ProductImage
           src={product.image}
           alt={product.name}
           className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
         />
-        <div className="absolute top-3 left-3 flex flex-col gap-1">
+        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
           {product.featured && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-black text-white px-2.5 py-1 rounded-full bg-[#F97316]">
+            <span className="inline-flex items-center gap-1 text-[10px] font-black text-white px-2 py-0.5 rounded bg-[#F97316] shadow-xs">
               <Star size={9} className="fill-white" /> Featured
             </span>
           )}
           {product.badge && <Badge type={product.badge} />}
           {product.originalPrice && (
-            <span className="text-[10px] font-bold bg-red-500 text-white px-2.5 py-1 rounded-full">
+            <span className="text-[10px] font-bold bg-red-600 text-white px-2 py-0.5 rounded shadow-xs">
               -{discount(product.originalPrice, product.price)}%
             </span>
           )}
         </div>
         <button
           onClick={e => { e.stopPropagation(); toggleWishlist(product); }}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center transition-all duration-200 active:scale-90"
+          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/90 border border-slate-200 flex items-center justify-center transition-all duration-200 active:scale-90 shadow-xs hover:bg-white z-10"
         >
-          <Heart size={15} className={inWishlist(product.id) ? "fill-red-500 text-red-500" : "text-gray-400"} />
+          <Heart size={15} className={inWishlist(product.id) ? "fill-red-500 text-red-500" : "text-slate-400"} />
         </button>
       </div>
-      <div className="p-4">
-        <p className="text-[11px] text-[#F97316] font-bold uppercase tracking-wide mb-1">{product.subcategory}</p>
-        {product.sellerStore && <p className="text-[11px] text-[#6b7280] mb-1 truncate">Sold by <span className="font-semibold text-[#374151]">{product.sellerStore}</span>{product.sellerCity ? ` · ${product.sellerCity}` : ""}</p>}
-        <h3 className="font-semibold text-[#111827] text-sm leading-snug mb-2 line-clamp-2 group-hover:text-[#1E40AF] transition-colors">{product.name}</h3>
-        {!product.isService && (product.reviews > 0 || !!product.sold) && (
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            {product.reviews > 0 && (
-              <>
-                <Stars rating={product.rating} />
-                <span className="text-xs text-gray-400">({product.reviews})</span>
-              </>
-            )}
-            {!!product.sold && <span className="text-xs text-gray-400">{fmtCount(product.sold)} sold</span>}
+      <div className="p-3 sm:p-4 flex flex-col justify-between flex-1">
+        <div>
+          <div className="flex items-center justify-between gap-1 mb-1">
+            <p className="text-[10px] sm:text-[11px] text-[#F97316] font-bold uppercase tracking-wider truncate">{product.subcategory}</p>
+            {product.sellerStore && <span className="text-[10px] text-slate-400 font-medium truncate max-w-[90px]">{product.sellerStore}</span>}
           </div>
-        )}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-lg font-extrabold text-[#1E40AF] tracking-tight">{fmt(product.price)}</p>
-            {product.originalPrice && <p className="text-xs text-gray-400 line-through">{fmt(product.originalPrice)}</p>}
-            {product.priceNote && <p className="text-[11px] text-[#6b7280] font-medium">{product.priceNote}</p>}
+          <h3 className="font-semibold text-slate-900 text-xs sm:text-sm leading-snug mb-1.5 line-clamp-2 min-h-[2.4rem] group-hover:text-[#1E40AF] transition-colors">{product.name}</h3>
+          {!product.isService && (product.reviews > 0 || !!product.sold) && (
+            <div className="flex items-center gap-1.5 mb-2 flex-wrap text-xs">
+              {product.reviews > 0 && (
+                <>
+                  <Stars rating={product.rating} size={12} />
+                  <span className="text-[11px] text-slate-400">({product.reviews})</span>
+                </>
+              )}
+              {!!product.sold && <span className="text-[11px] text-slate-400">{fmtCount(product.sold)} sold</span>}
+            </div>
+          )}
+        </div>
+        <div className="pt-2 border-t border-slate-100 mt-2 flex items-center justify-between gap-1 flex-wrap sm:flex-nowrap">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm sm:text-base font-black text-[#1E40AF] tracking-tight truncate">{fmt(product.price)}</p>
+            {product.originalPrice && <p className="text-[11px] text-slate-400 line-through truncate">{fmt(product.originalPrice)}</p>}
+            {product.priceNote && <p className="text-[10px] text-slate-500 font-medium truncate">{product.priceNote}</p>}
           </div>
           {product.isService ? (
             <button
               onClick={e => { e.stopPropagation(); navigate(`/product/${product.id}`); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-colors duration-200 active:scale-95 bg-[#1E40AF] hover:bg-[#1e3a8a]"
+              className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-bold text-white transition-all active:scale-95 bg-[#1E40AF] hover:bg-[#1e3a8a] shadow-xs"
             >
               <ShoppingCart size={13} /> Buy
             </button>
           ) : (
             <button
               onClick={handleAdd}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors duration-200 active:scale-95 ${adding ? "bg-emerald-500 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}
+              className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-xs ${adding ? "bg-emerald-600 text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}
             >
               {adding ? <CheckCircle size={13} /> : <ShoppingCart size={13} />}
               {adding ? "Added!" : "Add"}
@@ -764,12 +768,13 @@ function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [unread, setUnread] = useState(0);
   const [openCat, setOpenCat] = useState<string | null>(null);
-  // Desktop "Categories" panel: open state + which category is highlighted
-  // (its sub-categories show in the right pane).
   const [catsOpen, setCatsOpen] = useState(false);
   const [megaCat, setMegaCat] = useState<string | null>(null);
   const [deskSearchFocus, setDeskSearchFocus] = useState(false);
   const catsRef = useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
   useEffect(() => {
     if (!catsOpen) return;
     const onDown = (e: MouseEvent) => {
@@ -778,14 +783,9 @@ function Navbar() {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [catsOpen]);
-  const navigate = useNavigate();
-  const location = useLocation();
 
-  // The nav is fixed, so the page needs a spacer exactly its height. The height
-  // is dynamic now (category bar can wrap to more rows as sellers add
-  // categories, search panel opens/closes), so measure it live.
   const navRef = useRef<HTMLElement | null>(null);
-  const [navH, setNavH] = useState(104);
+  const [navH, setNavH] = useState(110);
   useEffect(() => {
     const el = navRef.current;
     if (!el) return;
@@ -796,7 +796,6 @@ function Navbar() {
     return () => ro.disconnect();
   }, []);
 
-  // Keep the unread-message badge fresh while signed in.
   useEffect(() => {
     if (!user) { setUnread(0); return; }
     let alive = true;
@@ -819,18 +818,13 @@ function Navbar() {
     if (searchQ.trim()) { navigate(`/shop?q=${encodeURIComponent(searchQ)}`); setSearchOpen(false); setSearchQ(""); }
   };
 
-  // Category links are built from the live catalog, so any new category a seller
-  // adds shows up in the category bar automatically (built-ins always listed
-  // first). ALL categories are shown — the bar wraps onto more rows as needed.
   const baseCats = ["Mobile Accessories", "Home Decoration", "Digital Services"];
   const allCats = Array.from(new Set([...baseCats, ...products.map(p => p.category)])).filter(Boolean);
-  // category -> its sub-categories (for the hover mega-menus)
   const catTree: Record<string, string[]> = {};
   for (const p of products) {
     (catTree[p.category] ||= []);
     if (!catTree[p.category].includes(p.subcategory)) catTree[p.category].push(p.subcategory);
   }
-  // Live search results shown in the search dropdown.
   const q = searchQ.trim().toLowerCase();
   const results = q
     ? products.filter(p => p.name.toLowerCase().includes(q) || p.subcategory.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)).slice(0, 6)
@@ -838,182 +832,159 @@ function Navbar() {
 
   return (
     <>
-      <nav ref={navRef} className={`fixed top-0 left-0 right-0 z-50 glass-nav transition-all duration-300 ${scrolled ? "shadow-lg" : ""}`}>
-        {/* Seller promo bar — continuously scrolling */}
-        <Link to="/register" className="block bg-[#1E40AF] text-white py-2 overflow-hidden hover:bg-[#1e3a8a] transition-colors">
-          <div className="flex w-max animate-marquee">
-            {[0, 1].map(g => (
-              <div key={g} className="flex shrink-0" aria-hidden={g === 1}>
-                {[0, 1, 2, 3].map(i => (
-                  <span key={i} className="px-10 text-xs sm:text-sm font-semibold whitespace-nowrap">
-                    Sell your products on Ahmad Mart with <span className="text-[#F97316] font-bold">0% commission</span> — start selling today
-                  </span>
+      <nav ref={navRef} className={`fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 transition-all duration-300 ${scrolled ? "shadow-md" : ""}`}>
+        {/* Top bar (WordPress Dark Slate) */}
+        <div className="bg-[#0F172A] text-white py-1.5 px-4 text-xs">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex-1 overflow-hidden">
+              <div className="flex w-max animate-marquee">
+                {[0, 1].map(g => (
+                  <div key={g} className="flex shrink-0" aria-hidden={g === 1}>
+                    {[0, 1].map(i => (
+                      <span key={i} className="px-6 text-[11px] sm:text-xs font-semibold whitespace-nowrap">
+                        🎉 Pakistan's Zero Commission Marketplace — Sellers sell with <span className="text-[#F97316] font-extrabold">0% Fee</span> | 100% Verified Quality & Nationwide Delivery
+                      </span>
+                    ))}
+                  </div>
                 ))}
               </div>
-            ))}
+            </div>
+            <div className="hidden lg:flex items-center gap-4 flex-shrink-0 text-slate-300 font-medium text-[11px]">
+              <PakistanClock />
+              <a href="https://wa.me/923405463601" target="_blank" rel="noopener noreferrer" className="hover:text-white flex items-center gap-1">
+                <MessageCircle size={13} className="text-emerald-400" /> WhatsApp Support
+              </a>
+              <LangToggle />
+            </div>
           </div>
-        </Link>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+        </div>
+
+        {/* Main Header */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+          <div className="flex items-center justify-between gap-3 sm:gap-6">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 flex-shrink-0 mr-4 xl:mr-8">
-              <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-10 w-10 object-contain" />
-              <div className="hidden sm:block notranslate" translate="no">
-                <span className="text-xl font-black text-[#1E40AF] tracking-tight">Ahmad</span>
-                <span className="text-xl font-black text-[#F97316] tracking-tight">Mart</span>
+            <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+              <img src={ahmadMartLogo} alt="Ahmad Mart" className="h-10 sm:h-11 w-auto object-contain" />
+              <div className="notranslate leading-none" translate="no">
+                <span className="text-xl sm:text-2xl font-black text-[#1E40AF] tracking-tight">Ahmad</span>
+                <span className="text-xl sm:text-2xl font-black text-[#F97316] tracking-tight">Mart</span>
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mt-0.5">WooCommerce Store</span>
               </div>
             </Link>
 
-            {/* Desktop nav: one "Categories" button opens a two-pane panel (all
-                categories on the left — it scrolls, so any number of categories
-            {/* Desktop nav */}
-            <div className="hidden xl:flex items-center gap-6 flex-1 min-w-0">
-              <div className="relative" ref={catsRef}>
-                <button onClick={() => { setCatsOpen(o => !o); setMegaCat(null); }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-colors border ${catsOpen ? "bg-[#1E40AF] text-white border-[#1E40AF]" : "bg-white text-[#1E40AF] border-[#1E40AF] hover:bg-[#1E40AF] hover:text-white"}`}>
-                  <LayoutGrid size={15} /> Categories
-                  <ChevronDown size={14} className={`transition-transform ${catsOpen ? "rotate-180" : ""}`} />
-                </button>
-                {catsOpen && (() => {
-                  const activeCat = megaCat && allCats.includes(megaCat) ? megaCat : allCats[0];
-                  const subs = catTree[activeCat] || [];
-                  return (
-                    <div className="absolute left-0 top-full mt-2 z-50 flex bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xl"
-                      style={{ boxShadow: "0 12px 24px rgba(17,24,39,0.12)", width: 620 }}>
-                      {/* Left pane: every category, scrollable */}
-                      <div className="w-60 max-h-[420px] overflow-y-auto border-r border-gray-200 py-2 bg-[#F8F9FB] flex-shrink-0">
-                        {allCats.map(c => (
-                          <button key={c} onMouseEnter={() => setMegaCat(c)}
-                            onClick={() => navigate(`/shop?cat=${encodeURIComponent(c)}`)}
-                            className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 text-sm font-semibold text-left transition-colors ${activeCat === c ? "bg-white text-[#1E40AF]" : "text-[#374151] hover:bg-white hover:text-[#1E40AF]"}`}>
-                            <span className="truncate">{c}</span>
-                            <ChevronRight size={14} className={`flex-shrink-0 ${activeCat === c ? "text-[#1E40AF]" : "text-gray-300"}`} />
-                          </button>
-                        ))}
-                      </div>
-                      {/* Right pane: the highlighted category's sub-categories */}
-                      <div className="flex-1 p-5 max-h-[420px] overflow-y-auto min-w-0">
-                        <p className="text-sm font-black text-[#111827] mb-3">{activeCat}</p>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          <Link to={`/shop?cat=${encodeURIComponent(activeCat)}`}
-                            className="px-3 py-2 rounded-xl text-sm font-bold text-[#1E40AF] bg-[#EFF6FF] hover:bg-[#1E40AF] hover:text-white transition-colors">
-                            All {activeCat}
-                          </Link>
-                          {subs.map(s => (
-                            <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`}
-                              className="px-3 py-2 rounded-xl text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors truncate">
-                              {s}
-                            </Link>
-                          ))}
-                        </div>
-                        {subs.length === 0 && <p className="text-xs text-[#6b7280]">No sub-categories yet.</p>}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-              <Link to="/" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors flex-shrink-0">Home</Link>
-              <Link to="/shop" className="text-sm font-semibold text-[#111827] hover:text-[#1E40AF] transition-colors flex-shrink-0">Shop</Link>
-
-              {/* Persistent desktop search */}
-              <div className="relative flex-1 max-w-md ml-2">
-                <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            {/* Desktop Search Bar */}
+            <div className="hidden md:flex flex-1 max-w-xl mx-4 relative">
+              <div className="relative flex-1 flex items-center">
                 <input
                   value={searchQ}
                   onChange={e => setSearchQ(e.target.value)}
                   onFocus={() => setDeskSearchFocus(true)}
                   onBlur={() => setTimeout(() => setDeskSearchFocus(false), 150)}
                   onKeyDown={e => { if (e.key === "Enter" && searchQ.trim()) { navigate(`/shop?q=${encodeURIComponent(searchQ)}`); setDeskSearchFocus(false); (e.target as HTMLInputElement).blur(); } }}
-                  placeholder="Search products, brands and categories..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 bg-[#F8F9FB] text-sm outline-none focus:border-[#1E40AF] focus:bg-white transition-colors"
+                  placeholder="Search products, brands & categories..."
+                  className="w-full pl-4 pr-10 py-2 sm:py-2.5 rounded-l-lg border border-r-0 border-slate-300 text-sm outline-none focus:border-[#1E40AF] bg-slate-50 focus:bg-white transition-colors"
                 />
-                {deskSearchFocus && q && (
-                  <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 rounded-2xl overflow-hidden z-50 shadow-xl" style={{ boxShadow: "0 12px 24px rgba(17,24,39,0.12)" }}>
-                    {results.length === 0 ? (
-                      <p className="px-4 py-3 text-sm text-[#6b7280]">No products match "{searchQ}".</p>
-                    ) : results.map(p => (
-                      <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchQ(""); setDeskSearchFocus(false); }}
-                        className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#F8F9FB] transition-colors border-b border-gray-50 last:border-0">
-                        <ProductImage src={p.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-[#111827] truncate">{p.name}</p>
-                          <p className="text-xs text-[#6b7280] truncate">{p.subcategory}{p.sellerStore ? ` · ${p.sellerStore}` : ""}</p>
-                        </div>
-                        <span className="text-sm font-bold text-[#1E40AF] flex-shrink-0">{fmt(p.price)}</span>
-                      </button>
-                    ))}
-                  </div>
+                {searchQ && (
+                  <button onClick={() => setSearchQ("")} className="absolute right-3 text-slate-400 hover:text-slate-600">
+                    <X size={14} />
+                  </button>
                 )}
               </div>
+              <button
+                onClick={() => { if (searchQ.trim()) navigate(`/shop?q=${encodeURIComponent(searchQ)}`); }}
+                className="px-5 py-2 sm:py-2.5 bg-[#1E40AF] hover:bg-[#1e3a8a] text-white font-bold text-sm rounded-r-lg flex items-center gap-1.5 transition-colors"
+              >
+                <Search size={16} /> Search
+              </button>
+
+              {deskSearchFocus && q && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl overflow-hidden z-50 shadow-2xl">
+                  {results.length === 0 ? (
+                    <p className="px-4 py-3 text-sm text-slate-500">No products match "{searchQ}".</p>
+                  ) : results.map(p => (
+                    <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchQ(""); setDeskSearchFocus(false); }}
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                      <ProductImage src={p.image} alt="" className="w-10 h-10 rounded-lg object-cover bg-slate-50 flex-shrink-0 border border-slate-200" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{p.name}</p>
+                        <p className="text-xs text-slate-500 truncate">{p.subcategory}{p.sellerStore ? ` · ${p.sellerStore}` : ""}</p>
+                      </div>
+                      <span className="text-sm font-black text-[#1E40AF] flex-shrink-0">{fmt(p.price)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ml-2">
-              <div className="hidden md:block"><LangToggle /></div>
+            {/* Header Actions */}
+            <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
               <button onClick={() => setSearchOpen(o => !o)}
-                className="xl:hidden w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
-                <Search size={18} />
+                className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors">
+                <Search size={20} />
               </button>
               <Link to="/wishlist"
-                className="w-9 h-9 hidden sm:flex items-center justify-center rounded-xl hover:bg-[#FFF7ED] text-[#111827] hover:text-[#F97316] transition-colors">
-                <Heart size={18} />
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors hidden sm:flex flex-col items-center text-[10px] font-semibold">
+                <Heart size={20} />
+                <span>Wishlist</span>
               </Link>
               {user && (
                 <Link to="/messages"
-                  className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
-                  <MessageCircle size={18} />
+                  className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors flex flex-col items-center text-[10px] font-semibold">
+                  <MessageCircle size={20} />
+                  <span>Messages</span>
                   {unread > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#F97316] text-white text-[10px] font-black flex items-center justify-center">
+                    <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#F97316] text-white text-[10px] font-black flex items-center justify-center">
                       {unread > 9 ? "9+" : unread}
                     </span>
                   )}
                 </Link>
               )}
               <Link to={user ? "/account" : "/login"}
-                className="w-9 h-9 hidden sm:flex items-center justify-center rounded-xl hover:bg-[#EFF6FF] text-[#111827] hover:text-[#1E40AF] transition-colors">
-                <User size={18} />
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors hidden sm:flex flex-col items-center text-[10px] font-semibold">
+                <User size={20} />
+                <span>{user ? user.name.split(" ")[0] : "Account"}</span>
               </Link>
-              <span className="hidden sm:block w-px h-6 bg-gray-200 mx-1" />
-              <Link to="/cart" className="relative flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-colors active:scale-95 bg-[#1E40AF] text-white hover:bg-[#1e3a8a]">
-                <ShoppingCart size={16} />
+
+              <Link to="/cart" className="relative flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg font-bold text-xs sm:text-sm transition-all active:scale-95 bg-[#1E40AF] text-white hover:bg-[#1e3a8a] shadow-xs">
+                <ShoppingCart size={18} />
                 <span className="hidden sm:inline">Cart</span>
                 {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#F97316] text-white text-[10px] font-black flex items-center justify-center">
+                  <span className="min-w-[20px] h-[20px] px-1 rounded-full bg-[#F97316] text-white text-[11px] font-black flex items-center justify-center">
                     {cartCount > 9 ? "9+" : cartCount}
                   </span>
                 )}
               </Link>
-              <button onClick={() => setMenuOpen(o => !o)} className="xl:hidden w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors ml-0.5">
-                {menuOpen ? <X size={20} /> : <Menu size={20} />}
+
+              <button onClick={() => setMenuOpen(o => !o)} className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-800 transition-colors">
+                {menuOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
             </div>
           </div>
 
-          {/* Search bar + live results */}
+          {/* Mobile Search Overlay Input */}
           {searchOpen && (
-            <div className="pb-3">
+            <div className="pt-2 pb-1 md:hidden">
               <form onSubmit={handleSearch}>
                 <div className="flex gap-2">
                   <input
                     autoFocus value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                    onBlur={() => { if (!searchQ.trim()) setSearchOpen(false); }}
                     placeholder="Search products..."
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 text-sm outline-none focus:border-[#1E40AF] bg-[#F8F9FB]"
+                    className="flex-1 px-3.5 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:border-[#1E40AF] bg-slate-50"
                   />
-                  <button type="submit" className="px-5 py-2.5 rounded-xl bg-[#1E40AF] text-white text-sm font-semibold">Search</button>
+                  <button type="submit" className="px-4 py-2 rounded-lg bg-[#1E40AF] text-white text-sm font-bold">Search</button>
                 </div>
               </form>
               {searchQ.trim() && (
-                <div className="mt-2 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xl" style={{ boxShadow: "0 12px 24px rgba(17,24,39,0.12)" }}>
+                <div className="mt-2 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xl">
                   {results.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-[#6b7280]">No products match “{searchQ}”.</p>
+                    <p className="px-4 py-3 text-sm text-slate-500">No products match "{searchQ}".</p>
                   ) : results.map(p => (
                     <button key={p.id} onClick={() => { navigate(`/product/${p.id}`); setSearchOpen(false); setSearchQ(""); }}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-[#F8F9FB] transition-colors border-b border-gray-50 last:border-0">
-                      <ProductImage src={p.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-gray-50 flex-shrink-0" />
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                      <ProductImage src={p.image} alt="" className="w-9 h-9 rounded object-cover bg-slate-50 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#111827] truncate">{p.name}</p>
-                        <p className="text-xs text-[#6b7280] truncate">{p.subcategory}{p.sellerStore ? ` · ${p.sellerStore}` : ""}</p>
+                        <p className="text-sm font-semibold text-slate-900 truncate">{p.name}</p>
+                        <p className="text-xs text-slate-500 truncate">{p.subcategory}</p>
                       </div>
                       <span className="text-sm font-bold text-[#1E40AF] flex-shrink-0">{fmt(p.price)}</span>
                     </button>
@@ -1024,51 +995,121 @@ function Navbar() {
           )}
         </div>
 
-        {/* Mobile menu */}
-        {menuOpen && (
-          <div className="xl:hidden border-t border-gray-100 bg-white mobile-menu-scroll">
-            <div className="px-4 py-3 flex flex-col gap-1">
-              <Link to="/" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">Home</Link>
-              <Link to="/shop" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">Shop</Link>
-              {allCats.map(c => {
-                const subs = catTree[c] || [];
-                const open = openCat === c;
-                return (
-                  <div key={c}>
-                    <button
-                      onClick={() => (subs.length ? setOpenCat(open ? null : c) : navigate(`/shop?cat=${encodeURIComponent(c)}`))}
-                      className="w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center justify-between">
-                      <span>{c}</span>
-                      {subs.length > 0 && <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />}
-                    </button>
-                    {open && subs.length > 0 && (
-                      <div className="pl-3 ml-2 border-l-2 border-[#EFF6FF] flex flex-col mt-0.5 mb-1">
-                        <Link to={`/shop?cat=${encodeURIComponent(c)}`} className="px-3 py-2 rounded-lg text-sm font-semibold text-[#1E40AF] hover:bg-[#EFF6FF] transition-colors">All {c}</Link>
-                        {subs.map(s => (
-                          <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`} className="px-3 py-2 rounded-lg text-sm font-medium text-[#374151] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors">{s}</Link>
+        {/* Secondary Category Navigation Bar (WordPress / WooCommerce Style) */}
+        <div className="hidden md:block bg-slate-100 border-t border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between text-xs sm:text-sm">
+            <div className="flex items-center gap-1 font-semibold text-slate-800">
+              {/* Mega Categories Button */}
+              <div className="relative" ref={catsRef}>
+                <button onClick={() => { setCatsOpen(o => !o); setMegaCat(null); }}
+                  className={`flex items-center gap-2 px-4 py-2.5 font-bold transition-colors ${catsOpen ? "bg-[#1E40AF] text-white" : "bg-[#1E40AF] text-white hover:bg-[#1e3a8a]"}`}>
+                  <LayoutGrid size={15} /> All Categories
+                  <ChevronDown size={14} className={`transition-transform ${catsOpen ? "rotate-180" : ""}`} />
+                </button>
+                {catsOpen && (() => {
+                  const activeCat = megaCat && allCats.includes(megaCat) ? megaCat : allCats[0];
+                  const subs = catTree[activeCat] || [];
+                  return (
+                    <div className="absolute left-0 top-full mt-0 z-50 flex bg-white border border-slate-200 rounded-b-xl overflow-hidden shadow-2xl"
+                      style={{ width: 600 }}>
+                      <div className="w-56 max-h-[380px] overflow-y-auto border-r border-slate-200 py-1.5 bg-slate-50 flex-shrink-0">
+                        {allCats.map(c => (
+                          <button key={c} onMouseEnter={() => setMegaCat(c)}
+                            onClick={() => navigate(`/shop?cat=${encodeURIComponent(c)}`)}
+                            className={`w-full flex items-center justify-between gap-2 px-3.5 py-2 text-xs font-bold text-left transition-colors ${activeCat === c ? "bg-white text-[#1E40AF] border-l-4 border-[#1E40AF]" : "text-slate-700 hover:bg-white hover:text-[#1E40AF]"}`}>
+                            <span className="truncate">{c}</span>
+                            <ChevronRight size={13} className={`flex-shrink-0 ${activeCat === c ? "text-[#1E40AF]" : "text-slate-300"}`} />
+                          </button>
                         ))}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-              <div className="border-t border-gray-100 mt-2 pt-2 flex flex-col gap-1">
-                <div className="md:hidden px-1 pb-1"><LangToggle full /></div>
-                <Link to="/wishlist" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#FFF7ED] hover:text-[#F97316] transition-colors flex items-center gap-2">
+                      <div className="flex-1 p-4 max-h-[380px] overflow-y-auto min-w-0">
+                        <p className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2.5 pb-1 border-b border-slate-100">{activeCat}</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <Link to={`/shop?cat=${encodeURIComponent(activeCat)}`}
+                            className="px-3 py-1.5 rounded text-xs font-bold text-[#1E40AF] bg-blue-50 hover:bg-[#1E40AF] hover:text-white transition-colors">
+                            All {activeCat}
+                          </Link>
+                          {subs.map(s => (
+                            <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`}
+                              className="px-3 py-1.5 rounded text-xs font-medium text-slate-700 hover:bg-blue-50 hover:text-[#1E40AF] transition-colors truncate">
+                              {s}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <Link to="/" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Home</Link>
+              <Link to="/shop" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Shop Catalog</Link>
+              <Link to="/shop?sub=Earbuds" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Earbuds</Link>
+              <Link to="/shop?sub=Chargers" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Chargers</Link>
+              <Link to="/shop?cat=Digital Services" className="px-3 py-2.5 hover:text-[#1E40AF] transition-colors">Digital Services</Link>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Link to="/register" className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#F97316]/10 text-[#F97316] hover:bg-[#F97316] hover:text-white rounded font-bold text-xs transition-colors">
+                <Zap size={13} /> Sell with 0% Fee
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile menu drawer */}
+        {menuOpen && (
+          <div className="md:hidden border-t border-slate-200 bg-white mobile-menu-scroll">
+            <div className="p-4 flex flex-col gap-1">
+              <div className="mb-2"><LangToggle full /></div>
+              <Link to="/" className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-900 hover:bg-blue-50 hover:text-[#1E40AF]">Home</Link>
+              <Link to="/shop" className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-900 hover:bg-blue-50 hover:text-[#1E40AF]">Shop All Products</Link>
+
+              <div className="my-1 border-t border-slate-100 pt-1">
+                <p className="px-3 text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Categories</p>
+                {allCats.map(c => {
+                  const subs = catTree[c] || [];
+                  const open = openCat === c;
+                  return (
+                    <div key={c}>
+                      <button
+                        onClick={() => (subs.length ? setOpenCat(open ? null : c) : navigate(`/shop?cat=${encodeURIComponent(c)}`))}
+                        className="w-full px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-blue-50 flex items-center justify-between">
+                        <span>{c}</span>
+                        {subs.length > 0 && <ChevronDown size={15} className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />}
+                      </button>
+                      {open && subs.length > 0 && (
+                        <div className="pl-4 ml-3 border-l-2 border-blue-200 flex flex-col gap-0.5 my-1">
+                          <Link to={`/shop?cat=${encodeURIComponent(c)}`} className="px-2.5 py-1.5 text-xs font-bold text-[#1E40AF]">All {c}</Link>
+                          {subs.map(s => (
+                            <Link key={s} to={`/shop?sub=${encodeURIComponent(s)}`} className="px-2.5 py-1.5 text-xs text-slate-700 hover:text-[#1E40AF]">{s}</Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="border-t border-slate-200 pt-2 flex flex-col gap-1 mt-1">
+                <Link to="/register" className="px-3 py-2 rounded-lg text-sm font-bold bg-orange-50 text-[#F97316] flex items-center gap-2">
+                  <Zap size={16} /> Become a Seller (0% Fee)
+                </Link>
+                <Link to="/wishlist" className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2">
                   <Heart size={16} /> Wishlist
                 </Link>
                 {user && (
-                  <Link to="/messages" className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center justify-between gap-2">
+                  <Link to="/messages" className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-50 flex items-center justify-between">
                     <span className="flex items-center gap-2"><MessageCircle size={16} /> Messages</span>
-                    {unread > 0 && <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#F97316] text-white text-[10px] font-black flex items-center justify-center">{unread > 9 ? "9+" : unread}</span>}
+                    {unread > 0 && <span className="px-1.5 py-0.5 rounded-full bg-[#F97316] text-white text-[10px] font-bold">{unread}</span>}
                   </Link>
                 )}
                 {user && (user.role === "seller" || user.role === "admin") && (
-                  <Link to={user.role === "admin" ? "/admin" : "/seller"} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center gap-2">
-                    {user.role === "admin" ? <ShieldCheck size={16} /> : <Package size={16} />} {user.role === "admin" ? "Admin" : "Seller Dashboard"}
+                  <Link to={user.role === "admin" ? "/admin" : "/seller"} className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2">
+                    {user.role === "admin" ? <ShieldCheck size={16} /> : <Package size={16} />} {user.role === "admin" ? "Admin Portal" : "Seller Dashboard"}
                   </Link>
                 )}
-                <Link to={user ? "/account" : "/login"} className="px-3 py-2.5 rounded-xl text-sm font-semibold text-[#111827] hover:bg-[#EFF6FF] hover:text-[#1E40AF] transition-colors flex items-center gap-2">
+                <Link to={user ? "/account" : "/login"} className="px-3 py-2 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-50 flex items-center gap-2">
                   <User size={16} /> {user ? user.name : "Login / Register"}
                 </Link>
               </div>
@@ -1076,8 +1117,6 @@ function Navbar() {
           </div>
         )}
       </nav>
-      {/* Spacer matching the fixed nav's real height (measured live — the
-          category bar wraps to more rows as categories grow). */}
       <div style={{ height: navH }} />
     </>
   );
@@ -1205,11 +1244,11 @@ function Footer() {
 function SectionHeader({ title, subtitle, eyebrow, action }: { title: string; subtitle?: string; eyebrow?: string; action?: React.ReactNode }) {
   const ref = useReveal<HTMLDivElement>();
   return (
-    <div ref={ref} className="reveal-up flex items-end justify-between mb-8">
-      <div>
-        {eyebrow && <p className="text-xs font-bold uppercase tracking-widest text-[#F97316] mb-1.5">{eyebrow}</p>}
-        <h2 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight">{title}</h2>
-        {subtitle && <p className="text-[#6b7280] mt-1.5 text-sm">{subtitle}</p>}
+    <div ref={ref} className="reveal-up flex items-end justify-between mb-6 pb-3 border-b border-slate-200">
+      <div className="border-l-4 border-[#1E40AF] pl-3">
+        {eyebrow && <p className="text-[11px] font-bold uppercase tracking-widest text-[#F97316] mb-0.5">{eyebrow}</p>}
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{title}</h2>
+        {subtitle && <p className="text-slate-500 mt-0.5 text-xs sm:text-sm">{subtitle}</p>}
       </div>
       {action}
     </div>
