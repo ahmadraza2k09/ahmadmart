@@ -743,8 +743,19 @@ function LangToggle({ full = false }: { full?: boolean }) {
   const switchTo = (lang: "en" | "ur") => {
     try {
       localStorage.setItem("am_lang", lang);
-      if (lang === "ur") document.cookie = "googtrans=/en/ur; path=/";
-      else document.cookie = "googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      if (lang === "ur") {
+        document.cookie = "googtrans=/en/ur; path=/";
+        if (typeof window !== "undefined" && window.location.hostname && window.location.hostname !== "localhost") {
+          document.cookie = "googtrans=/en/ur; path=/; domain=" + window.location.hostname;
+        }
+      } else {
+        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+        document.cookie = "googtrans=/en/en; path=/";
+        if (typeof window !== "undefined" && window.location.hostname && window.location.hostname !== "localhost") {
+          document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=" + window.location.hostname;
+          document.cookie = "googtrans=/en/en; path=/; domain=" + window.location.hostname;
+        }
+      }
     } catch { /* storage blocked */ }
     window.location.reload();
   };
@@ -753,9 +764,14 @@ function LangToggle({ full = false }: { full?: boolean }) {
       translate="no"
       onClick={() => switchTo(isUrdu ? "en" : "ur")}
       title={isUrdu ? "Switch to English" : "اردو میں دیکھیں"}
-      className={`notranslate inline-flex items-center gap-1.5 rounded-sm border border-gray-200 font-bold text-[#1E40AF] hover:bg-[#EFF6FF] transition-colors ${full ? "w-full justify-center px-4 py-2.5 text-sm" : "px-2.5 h-9 text-xs"}`}
+      className={`notranslate inline-flex items-center gap-1.5 rounded-full font-bold transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer ${
+        isUrdu
+          ? "bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-300"
+          : "bg-white/20 hover:bg-white/30 text-white border border-white/40"
+      } ${full ? "w-full justify-center px-4 py-2 text-sm" : "px-3 py-1 text-xs"}`}
     >
-      <Globe size={16} /> {isUrdu ? "English" : "اردو"}
+      <Globe size={14} className={isUrdu ? "text-slate-900" : "text-amber-300"} />
+      <span>{isUrdu ? "English" : "اردو"}</span>
     </button>
   );
 }
@@ -833,12 +849,18 @@ function Navbar() {
     <>
       <nav ref={navRef} className={`fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 transition-all duration-300 ${scrolled ? "shadow-md" : ""}`}>
         {/* Top bar */}
-        <div className="bg-[#0F172A] text-white py-1.5 px-4 text-xs">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            <a href="https://wa.me/923405463601" target="_blank" rel="noopener noreferrer" className="hover:text-white flex items-center gap-1.5 text-slate-300 font-medium text-[11px]">
-              <MessageCircle size={13} className="text-emerald-400" /> <span>WhatsApp Support:</span> <span className="font-semibold text-white">0340 5463601</span>
+        <div className="bg-[#1E3A8A] text-white py-1.5 px-4 text-xs border-b border-blue-900/40">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+            <a href="https://wa.me/923405463601" target="_blank" rel="noopener noreferrer" className="hover:text-white flex items-center gap-1.5 text-blue-100 font-medium text-[11px] flex-shrink-0">
+              <MessageCircle size={13} className="text-emerald-400" /> <span className="hidden sm:inline">WhatsApp Support:</span> <span className="font-semibold text-white">0340 5463601</span>
             </a>
-            <div className="flex items-center gap-4 text-slate-300 font-medium text-[11px]">
+            
+            <div className="hidden md:flex items-center gap-2 text-blue-100 text-[11px] font-semibold truncate">
+              <span className="bg-amber-400/20 text-amber-300 font-extrabold px-2 py-0.5 rounded-full text-[10px] border border-amber-400/30">0% Commission</span>
+              <span className="text-slate-100 font-medium truncate">Pakistan's Zero Commission Marketplace — Buy &amp; Sell Free!</span>
+            </div>
+
+            <div className="flex items-center gap-2 text-blue-100 font-medium text-[11px] flex-shrink-0">
               <LangToggle />
             </div>
           </div>
